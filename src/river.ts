@@ -58,6 +58,7 @@ export class River {
   private segEls: { el: SVGPathElement; stream: Stream; tier: Tier | 'known'; region?: string; a?: string; b?: string }[] = [];
   private labelEls: { el: SVGGElement; year: number }[] = [];
   private confs: { x: number; y: number; fam: string; year: number }[] = [];
+  private stars: { x: number; y: number; lead: string; year: number; el: SVGGElement }[] = [];
   private ribbons = new Map<Stream, Ribbon>();
   private routeEl: SVGPathElement;
   private pulseEl: SVGPathElement;
@@ -306,7 +307,10 @@ export class River {
     const sp = this.L.spots.get(personId);
     if (!sp) return;
     const g = el('g', { class: 'finding', transform: `translate(${f1(sp.x)} ${f1(sp.y)})`, 'data-find': leadId });
-    this.world.insertBefore(g, this.world.querySelector('.people'));
+    // above the stream labels, so a label never hides a star
+    this.world.insertBefore(g, this.pulseEl);
+    el('title', {}, g).textContent = label;
+    this.stars.push({ x: sp.x, y: sp.y, lead: leadId, year: sp.year, el: g });
     const inner = el('g', { class: 'ls' }, g);
     el('path', { d: 'M0 -7V-19', class: 'fstem' }, inner);
     el('circle', { cx: 0, cy: -24, r: 11, class: 'hit' }, inner);
@@ -701,6 +705,18 @@ export class River {
       if (g && dot.dist > 9) return g.dataset.id!;
       return dot.id ?? g?.dataset.id ?? null;
     };
+    /** a star is small: a tap within a finger's width of one counts */
+    const nearStar = (p: { x: number; y: number }, max: number): string | null => {
+      if (this.svg.classList.contains('zoom-far')) return null;
+      const up = 24 * Math.pow(Math.max(0.3, Math.min(2.2, this.k)), 0.45);
+      let lead: string | null = null, best = max;
+      for (const s of this.stars) {
+        if (s.year > this.year) continue;
+        const dist = Math.hypot(s.x * this.k + this.tx - p.x, s.y * this.k + this.ty - up - p.y);
+        if (dist < best) { best = dist; lead = s.lead; }
+      }
+      return lead;
+    };
     const scrubTo = (x: number, final: boolean) => {
       const y = Math.round(Math.max(this.minYear, Math.min(this.data.meta.thisYear, this.L.invX((x - this.tx) / this.k))));
       this.ev.onYear(y, final);
@@ -753,8 +769,8 @@ export class River {
         const conf = nearConf(p, 8);
         this.ev.onHover(null, 0, 0);
         const who = pick(p, g, e.pointerType === 'mouse' ? 14 : 20);
-        const mark = hit?.closest?.('.finding') as SVGGElement | null;
-        if (mark) this.ev.onFinding(mark.dataset.find!);
+        const mark = (hit?.closest?.('.finding') as SVGGElement | null)?.dataset.find ?? nearStar(p, e.pointerType === 'mouse' ? 9 : 15);
+        if (mark) this.ev.onFinding(mark);
         else if (conf.fam && conf.dist < dot.dist) this.ev.onConfluence(conf.fam);
         else if (who) this.ev.onSelect(who);
         else {

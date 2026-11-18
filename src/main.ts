@@ -9,6 +9,8 @@ import { chain, kinship, lifeLines, namesakes, restsOn } from './model/kin.ts';
 const $ = <T extends HTMLElement = HTMLElement>(sel: string) => document.querySelector(sel) as T;
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ł/g, 'l').replace(/Ł/g, 'L').toLowerCase();
+/** a phone on its side: desktop layout, phone-sized controls */
+const isSideways = () => matchMedia('(max-height: 520px) and (min-aspect-ratio: 13/10)').matches;
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const isSmall = () => matchMedia('(max-width: 900px) and (max-aspect-ratio: 13/10)').matches;
 
@@ -749,7 +751,7 @@ function stopWalk() {
 let legendBound = false;
 function syncLegendPad() {
   if (!river) return;
-  const pad = isSmall() ? 64 : $('#legend').offsetHeight + 46;
+  const pad = isSmall() ? 64 : isSideways() ? 46 : $('#legend').offsetHeight + 46;
   if (Math.abs(pad - river.padBottom) < 2) return;
   const wasFit = river.isFit;
   river.padBottom = pad;
@@ -767,7 +769,7 @@ function renderLegend() {
   html += `<span class="opt"><i class="dia"></i>living, private</span><span class="opt"><i class="ring"></i>date estimated</span><span class="opt"><i class="water" style="background:repeating-linear-gradient(90deg,#9FB0C6 0 5px,transparent 5px 9px)"></i>in doubt</span><span class="opt"><i class="water" style="background:repeating-linear-gradient(90deg,#9FB0C6 0 2px,transparent 2px 5px)"></i>disputed</span><span class="opt"><i class="water" style="background:repeating-linear-gradient(90deg,#9FB0C6 0 6px,transparent 6px 7px)"></i>which of two</span>`;
   $('#legend').innerHTML = html;
   requestAnimationFrame(syncLegendPad);
-  if (!legendBound) { legendBound = true; if (isSmall()) { $('#legend').classList.add('collapsed'); $('#legend').setAttribute('role', 'button'); $('#legend').tabIndex = 0; $('#legend').setAttribute('aria-label', 'Key to the colours and symbols'); $('#legend').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); $('#legend').classList.toggle('collapsed'); } }); } $('#legend').addEventListener('click', (e) => { if (isSmall() && !(e.target as HTMLElement).closest('button')) $('#legend').classList.toggle('collapsed'); }); }
+  if (!legendBound) { legendBound = true; if (isSmall() || isSideways()) { $('#legend').classList.add('collapsed'); $('#legend').setAttribute('role', 'button'); $('#legend').tabIndex = 0; $('#legend').setAttribute('aria-label', 'Key to the colours and symbols'); $('#legend').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); $('#legend').classList.toggle('collapsed'); } }); } $('#legend').addEventListener('click', (e) => { if ((isSmall() || isSideways()) && !(e.target as HTMLElement).closest('button')) $('#legend').classList.toggle('collapsed'); }); }
 }
 
 // ---------------------------------------------------------------- search

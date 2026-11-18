@@ -247,7 +247,23 @@ process.on('exit', () => server?.kill());
   const tx0 = await page.evaluate(() => window.__river.river.tx);
   await page.waitForTimeout(1800);
   check('phone: the camera travels with the year', (await page.evaluate(() => window.__river.river.tx)) < tx0);
+  // a star under a stream label can still be tapped on a phone
+  await page.keyboard.press(' ');
+  await page.goto(url + '#y=1700'); await page.reload(); await page.waitForSelector('#app:not(.loading)'); await page.waitForTimeout(900);
+  const sb = await page.locator('.finding[data-find^="young-parent"] .fstar').boundingBox();
+  await page.mouse.click(sb.x + sb.width / 2, sb.y + sb.height / 2);
+  await page.waitForTimeout(500);
+  check('phone: a star beside a stream label opens its finding', /young-parent/.test(await page.evaluate(() => window.__river.state.lead || '')));
   check('phone: no horizontal overflow', await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  await page.close();
+
+  // a phone on its side
+  page = await open('#y=1862&p=I11', { width: 844, height: 390 });
+  await page.waitForTimeout(600);
+  const side = await page.evaluate(() => ({ stage: document.querySelector('#stage').getBoundingClientRect().width, panel: document.querySelector('#panel').getBoundingClientRect().left, key: getComputedStyle(document.querySelector('#legend')).display, over: document.documentElement.scrollWidth <= innerWidth }));
+  check('sideways phone: river and record side by side, with a key', side.stage > 400 && side.panel > 400 && side.key !== 'none' && side.over, JSON.stringify(side));
+  await page.locator('#search').focus();
+  check('sideways phone: search does not push the lenses off screen', await page.evaluate(() => document.querySelector('.lens').getBoundingClientRect().right <= document.querySelector('.top').getBoundingClientRect().right + 1));
   await page.close();
 
   check('no console errors', errors.length === 0, errors.slice(0, 3).join(' | '));
