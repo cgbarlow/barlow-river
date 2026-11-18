@@ -33,7 +33,7 @@
   </header>
 
   <main class="stage" id="stage">
-    <svg id="river" role="img" aria-label="The family lines drawn as streams across four centuries, joining at each marriage."></svg>
+    <svg id="river" role="application" aria-label="The river. Family lines drawn as streams across four centuries, joining at each marriage. Up and down arrows step through people in birth order."></svg>
     <div class="caption" id="caption" aria-live="polite"></div>
     <div class="legend" id="legend"></div>
     <div class="zoom">
@@ -48,17 +48,6 @@
     <div class="hint" id="hint" hidden>Drag the year, or press play. Tap any light to meet a person.</div>
   </main>
 
-  <aside class="panel" id="panel" aria-label="Case file and details">
-    <button class="grab" id="grab" aria-label="Open or close the panel"><span></span></button>
-    <nav class="tabs" role="tablist">
-      <button role="tab" data-tab="case" aria-selected="true">Case file</button>
-      <button role="tab" data-tab="leads" aria-selected="false">Findings</button>
-      <button role="tab" data-tab="lines" aria-selected="false">Lines</button>
-    </nav>
-    <div class="panel-body" id="panel-body"></div>
-    <div class="record" id="record" hidden></div>
-  </aside>
-
   <footer class="time">
     <button id="play" class="play" aria-label="Play the timeline">
       <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16"><path class="i-play" d="M4 2 L13 8 L4 14 Z"/><path class="i-pause" d="M3.5 2h3.2v12H3.5zM9.3 2h3.2v12H9.3z"/></svg>
@@ -71,6 +60,17 @@
       <div class="track-ticks" id="track-ticks"></div>
     </div>
   </footer>
+
+  <aside class="panel" id="panel" aria-label="Case file and details">
+    <button class="grab" id="grab" aria-label="Open or close the panel"><span></span></button>
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="case" aria-selected="true">Case file</button>
+      <button role="tab" data-tab="leads" aria-selected="false">Findings</button>
+      <button role="tab" data-tab="lines" aria-selected="false">Lines</button>
+    </nav>
+    <div class="panel-body" id="panel-body"></div>
+    <div class="record" id="record" hidden></div>
+  </aside>
 </div>
 <script type="module" src="/src/main.ts"></script>
 </body>

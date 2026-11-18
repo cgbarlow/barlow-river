@@ -43,6 +43,8 @@ export interface RiverEvents {
   onHeadwater: () => void;
   onOxbow: (s: Stream) => void;
   onConfluence: (famId: string) => void;
+  /** keyboard: step to the next or previous person */
+  onStep: (dir: number) => void;
 }
 
 export class River {
@@ -95,6 +97,7 @@ export class River {
     const defs = el('defs', {}, svg);
     defs.innerHTML = `
       <pattern id="gap-doubt" patternUnits="userSpaceOnUse" width="11" height="8"><rect x="7" width="4" height="8" fill="var(--bg)"/></pattern>
+      <pattern id="gap-soft" patternUnits="userSpaceOnUse" width="9" height="8"><rect x="7.4" width="1.6" height="8" fill="var(--bg)"/></pattern>
       <pattern id="gap-disputed" patternUnits="userSpaceOnUse" width="6" height="8"><rect x="1.8" width="4.2" height="8" fill="var(--bg)"/></pattern>
       <linearGradient id="delta-fade" x1="0" x2="1"><stop offset="0" stop-color="#F2B544" stop-opacity=".85"/><stop offset="1" stop-color="#F2B544" stop-opacity="0"/></linearGradient>
       <linearGradient id="head-fade" x1="1" x2="0"><stop offset="0" stop-color="#F2B544" stop-opacity=".7"/><stop offset="1" stop-color="#F2B544" stop-opacity="0"/></linearGradient>
@@ -189,7 +192,7 @@ export class River {
         const region = [...chainP].reverse().find((p) => p.b!.y <= seg.x1 + 1)?.region ?? chainP[0]?.region ?? s.region;
         const path = el('path', { d, class: 'seg' }, g);
         this.segEls.push({ el: path, stream: s, tier: seg.tier, region, a: seg.a, b: seg.b });
-        if (seg.tier === 'doubt' || seg.tier === 'disputed') el('path', { d, class: 'gap', fill: `url(#gap-${seg.tier})` }, g);
+        if (seg.tier === 'doubt' || seg.tier === 'disputed') el('path', { d, class: 'gap', fill: `url(#gap-${seg.soft ? 'soft' : seg.tier})` }, g);
       }
       if (!s.minor && s.kind !== 'oxbow') el('path', { d: this.line(r.mid), class: 'current' }, g);
       g.addEventListener('click', (e) => { e.stopPropagation(); if (s.kind === 'oxbow') this.ev.onOxbow(s); else this.ev.onStream(s); });
@@ -618,6 +621,10 @@ export class River {
   // ---------- input ----------
   private bind() {
     const svg = this.svg;
+    svg.setAttribute('tabindex', '0');
+    svg.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); this.ev.onStep(e.key === 'ArrowDown' ? 1 : -1); }
+    });
     const pointers = new Map<number, { x: number; y: number }>();
     let mode: 'none' | 'pan' | 'scrub' | 'pinch' = 'none';
     let moved = 0, start = { x: 0, y: 0 }, pinch0 = 0, target: Element | null = null;

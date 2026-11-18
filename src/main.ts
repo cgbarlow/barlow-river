@@ -25,6 +25,7 @@ const state = {
   selected: null as string | null,
   card: null as string | null,
   lead: null as string | null,
+  line: null as string | null,
   composing: null as Draft | null,
   record: null as { kind: 'person' | 'family' | 'compose' | 'rule'; id?: string } | null,
 };
@@ -96,6 +97,7 @@ async function boot() {
     onStream: (s, frame) => showStream(s, frame),
     onHeadwater: () => { if (!state.composing) openCard('origin'); },
     onOxbow: (s) => { if (state.composing) return; const card = cardForStream(s); if (card) { state.card = null; openCard(card.id); } else focusIds(s.members); },
+    onStep: stepPerson,
     onConfluence: (fid) => { if (state.composing) return; stopWalk(); openRecord({ kind: 'family', id: fid }); },
   });
 
@@ -125,8 +127,9 @@ async function boot() {
   else {
     setYear(state.year);
     if (!had) { $('#hint').hidden = false; setTimeout(() => { $('#hint').hidden = true; }, 6000); }
-    const sel = state.selected, card = state.card;
-    setTimeout(() => { if (sel) select(sel); else if (card) { state.card = null; openCard(card, true, true); } }, 60);
+    const sel = state.selected, card = state.card, lead = state.lead, line = state.line;
+    state.lead = null; state.line = null;
+    setTimeout(() => { if (sel) select(sel); else if (card) { state.card = null; openCard(card, true, true); } else if (lead) openLead(lead); else if (line) selectLine(line); }, 60);
   }
   (window as unknown as Record<string, unknown>).__river = { river, state, L, data, select, setYear, play, stop, openCard };
 }
@@ -279,7 +282,7 @@ function select(id: string | null, reveal = true) {
   stop();
   $('#hint').hidden = true;
   const p = P.get(id)!;
-  state.card = null; state.lead = null;
+  state.card = null; state.lead = null; state.line = null;
   if (hadCard) renderTab();
   const lit = new Set<string>([id, ...ancestorsOf(id), ...descendantsOf(id)]);
   for (const fid of p.fams) for (const q of F.get(fid)!.partners) lit.add(q);
@@ -289,6 +292,26 @@ function select(id: string | null, reveal = true) {
   if (state.year < sp.year) setYear(sp.year);
   openRecord({ kind: 'person', id });
   if (reveal) river.reveal(id);
+  writeHash();
+}
+let birthOrder: string[] = [];
+/** Keyboard route to every light: with the river focused, up and down walk people in birth order. */
+function stepPerson(dir: number) {
+  if (!birthOrder.length) birthOrder = data.people.filter((p) => !p.living).sort((a, b) => a.b!.y - b.b!.y || (a.id < b.id ? -1 : 1)).map((p) => p.id);
+  let i = state.selected ? birthOrder.indexOf(state.selected) : -1;
+  if (i < 0) i = dir > 0 ? birthOrder.findIndex((id) => P.get(id)!.b!.y >= state.year) - 1 : birthOrder.findIndex((id) => P.get(id)!.b!.y > state.year);
+  if (i < -1) i = birthOrder.length - 1;
+  const next = birthOrder[Math.max(0, Math.min(birthOrder.length - 1, i + dir))];
+  if (next) { select(next); setYear(Math.max(state.year, P.get(next)!.b!.y)); }
+}
+function selectLine(name: string | null) {
+  select(null);
+  state.card = null; state.lead = null;
+  state.line = name;
+  state.tab = 'lines';
+  if (state.record) closeRecord();
+  renderTab();
+  if (name) { focusIds(lineInfo(name).ids); openSheet(false); } else focusIds(null, false);
   writeHash();
 }
 function hover(id: string | null, x: number, y: number) {
@@ -334,7 +357,7 @@ function cardHtml(c: EvidenceCard): string {
     <span class="b clip">${esc(c.body)}</span>
     <span class="more">${c.source ? `<b style="color:var(--ink-2);font-weight:500">Rests on:</b> ${esc(c.source)}` : ''}
       <span class="who">${chips(c.people)}</span>
-      ${c.draft ? `<span class="actions"><button class="btn" data-copy="${esc(c.id)}">Copy the change request</button><button class="btn quiet" data-del="${esc(c.id)}">Delete</button></span>` : ''}
+      ${c.draft ? `<span class="actions"><button class="btn" data-copy="${esc(c.id)}">Copy the change request</button><button class="btn quiet" data-edit="${esc(c.id)}">Edit</button><button class="btn quiet" data-del="${esc(c.id)}">Delete</button></span>` : ''}
     </span>
   </div>`;
 }
@@ -347,7 +370,7 @@ function caseHtml(): string {
     <div class="kicker">Open case</div>
     <h2>${esc(CASE.question)}</h2>
     <p class="lede">${esc(CASE.summary)}</p>
-    <div class="proofline">Following the Barlow stream upriver, the evidence holds for <b>${gens} generations</b>, back to <b>${esc(head?.name)}</b>${head?.b ? ` (${esc(bornText(head))})` : ''}. Above that there ${hard.length === 1 ? 'is <b>1 break</b>' : `are <b>${hard.length} breaks</b>`} before ${esc(oldest?.name)}, ${esc(oldest?.b?.text)}. Broken water is drawn dashed or dotted.${SOFT_BREAKS.length ? ' One dashed stretch lies below the flag: there the doubt is which of two brothers is the ancestor, and either answer keeps the line.' : ''}
+    <div class="proofline">Following the Barlow stream upriver, the evidence holds for <b>${gens} generations</b>, back to <b>${esc(head?.name)}</b>${head?.b ? ` (${esc(bornText(head))})` : ''}. Above that there ${hard.length === 1 ? 'is <b>1 break</b>' : `are <b>${hard.length} breaks</b>`} before ${esc(oldest?.name)}, ${esc(oldest?.b?.text)}. Broken water is drawn dashed or dotted.${SOFT_BREAKS.length ? ' One finely scored stretch lies below the flag: there the doubt is which of two brothers is the ancestor, and either answer keeps the line.' : ''}
       <div class="actions" style="margin-top:10px"><button class="btn" data-act="walk">${walking ? 'Stop the walk' : 'Walk the evidence'}</button></div></div>
     <div class="cards">${allCards().map(cardHtml).join('')}</div>
     <h3>How to test it</h3>
@@ -420,7 +443,7 @@ function linesHtml(): string {
       const i = lineInfo(name);
       if (!i.ids.length) return '';
       const into = i.join?.into;
-      return `<button class="linecard" data-line="${name}"><i style="background:${LINE_COLOUR[name]}"></i><span>
+      return `<button class="linecard${state.line === name ? ' on' : ''}" data-line="${name}" aria-pressed="${state.line === name}"><i style="background:${LINE_COLOUR[name]}"></i><span>
         <span class="t">${name}</span>
         <span class="m">${i.ids.length} people${i.ids.length - i.dead.length ? `, ${i.ids.length - i.dead.length} living` : ''}. ${i.head ? `Earliest: ${esc(i.head.name)}, ${esc(bornText(i.head))}.` : ''}
         ${i.places.length ? esc(i.places.join(', ')) + '.' : ''}
@@ -445,7 +468,7 @@ function openRecord(r: NonNullable<typeof state.record>) {
   openSheet(true);
   $('#panel-body').inert = true;
   (document.querySelector('.tabs') as HTMLElement).inert = !isSmall();
-  if (document.activeElement && document.activeElement !== document.body && !el.contains(document.activeElement) && !(document.activeElement as HTMLElement).matches('#search')) (el.querySelector('.back') as HTMLElement | null)?.focus({ preventScroll: true });
+  if (document.activeElement && document.activeElement !== document.body && !el.contains(document.activeElement) && !(document.activeElement as HTMLElement).matches('#search, #river')) (el.querySelector('.back') as HTMLElement | null)?.focus({ preventScroll: true });
   if (r.kind === 'family') {
     const f = F.get(r.id!)!;
     focusIds([...f.partners, ...f.children]);
@@ -632,7 +655,7 @@ function openCard(id: string, frame = true, keepYear = false) {
   if (state.record) closeRecord();
   state.selected = null; river.setSelected(null);
   state.card = state.card === id && frame ? null : id;
-  state.lead = null;
+  state.lead = null; state.line = null;
   state.tab = 'case';
   renderTab();
   openSheet(true);
@@ -650,7 +673,9 @@ function openLead(id: string) {
   stop();
   state.selected = null; river.setSelected(null);
   state.lead = state.lead === id ? null : id;
-  state.card = null;
+  state.card = null; state.line = null;
+  if (state.record) closeRecord();
+  writeHash();
   state.tab = 'leads';
   const top = $('#panel-body').scrollTop;
   renderTab();
@@ -806,7 +831,9 @@ function bindChrome() {
     const lead = t.closest<HTMLElement>('[data-lead]');
     if (lead) { openLead(lead.dataset.lead!); return; }
     const line = t.closest<HTMLElement>('[data-line]');
-    if (line) { const i = lineInfo(line.dataset.line!); const on = line.classList.contains('on'); select(null); document.querySelectorAll('.linecard.on').forEach((x) => x.classList.remove('on')); if (on) focusIds(null, false); else { line.classList.add('on'); focusIds(i.ids); openSheet(false); } return; }
+    if (line) { selectLine(state.line === line.dataset.line ? null : line.dataset.line!); return; }
+    const edit = t.closest<HTMLElement>('[data-edit]');
+    if (edit) { const d = drafts.find((x) => x.id === edit.dataset.edit); if (d) { stash = { ...d, people: [...d.people] }; state.card = null; startCompose(); } return; }
     const status = t.closest<HTMLElement>('[data-status]');
     if (status && state.composing) { syncCompose(); state.composing.status = status.dataset.status as Status; syncCompose(); return; }
     const unpick = t.closest<HTMLElement>('[data-unpick]');
@@ -836,7 +863,7 @@ function bindChrome() {
     else if (e.key === 'ArrowRight') { stop(); setYear(state.year + (e.shiftKey ? 10 : 1)); }
     else if (e.key === '/') { $('#search').focus(); e.preventDefault(); }
     else if (e.key === '?') showHelp();
-    else if (e.key === 'Escape') { stopWalk(); if (state.record) { closeRecord(); select(null); } else if (state.card || state.lead) { state.card = null; state.lead = null; focusIds(null, false); renderTab(); writeHash(); } else { focusIds(null, false); document.querySelectorAll('.linecard.on').forEach((x) => x.classList.remove('on')); river.fit(); } }
+    else if (e.key === 'Escape') { stopWalk(); if (state.record) { closeRecord(); select(null); } else if (state.card || state.lead) { state.card = null; state.lead = null; focusIds(null, false); renderTab(); writeHash(); } else { focusIds(null, false); if (state.line) { state.line = null; renderTab(); writeHash(); } river.fit(); } }
     else if (e.key === '+' || e.key === '=') river.zoomBy(1.5);
     else if (e.key === '-') river.zoomBy(1 / 1.5);
     else if (e.key === '0') river.fit();
@@ -863,13 +890,13 @@ function showHelp() {
     <p><b>Each stream is a family line.</b> It starts with its earliest known person. Where two streams join, two people married. The Barlow stream is the trunk, and the river ends at the youngest generation alive today.</p>
     <p><b>Each light is a person.</b> Bright while they are alive, dark once they have died. Ringed lights are direct ancestors. A dashed ring means the birth year is an estimate.</p>
     <p><b>Diamonds are the living.</b> ${c.living} of the ${c.people} people in the tree are alive. They have no name, date or place here.</p>
-    <p><b>Broken water is doubt.</b> Solid water has a source. Dashed water is a link the tree itself calls a hypothesis. Dotted water is disputed. The flag marks how far up the Barlow stream the evidence runs without a break.</p>
+    <p><b>Broken water is doubt.</b> Solid water has a source. Dashed water is a link the tree itself calls a hypothesis. Dotted water is disputed. Finely scored water is a doubt that does not break the line. The flag marks how far up the Barlow stream the evidence runs without a break.</p>
     <p><b>The lake is a dead end.</b> A family once thought to be ancestors, cut off when a will ruled them out. The three dotted springs at the far left are guesses at where the name came from.</p>
     <p><b>Some dates are guesses.</b> ${data.people.filter((p) => !p.living && p.d?.est).length} people have no recorded death. Their light goes out seventy years after birth. Their record says “not recorded”.</p>
     <h3>Things to try</h3>
     <p>Tap any light for the person’s record, then “Follow the water”. Switch the lens to see where people lived, or how well each link is sourced. Open a card in the case file. Zoom in to see names.</p>
     <h3>Keys</h3>
-    <dl class="kv"><dt>Space</dt><dd>Play or pause</dd><dt>← →</dt><dd>One year. With Shift, ten</dd><dt>1 2 3</dt><dd>Surname, place, certainty</dd><dt>/</dt><dd>Find a person</dd><dt>+ − 0</dt><dd>Zoom in, out, whole river</dd><dt>Esc</dt><dd>Close, clear</dd></dl>
+    <dl class="kv"><dt>Space</dt><dd>Play or pause</dd><dt>← →</dt><dd>One year. With Shift, ten</dd><dt>1 2 3</dt><dd>Surname, place, certainty</dd><dt>↑ ↓</dt><dd>With the river focused, step through people in birth order</dd><dt>/</dt><dd>Find a person</dd><dt>+ − 0</dt><dd>Zoom in, out, whole river</dd><dt>Esc</dt><dd>Close, clear</dd></dl>
     <p class="fine">Best in a browser from 2023 or later.</p>
   </div>`;
   el.scrollTop = 0;
@@ -895,15 +922,15 @@ function setLens(lens: Lens) {
 function applyHash() {
   stop(); stopWalk();
   if (state.record) closeRecord();
-  state.year = data.meta.thisYear; state.lens = 'surname'; state.card = null; state.lead = null; state.selected = null;
+  state.year = data.meta.thisYear; state.lens = 'surname'; state.card = null; state.lead = null; state.line = null; state.selected = null;
   readHash();
-  const sel = state.selected, card = state.card;
-  state.card = null;
+  const sel = state.selected, card = state.card, lead = state.lead, line = state.line;
+  state.card = null; state.lead = null; state.line = null;
   setLens(state.lens);
   river.setSelected(null); focusIds(null, false);
   setYear(state.year);
   renderTab();
-  if (sel) select(sel); else if (card) openCard(card, true, true);
+  if (sel) select(sel); else if (card) openCard(card, true, true); else if (lead) openLead(lead); else if (line) selectLine(line);
 }
 let hashTimer = 0;
 function writeHash() {
@@ -914,6 +941,8 @@ function writeHash() {
     if (state.selected && !P.get(state.selected)?.living) q.set('p', state.selected);
     if (state.lens !== 'surname') q.set('lens', state.lens);
     if (state.card && !state.card.startsWith('draft-')) q.set('c', state.card);
+    if (state.lead) q.set('f', state.lead);
+    if (state.line) q.set('line', state.line);
     const s = q.toString();
     history.replaceState(null, '', s ? '#' + s : location.pathname + location.search);
   }, 250);
@@ -929,6 +958,10 @@ function readHash(): boolean {
   state.selected = p && P.has(p) && !P.get(p)!.living ? p : null;
   const c = q.get('c');
   state.card = c && CARDS.some((x) => x.id === c) ? c : null;
+  const f = q.get('f');
+  state.lead = f && [...data.facts, ...data.leads].some((x) => x.id === f) ? f : null;
+  const ln = q.get('line');
+  state.line = ln && (LINES as readonly string[]).includes(ln) ? ln : null;
   return true;
 }
 

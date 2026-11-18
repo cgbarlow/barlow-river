@@ -70,6 +70,15 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 
   await page.locator('#record [data-act="back"]').click();
   check('back closes the record', await page.locator('#record').isHidden());
 
+  // keyboard route to the lights
+  await page.locator('#river').focus();
+  await page.keyboard.press('ArrowDown');
+  const k1 = await page.locator('#record h2').textContent();
+  await page.keyboard.press('ArrowDown');
+  const k2 = await page.locator('#record h2').textContent();
+  check('arrow keys on the river step through people', Boolean(k1) && (await page.evaluate(() => window.__river.state.selected)) !== null && (await page.evaluate(() => document.activeElement.id)) === 'river', `${k1} -> ${k2}`);
+  await page.keyboard.press('Escape');
+
   // 4. lenses
   for (const lens of ['place', 'certainty', 'surname']) {
     await page.locator(`.lens [data-lens="${lens}"]`).click();
@@ -123,6 +132,28 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 
     return { n: living.length, keys: [...new Set(living.flatMap((p) => Object.keys(p)))].sort().join(',') };
   });
   check('living people carry no personal fields', leak.keys === 'estY,fams,id,living,parents', `${leak.n} living: ${leak.keys}`);
+  await page.close();
+
+  // photos: the sandbox blocks the image host, so serve a stand-in and check both paths
+  page = await open('#p=I11');
+  check('a missing photo falls back to an initial', (await page.locator('#record .avatar').count()) === 1);
+  await page.close();
+  page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  let asked = '';
+  await page.route('**/res.cloudinary.com/**', (r) => { asked = r.request().url(); r.fulfill({ status: 200, contentType: 'image/png', body: png }); });
+  await page.goto(url + '#p=I11'); await page.waitForSelector('#record img');
+  await page.waitForTimeout(400);
+  check('a photo is shown when the image host answers', (await page.locator('#record img').count()) === 1 && /c_thumb,g_face/.test(asked), asked.slice(0, 70));
+  await page.close();
+
+  page = await open('#f=fact:largest');
+  await page.waitForTimeout(500);
+  check('a finding can be linked to', (await page.locator('.card.on[data-lead="fact:largest"]').count()) === 1 && (await page.locator('.p.lit').count()) >= 10);
+  await page.close();
+  page = await open('#line=Finch');
+  await page.waitForTimeout(500);
+  check('a line can be linked to', (await page.locator('.linecard.on[data-line="Finch"]').count()) === 1);
   await page.close();
 
   // 10. deep link and phone layout

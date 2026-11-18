@@ -14,7 +14,7 @@ const BEND_YEARS = 13;
 export const LINES = ['Barlow', 'Finch', 'Carter', 'Watkins', 'Chmielewski', 'Czeladka', 'Klos'] as const;
 export type LineName = (typeof LINES)[number];
 
-export interface Segment { x0: number; x1: number; tier: Tier | 'known'; /** the people at the upstream and downstream end */ a?: string; b?: string }
+export interface Segment { x0: number; x1: number; tier: Tier | 'known'; /** the people at the upstream and downstream end */ a?: string; b?: string; /** in doubt, but either answer keeps the line */ soft?: boolean }
 export interface Stream {
   id: number;
   chain: string[];
@@ -370,7 +370,7 @@ export function buildLayout(data: RiverData, softBreaks: Set<string> = new Set()
     for (let i = 1; i < s.chain.length; i++) {
       const c = P.get(s.chain[i])!;
       const tier: Segment['tier'] = c.living ? 'known' : c.tier ?? 'none';
-      segs.push({ x0: yearOf(s.chain[i - 1]), x1: yearOf(s.chain[i]), tier, a: s.chain[i - 1], b: s.chain[i] });
+      segs.push({ x0: yearOf(s.chain[i - 1]), x1: yearOf(s.chain[i]), tier, a: s.chain[i - 1], b: s.chain[i], ...(softBreaks.has(c.id) ? { soft: true } : {}) });
     }
     const lastP = P.get(s.chain[s.chain.length - 1])!;
     const tailTier: Segment['tier'] = lastP.living ? 'known' : s.chain.length > 1 ? segs[segs.length - 1].tier : segs[0].tier;
