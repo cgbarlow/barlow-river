@@ -9,7 +9,7 @@ const url = selfServe ? 'http://localhost:4173/' : process.argv.slice(2).find((a
 let server;
 async function serve() {
   if (!selfServe) return;
-  server = spawn('npx', ['vite', 'preview', '--port', '4173', '--strictPort'], { stdio: 'ignore' });
+  server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', 'preview', '--port', '4173', '--strictPort'], { stdio: 'ignore' });
   for (let i = 0; i < 50; i++) { try { if ((await fetch(url)).ok) return; } catch { /* not up yet */ } await new Promise((r) => setTimeout(r, 200)); }
   throw new Error('preview server did not start');
 }
@@ -79,6 +79,17 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 
   check('arrow keys on the river step through people', Boolean(k1) && (await page.evaluate(() => window.__river.state.selected)) !== null && (await page.evaluate(() => document.activeElement.id)) === 'river', `${k1} -> ${k2}`);
   await page.keyboard.press('Escape');
 
+  // the year line stays in view when zoomed in
+  await page.evaluate(() => { window.__river.setYear(1700); window.__river.river.zoomBy(4); });
+  await page.waitForTimeout(400);
+  const tb2 = await page.locator('#track').boundingBox();
+  await page.mouse.click(tb2.x + tb2.width * 0.85, tb2.y + tb2.height / 2);
+  await page.waitForTimeout(300);
+  const cx = await page.evaluate(() => document.querySelector('.cursor').getBoundingClientRect().left);
+  const sw = await page.evaluate(() => document.querySelector('#stage').getBoundingClientRect().width);
+  check('zoomed in: scrubbing keeps the year line on screen', cx > 0 && cx < sw, `${Math.round(cx)} of ${Math.round(sw)}`);
+  await page.evaluate(() => window.__river.river.fit(false));
+
   // 4. lenses
   for (const lens of ['place', 'certainty', 'surname']) {
     await page.locator(`.lens [data-lens="${lens}"]`).click();
@@ -120,6 +131,11 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 
   await page.locator('#record [name="link"]').selectOption('dispute');
   await page.locator('#record [data-act="savedraft"]').click();
   check('a draft card is saved', (await page.locator('.chip.draft').count()) === 1);
+  await page.locator('[data-edit]').click();
+  check('a draft can be edited', (await page.locator('#record [name="title"]').inputValue()) === 'Smoke test evidence');
+  await page.locator('#record [name="title"]').fill('Smoke test evidence, edited');
+  await page.locator('#record [data-act="savedraft"]').click();
+  check('the edit replaces the draft', (await page.locator('.chip.draft').count()) === 1 && /edited/.test(await page.locator('.card.on .t').textContent()));
   const req = await page.evaluate(() => { const b = document.querySelector('[data-copy]'); return b ? true : false; });
   check('a change request can be copied', req);
   await page.locator('[data-del]').click();
@@ -154,6 +170,16 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 
   page = await open('#line=Finch');
   await page.waitForTimeout(500);
   check('a line can be linked to', (await page.locator('.linecard.on[data-line="Finch"]').count()) === 1);
+  await page.close();
+
+  // narrow desktop: nobody sits under the legend
+  page = await open('#y=2026', { width: 1024, height: 768 });
+  await page.waitForTimeout(600);
+  const under = await page.evaluate(() => {
+    const l = document.querySelector('#legend').getBoundingClientRect();
+    return [...document.querySelectorAll('.p:not(.unborn) .dot')].filter((d) => { const r = d.getBoundingClientRect(); const x = r.left + r.width / 2, y = r.top + r.height / 2; return x > l.left && x < l.right && y > l.top && y < l.bottom; }).length;
+  });
+  check('1024 wide: the legend covers nobody', under === 0, `${under} under`);
   await page.close();
 
   // 10. deep link and phone layout

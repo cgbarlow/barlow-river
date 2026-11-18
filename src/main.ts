@@ -366,11 +366,13 @@ function caseHtml(): string {
   const hard = L.breaks.filter((b) => !SOFT_BREAKS.includes(b.child));
   const gens = head ? (L.spots.get(head.id)?.gen ?? 0) : 0;
   const oldest = P.get(L.trunk.chain[0]);
+  const below = L.trunk.chain.slice(head ? L.trunk.chain.indexOf(head.id) : 0).map((id) => P.get(id)!).filter((p) => !p.living);
+  const bare = below.filter((p) => p.sourced === 'none').length;
   return `
     <div class="kicker">Open case</div>
     <h2>${esc(CASE.question)}</h2>
     <p class="lede">${esc(CASE.summary)}</p>
-    <div class="proofline">Following the Barlow stream upriver, the evidence holds for <b>${gens} generations</b>, back to <b>${esc(head?.name)}</b>${head?.b ? ` (${esc(bornText(head))})` : ''}. Above that there ${hard.length === 1 ? 'is <b>1 break</b>' : `are <b>${hard.length} breaks</b>`} before ${esc(oldest?.name)}, ${esc(oldest?.b?.text)}. Broken water is drawn dashed or dotted.${SOFT_BREAKS.length ? ' One finely scored stretch lies below the flag: there the doubt is which of two brothers is the ancestor, and either answer keeps the line.' : ''}
+    <div class="proofline">Following the Barlow stream upriver, no link is in doubt for <b>${gens} generations</b>, back to <b>${esc(head?.name)}</b>${head?.b ? ` (${esc(bornText(head))})` : ''}. Above that there ${hard.length === 1 ? 'is <b>1 break</b>' : `are <b>${hard.length} breaks</b>`} before ${esc(oldest?.name)}, ${esc(oldest?.b?.text)}. Broken water is drawn dashed or dotted.${bare ? ` Not in doubt is not the same as proven: ${bare} of the named ancestors on that stretch cite no source yet. The certainty lens shows which.` : ''}${SOFT_BREAKS.length ? ' One finely scored stretch lies below the flag: there the doubt is which of two brothers is the ancestor, and either answer keeps the line.' : ''}
       <div class="actions" style="margin-top:10px"><button class="btn" data-act="walk">${walking ? 'Stop the walk' : 'Walk the evidence'}</button></div></div>
     <div class="cards">${allCards().map(cardHtml).join('')}</div>
     <h3>How to test it</h3>
@@ -571,6 +573,7 @@ function familyHtml(f: Family): string {
 
 // ---------------------------------------------------------------- evidence composer
 function startCompose(about?: string) {
+  if (!stash) { try { const saved = JSON.parse(localStorage.getItem(COMPOSE_KEY) ?? 'null'); if (saved?.id) stash = { ...saved, people: (saved.people ?? []).filter((id: string) => P.has(id) && !P.get(id)!.living) }; } catch { /* nothing saved */ } }
   state.composing = stash ?? { id: 'draft-' + Date.now().toString(36), status: 'doubt', title: '', body: '', source: '', url: '', people: [], link: 'none', year: about ? L.spots.get(about)!.year : state.year };
   stash = null;
   if (about && !state.composing.people.includes(about)) state.composing.people.push(about);
@@ -585,6 +588,8 @@ function pickForDraft(id: string) {
   d.people = d.people.includes(id) ? d.people.filter((x) => x !== id) : [...d.people, id];
   syncCompose();
 }
+const COMPOSE_KEY = 'river.compose.v1';
+function keepCompose() { try { if (state.composing) localStorage.setItem(COMPOSE_KEY, JSON.stringify(state.composing)); else localStorage.removeItem(COMPOSE_KEY); } catch { /* private mode */ } }
 function readCompose() {
   const d = state.composing!;
   const form = $('#record');
@@ -596,6 +601,7 @@ function syncCompose() {
   const form = $('#record');
   readCompose();
   form.innerHTML = composeHtml();
+  keepCompose();
   river.setFocus(d.people.length ? d.people : null);
 }
 function composeHtml(): string {
@@ -630,7 +636,7 @@ function saveDraft() {
   if (!d.title.trim()) { toast('Give the evidence a title first'); return; }
   drafts = [d, ...drafts.filter((x) => x.id !== d.id)];
   saveDrafts(drafts);
-  state.composing = null; stash = null;
+  state.composing = null; stash = null; keepCompose();
   document.body.classList.remove('picking');
   closeRecord();
   state.tab = 'case';
@@ -694,7 +700,7 @@ function walkEvidence() {
     if (!walking) return;
     if (i >= order.length) { walking = false; if (state.tab === 'case' && !state.record) { const top = $('#panel-body').scrollTop; renderTab(); $('#panel-body').scrollTop = top; } return; }
     state.card = null;
-    walking = false; openCard(order[i++]); walking = true;
+    openCard(order[i++]);
     if (i === 1) { const top = $('#panel-body').scrollTop; renderTab(); $('#panel-body').scrollTop = top; document.querySelector('.card.on')?.scrollIntoView({ block: 'nearest' }); }
     walkTimer = window.setTimeout(next, 5600);
   };
@@ -727,7 +733,7 @@ function renderLegend() {
     html = Object.entries(REGION_COLOUR).filter(([r]) => used.has(r)).map(([r, c]) => sw(c, r)).join('') + `<span class="opt"><i class="ring"></i>place inferred</span>`;
     if (data.people.some((p) => !p.living && !p.region)) html += sw('#5B6B83', 'Not known');
   } else html = (['record', 'compiled', 'none', 'doubt', 'disputed', 'known'] as const).map((t) => sw(TIER_COLOUR[t], TIER_LABEL[t])).join('') + `<button data-act="rule">How is this worked out?</button>`;
-  html += `<span class="opt"><i class="dia"></i>living, private</span><span class="opt"><i class="ring"></i>date estimated</span><span class="opt"><i class="water" style="background:repeating-linear-gradient(90deg,#9FB0C6 0 5px,transparent 5px 9px)"></i>link in doubt</span>`;
+  html += `<span class="opt"><i class="dia"></i>living, private</span><span class="opt"><i class="ring"></i>date estimated</span><span class="opt"><i class="water" style="background:repeating-linear-gradient(90deg,#9FB0C6 0 5px,transparent 5px 9px)"></i>in doubt</span><span class="opt"><i class="water" style="background:repeating-linear-gradient(90deg,#9FB0C6 0 2px,transparent 2px 5px)"></i>disputed</span><span class="opt"><i class="water" style="background:repeating-linear-gradient(90deg,#9FB0C6 0 6px,transparent 6px 7px)"></i>which of two</span>`;
   $('#legend').innerHTML = html;
   requestAnimationFrame(syncLegendPad);
   if (!legendBound) { legendBound = true; if (isSmall()) $('#legend').classList.add('collapsed'); $('#legend').addEventListener('click', (e) => { if (isSmall() && !(e.target as HTMLElement).closest('button')) $('#legend').classList.toggle('collapsed'); }); }
@@ -826,14 +832,14 @@ function bindChrome() {
     if (copy) { e.stopPropagation(); const text = draftRequest(copy.dataset.copy!); navigator.clipboard?.writeText(text).then(() => toast('Change request copied'), () => showRequest(text)) ?? showRequest(text); return; }
     const del = t.closest<HTMLElement>('[data-del]');
     if (del) { drafts = drafts.filter((d) => d.id !== del.dataset.del); saveDrafts(drafts); state.card = null; focusIds(null, false); renderTab(); return; }
+    const edit = t.closest<HTMLElement>('[data-edit]');
+    if (edit) { const d = drafts.find((x) => x.id === edit.dataset.edit); if (d) { stash = { ...d, people: [...d.people] }; state.card = null; startCompose(); } return; }
     const card = t.closest<HTMLElement>('[data-card]');
     if (card && !t.closest('a')) { stopWalk(); openCard(card.dataset.card!); return; }
     const lead = t.closest<HTMLElement>('[data-lead]');
     if (lead) { openLead(lead.dataset.lead!); return; }
     const line = t.closest<HTMLElement>('[data-line]');
     if (line) { selectLine(state.line === line.dataset.line ? null : line.dataset.line!); return; }
-    const edit = t.closest<HTMLElement>('[data-edit]');
-    if (edit) { const d = drafts.find((x) => x.id === edit.dataset.edit); if (d) { stash = { ...d, people: [...d.people] }; state.card = null; startCompose(); } return; }
     const status = t.closest<HTMLElement>('[data-status]');
     if (status && state.composing) { syncCompose(); state.composing.status = status.dataset.status as Status; syncCompose(); return; }
     const unpick = t.closest<HTMLElement>('[data-unpick]');
@@ -850,6 +856,7 @@ function bindChrome() {
     else if (act === 'help') { stopWalk(); showHelp(); }
     else if (act === 'surprise') { const pool = [...data.facts, ...data.leads].filter((l) => l.id !== state.lead); state.lead = null; openLead(pool[Math.floor(Math.random() * pool.length)].id); document.querySelector('.card.on')?.scrollIntoView({ block: 'nearest' }); }
   });
+  $('#record').addEventListener('input', () => { if (state.composing) { readCompose(); keepCompose(); } });
   $('#record').addEventListener('change', (e) => { if (state.composing && (e.target as HTMLElement).matches('select')) syncCompose(); });
   document.addEventListener('keydown', (e) => {
     const t = e.target as HTMLElement;
@@ -886,11 +893,11 @@ function showHelp() {
   <div class="kicker">A short guide</div>
   <h2>How to read the river</h2>
   <div class="rec guide">
-    <p><b>Time runs left to right.</b> Drag the year, or press play. What lies ahead of the year is shown faintly.</p>
+    <p><b>Time runs left to right.</b> Drag the year, or press play. What lies ahead of the year is shown faintly. Before 1700, where people are few, a year is drawn half as wide.</p>
     <p><b>Each stream is a family line.</b> It starts with its earliest known person. Where two streams join, two people married. The Barlow stream is the trunk, and the river ends at the youngest generation alive today.</p>
     <p><b>Each light is a person.</b> Bright while they are alive, dark once they have died. Ringed lights are direct ancestors. A dashed ring means the birth year is an estimate.</p>
     <p><b>Diamonds are the living.</b> ${c.living} of the ${c.people} people in the tree are alive. They have no name, date or place here.</p>
-    <p><b>Broken water is doubt.</b> Solid water has a source. Dashed water is a link the tree itself calls a hypothesis. Dotted water is disputed. Finely scored water is a doubt that does not break the line. The flag marks how far up the Barlow stream the evidence runs without a break.</p>
+    <p><b>Broken water is doubt.</b> Solid water is a link nobody questions. Whether it cites a source is what the certainty lens shows. Dashed water is a link the tree itself calls a hypothesis. Dotted water is disputed. Finely scored water is a doubt that does not break the line. The flag marks how far up the Barlow stream the evidence runs without a break.</p>
     <p><b>The lake is a dead end.</b> A family once thought to be ancestors, cut off when a will ruled them out. The three dotted springs at the far left are guesses at where the name came from.</p>
     <p><b>Some dates are guesses.</b> ${data.people.filter((p) => !p.living && p.d?.est).length} people have no recorded death. Their light goes out seventy years after birth. Their record says “not recorded”.</p>
     <h3>Things to try</h3>
@@ -930,7 +937,7 @@ function applyHash() {
   river.setSelected(null); focusIds(null, false);
   setYear(state.year);
   renderTab();
-  if (sel) select(sel); else if (card) openCard(card, true, true); else if (lead) openLead(lead); else if (line) selectLine(line);
+  if (sel) select(sel); else if (card) openCard(card, true, true); else if (lead) openLead(lead); else if (line) selectLine(line); else river.fit();
 }
 let hashTimer = 0;
 function writeHash() {

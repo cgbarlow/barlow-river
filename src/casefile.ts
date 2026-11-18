@@ -45,7 +45,7 @@ export const CARDS: EvidenceCard[] = [
   {
     id: 'weaver', status: 'proven', year: 1707,
     title: 'John the worsted weaver',
-    body: 'John Barlow, worsted weaver of Norwich, married Mirabella in 1705. Their son Peter was christened on 6 October 1707 at St Stephen. From here down to the present every step has a record.',
+    body: 'John Barlow, worsted weaver of Norwich, married Mirabella in 1705. Their son Peter was christened on 6 October 1707 at St Stephen. From here down to the present no link is in question, though several later generations still cite no source.',
     source: 'FamilySearch indexed christenings and marriages; FreeREG',
     people: ['I900001', 'I900002', 'I900003'],
   },

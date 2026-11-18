@@ -347,7 +347,7 @@ export class River {
     }
     for (const l of this.labelEls) l.el.classList.toggle('future', l.year > year);
     if (this.autoCam) {
-      const t = this.autoTarget(), a = ripple ? 0.085 : 0.4;
+      const t = this.autoTarget(), a = ripple ? 0.085 : Math.abs(year - prev) > 3 ? 1 : 0.4;
       this.k += (t.k - this.k) * a; this.tx += (t.tx - this.tx) * a; this.ty += (t.ty - this.ty) * a;
       if (year >= this.data.meta.thisYear) { this.autoCam = false; this.fit(); } else this.apply();
     }
@@ -356,6 +356,16 @@ export class River {
       if (Math.abs(tx - this.tx) > 0.5) { this.tx = Math.abs(year - prev) > 30 ? tx : this.tx + (tx - this.tx) * 0.35; this.apply(); }
     }
     this.svg.classList.toggle('at-present', year >= this.data.meta.thisYear);
+    // wherever the camera is, a change of year keeps the year line in view
+    if (!this.autoCam && !(this.follow && this.narrow) && year !== prev && !this.svg.classList.contains('scrubbing')) {
+      const w = this.w - this.inset.right, sx = this.L.X(year) * this.k + this.tx;
+      if (sx < 24 || sx > w - 24) {
+        const want = (sx < 24 ? w * 0.3 : w * 0.7) - this.L.X(year) * this.k;
+        this.tx = Math.abs(year - prev) > 3 ? want : this.tx + (want - this.tx) * 0.5;
+        this.clampPan();
+        this.apply();
+      }
+    }
     this.placeCursor();
   }
   private ripple(d: DotRef) {
@@ -448,7 +458,7 @@ export class River {
     const b = this.L.bounds;
     const w = this.w - this.inset.right, h = this.h - this.inset.bottom;
     if (this.narrow) {
-      const padT = 30, padB = 40;
+      const padT = 30, padB = Math.max(40, this.padBottom - 24);
       const fitH = (this.h - padT - padB) / (b.y1 - b.y0);
       const k = Math.max(0.3, Math.min(0.62, fitH));
       // when the stage is too short for the whole river, keep the trunk in the middle
@@ -675,7 +685,16 @@ export class River {
         // a tap. Pointer capture swallows click, so dispatch by hand.
         const hit = document.elementFromPoint(e.clientX, e.clientY) ?? target;
         const g = hit?.closest?.('.p') as SVGGElement | null;
+        const conf = hit?.closest?.('.conf');
+        // small lights are hard to hit: a near miss still counts, the named before the unnamed
+        let near: string | null = null, best = 15;
+        if (!g && !conf) for (const [id, d] of this.dots) {
+          if (d.state === 'unborn') continue;
+          const dist = Math.hypot(d.x * this.k + this.tx - p.x, d.y * this.k + this.ty - p.y) + (d.p.living ? 3 : 0);
+          if (dist < best) { best = dist; near = id; }
+        }
         if (g) this.ev.onSelect(g.dataset.id!);
+        else if (near) this.ev.onSelect(near);
         else {
           const other = hit?.closest?.('.conf') ?? hit?.closest?.('.oxbow-mark') ?? hit?.closest?.('.slabel') ?? hit?.closest?.('.headwaters') ?? hit?.closest?.('.stream');
           this.ev.onHover(null, 0, 0);

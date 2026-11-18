@@ -327,7 +327,8 @@ pre.req { background: var(--bg); border-radius: 8px; padding: 12px; font: 400 11
   .search { min-height: 44px; }
   .time { padding-top: 4px; padding-bottom: calc(56px + env(safe-area-inset-bottom)); }
   .play { width: 44px; height: 44px; }
-  .legend, .caption { display: none; }
+  .legend { display: none; }
+  .caption { font-size: 13px; top: 2px; }
   .panel { height: min(86dvh, 560px); }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -51,6 +51,7 @@ export function changeRequest(d: Draft, look: Lookup): string {
   out.push('1. Nodes');
   const url = /^https?:\/\//.test(d.url) ? d.url : '';
   const cite = JSON.stringify({ source: d.source || 'not given', ...(url ? { url } : {}), detail: d.title });
+  if (!d.people.length) out.push('   - Nobody is attached. Say which people this evidence belongs to.');
   for (const id of d.people) out.push(`   - ${look.name(id)}: add the citation ${cite} and a dated research note.`);
   out.push('2. Edges');
   if (d.link !== 'none' && child && par) out.push(`   - Family ${par.id} (${par.names.join(' and ')}) to child ${look.name(child)}: ${EDGE[d.link]}`);
