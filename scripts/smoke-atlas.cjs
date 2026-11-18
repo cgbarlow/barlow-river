@@ -150,7 +150,7 @@ process.on('exit', () => server?.kill());
   check('between times it holds steady', jump <= 4, `largest move in five years: ${jump} degrees`);
   await A(page, () => { window.__atlas.setYear(1868); window.__atlas.stages[0].resume(); window.__atlas.settle(); window.__atlas.play(); });
   const seen = [];
-  for (let i = 0; i < 60; i++) { await page.waitForTimeout(120); const c = await A(page, () => [window.__atlas.state.year, window.__atlas.stages[0].cam.lon, Boolean(window.__atlas.scene().ship)]); seen.push(c); if (c[0] > 1885) break; }
+  for (let i = 0; i < 260; i++) { await page.waitForTimeout(120); const c = await A(page, () => [window.__atlas.state.year, window.__atlas.stages[0].cam.lon, Boolean(window.__atlas.scene().ship)]); seen.push(c); if (c[0] > 1880) break; }
   await A(page, () => window.__atlas.stop());
   // through Suez a ship first runs south-west down the Channel; after that it only goes east
   let back = 0; for (let i = 1; i < seen.length; i++) { if (seen[i - 1][1] < 40) continue; let d = seen[i][1] - seen[i - 1][1]; if (d > 180) d -= 360; if (d < -180) d += 360; if (d < -0.5) back++; }
@@ -210,6 +210,16 @@ process.on('exit', () => server?.kill());
   check('Home goes to the first year', (await year(page)) < 1600);
   await A(page, () => window.__atlas.setYear(1880));
 
+  // 7e. records that name only a country still count; the sea is counted
+  const sarah = await idOf(page, 'Sarah Ann Hurley');
+  const sh = await A(page, (id) => { const w = window.__atlas.world, a = w.byId.get(id); const at = (y) => { const l = w.scene(y, null, null).lights.find((x) => x.actor === a); return [w.countryOf(a, y), l ? l.haze : null]; }; return [at(1858.5), at(1865.5), at(1880.5)]; }, sarah);
+  check('a record naming only New Zealand moves the person there, as a haze, until a town is recorded', sh[0][0] === 'England' && sh[1][0] === 'New Zealand' && sh[1][1] === true && sh[2][0] === 'New Zealand' && sh[2][1] === false, JSON.stringify(sh));
+  await A(page, () => window.__atlas.setYear(1874));
+  check('a voyage that falls inside one year is counted as at sea', /At sea\s*2/.test(await page.locator('#countries').textContent()) && (await A(page, () => Boolean(window.__atlas.scene().ship))));
+  const sums = await A(page, () => { const out = []; for (const y of [1700, 1855, 1874, 1900, 1960]) { window.__atlas.setYear(y); window.__atlas.settle(); const c = window.__atlas.counts(); out.push(Object.values(c).reduce((a, b) => a + b, 0) === window.__atlas.scene().alive && document.querySelector('#alive').textContent.startsWith(String(window.__atlas.scene().alive))); } return out; });
+  check('chips, the count under the year and the lights drawn agree', sums.every(Boolean), JSON.stringify(sums));
+  await A(page, () => window.__atlas.setYear(1880));
+
   // 8. lenses
   await page.keyboard.press('2');
   check('the birthplace lens recolours and rewrites the key', /Norfolk/.test(await page.locator('#legend').textContent()) && (await page.locator('#lens [data-lens="place"]').getAttribute('aria-checked')) === 'true');
@@ -246,6 +256,11 @@ process.on('exit', () => server?.kill());
   await page.locator('#search').fill('zamosc');
   await page.keyboard.press('Enter');
   check('search finds a place and opens it', /Zamość/.test(await page.locator('#record h2').textContent()));
+  await page.waitForTimeout(150);
+  check('after a search the keyboard is in the record that opened', await page.evaluate(() => Boolean(document.activeElement?.closest('#record'))));
+  await page.keyboard.press('/'); await page.locator('#search').fill('poland'); await page.keyboard.press('Enter');
+  check('search finds a country', (await page.locator('#record h2').textContent()) === 'Poland');
+  await page.locator('#record .back').click();
   await page.locator('#record .back').click();
   const none = await A(page, () => window.__atlas.atlas.unplaced[0]);
   await A(page, (id) => window.__atlas.select(id), none);
@@ -268,6 +283,9 @@ process.on('exit', () => server?.kill());
   await A(page, () => { window.__atlas.setYear(1852); window.__atlas.play(); });
   let cap = '';
   for (let i = 0; i < 40 && !/1855/.test(cap); i++) { await page.waitForTimeout(150); if (await page.locator('#caption.on').count()) cap = await page.locator('#caption').textContent(); }
+  const t1 = Date.now(); let held = 0;
+  for (let i = 0; i < 60; i++) { await page.waitForTimeout(100); const now = await page.locator('#caption').textContent(); if (now !== cap || !(await page.locator('#caption.on').count())) break; held = Date.now() - t1; }
+  check('a caption stays up long enough to read', held >= 1800, `${held} ms`);
   check('a caption says what the records say, and no more', /1855/.test(cap) && /Last recorded in/.test(cap) && !/sailed|ship/.test(cap), cap.slice(0, 70));
   const capBox = await page.locator('#caption').boundingBox(), stBox = await page.locator('#stage').boundingBox();
   check('captions sit at the bottom, clear of the countries and the rim pointers', capBox.y > stBox.y + stBox.height * 0.6);
@@ -299,6 +317,15 @@ process.on('exit', () => server?.kill());
   check('and “See on the map” comes back, on the same year, with the light lit', (await page.locator('#record h2').textContent()) === 'Edwin Watkins' && (await year(page)) === 1862 && (await A(page, (id) => window.__atlas.scene().lights.some((l) => l.actor.id === id), edwin)));
   await page.close();
 
+  page = await open('');
+  await page.goto(base + 'index.html'); await page.waitForSelector('#river'); await page.waitForTimeout(2500);
+  const ry = Number(await page.locator('#year').textContent());
+  await page.locator('a.mode-link').click(); await page.waitForSelector('#views'); await page.waitForSelector('#app:not(.loading)');
+  check('from the River in mid-play, the Atlas opens on the year that was showing', Math.abs((await year(page)) - ry) <= 12 && (await year(page)) > 1560, `${ry} -> ${await year(page)}`);
+  await page.goto(base + `index.html#p=${encodeURIComponent(tf)}`); await page.reload(); await page.waitForSelector('#record:not([hidden]) h2');
+  await page.locator('#see-map').click(); await page.waitForSelector('#views'); await page.waitForSelector('#record:not([hidden]) h2');
+  check('“See on the map” from the present day lands in the person’s lifetime, lit', (await year(page)) < 1900 && (await A(page, (id) => window.__atlas.scene().lights.some((l) => l.actor.id === id), tf)), String(await year(page)));
+  await page.close();
   page = await open('#v=shores');
   check('a link with no year opens on a year with people in it', (await A(page, () => window.__atlas.scene().alive)) > 50 && (await year(page)) < 2000, String(await year(page)));
   await page.close();
@@ -320,6 +347,17 @@ process.on('exit', () => server?.kill());
   await A(page, () => window.__atlas.settle());
   const stacked = await A(page, () => { const s = window.__atlas.stages[0], w = window.__atlas.world; const e = w.actors.find((a) => s.screenOf(a.id) && w.lightOf(a, 1880)?.[0] < 10), n = w.actors.find((a) => s.screenOf(a.id) && w.lightOf(a, 1880)?.[0] > 150); return e && n ? s.screenOf(n.id)[1] - s.screenOf(e.id)[1] : 0; });
   check('on a phone the two shores stack', stacked > 80, String(stacked));
+  await page.locator('#legend .key-toggle').tap();
+  check('on a phone the Key opens', !(await page.locator('#legend.collapsed').count()) && /Hollow/.test(await page.locator('#legend').innerText()));
+  await page.locator('#legend .key-toggle').tap();
+  const hdr = await page.locator('.top').boundingBox();
+  check('on a phone the header leaves the map most of the screen', hdr.height < 130 && (await page.locator('#view-a').boundingBox()).height > 480, `${Math.round(hdr.height)} px`);
+  const nzP = await A(page, () => { const w = window.__atlas.world; return w.actors.find((a) => !a.hollow && w.lightOf(a, 1880.5)?.[0] > 150).id; });
+  await A(page, (id) => { window.__atlas.select(id); window.__atlas.settle(); }, nzP);
+  await page.waitForTimeout(500); await A(page, () => window.__atlas.settle());
+  const vis = await page.evaluate((id) => { const s = window.__atlas.stages[0], q = s.screenOf(id), r = s.canvas.getBoundingClientRect(), sheet = document.querySelector('#panel').getBoundingClientRect(); return q ? [Math.round(r.top + q[1]), Math.round(sheet.top)] : null; }, nzP);
+  check('on a phone, two shores keeps a selected person above the open sheet', vis && vis[0] < vis[1] - 8, JSON.stringify(vis));
+  await page.locator('#record .back').click();
   await page.close();
 
   // 16. a phone on its side, and reduced motion

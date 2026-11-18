@@ -50,9 +50,9 @@ A second mode, at `atlas.html`. The River shows time and doubt. The Atlas adds p
 
 What it will not pretend to know:
 
-- **A solid light has a record.** A hollow light has none: the person is drawn where a close relative was, and never moves. A haze is a place known only to a county or country. Eight people have no place and nobody to borrow from. They are listed, not drawn.
-- **When a move happened is almost never recorded.** Where the records pin it to within three years, the light travels. Otherwise it fades out of one place and into the other across the years it could have been.
-- **Sea routes are custom, not record.** A voyage to New Zealand is drawn the way ships went at the time: round the Cape before 1870, through Suez after. The tree names no ship.
+- **A solid light has a record.** It is never drawn anywhere before a record puts the person there, and it dims the longer it is since the last one. A hollow light has no record: the person is drawn where a close relative was last recorded, never earlier than that relative's own first record, and never moves. A haze is a place known only to a county or country. Ten people have no place and nobody to borrow from. They are listed, not drawn.
+- **When a move happened is almost never recorded.** Where the records pin it to within three years, the light travels. Otherwise it stays where it was last recorded and appears at the new place only in the year a record finds it there.
+- **Sea routes are custom, not record.** A voyage to New Zealand is drawn the way ships went at the time: out round the Cape of Good Hope, and through Panama once the canal had opened. The tree names no ship.
 - **Living people are not on the map.** No light, no place.
 
 How it is made: `pipeline/gazetteer.ts` places every place name in the tree by hand, so no family data is sent to a geocoding service. `pipeline/atlas.ts` builds `public/data/atlas.json` from the published `river.json`, never from the raw export, so the Atlas cannot publish anything the River does not. Anyone who died from 1950 on is shown to the town only. The basemap is Natural Earth, bundled (`scripts/build-land.ts` writes it, coarse for the world and detailed for Britain, Ireland and New Zealand); nothing is fetched from a map service.

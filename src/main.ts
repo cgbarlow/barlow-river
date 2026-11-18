@@ -560,7 +560,7 @@ function personHtml(p: Person): string {
       ${L.route(p.id).length > 1 ? '<button class="btn solid" data-act="follow">Follow the water</button>' : '<span class="badge">This water does not reach the river</span>'}
       <button class="btn quiet" data-act="goyear" data-y="${p.b?.y}">Go to ${p.b?.y}</button>
       <button class="btn quiet" data-act="relate">Related to…</button>
-      <a class="btn quiet" id="see-map" href="./atlas.html#p=${encodeURIComponent(p.id)}&y=${Math.min(data.meta.thisYear - 1, Math.max(p.b?.y ?? 0, state.year))}">See on the map</a>
+      <a class="btn quiet" id="see-map" href="./atlas.html#p=${encodeURIComponent(p.id)}${state.year < data.meta.thisYear ? `&y=${state.year}` : ''}">See on the map</a>
     </div>
     <h3>Record</h3>
     <dl class="kv">${kv.join('')}</dl>
@@ -907,6 +907,10 @@ function bindChrome() {
   $('#record').addEventListener('input', () => { if (state.composing) { readCompose(); keepCompose(); } });
   $('#record').addEventListener('change', (e) => { if (state.composing && (e.target as HTMLElement).matches('select')) syncCompose(); });
   document.addEventListener('pointerdown', () => document.body.classList.remove('kbd'), true);
+  for (const ev of ['pointerdown', 'focusin'] as const) document.addEventListener(ev, (e) => {
+    const a = (e.target as HTMLElement).closest?.('a.mode-link, a#see-map') as HTMLAnchorElement | null;
+    if (a) a.href = atlasHref(a.id === 'see-map' && state.selected ? state.selected : undefined);
+  }, true);
   document.addEventListener('keydown', (e) => {
     const t = e.target as HTMLElement;
     if (e.key === 'Tab') document.body.classList.add('kbd');
@@ -1052,6 +1056,12 @@ function writeHash() {
     const link = document.querySelector<HTMLAnchorElement>('a.mode-link');
     if (link) link.href = './atlas.html' + (to ? '#' + to : '');
   }, 250);
+}
+/** The link to the Atlas is worked out at the moment it is pressed, so it carries the year on screen even mid-play. */
+function atlasHref(person?: string): string {
+  const sel = person ?? (state.selected && !P.get(state.selected)?.living ? state.selected : null);
+  const to = new URLSearchParams({ ...(state.year < data.meta.thisYear ? { y: String(state.year) } : {}), ...(sel ? { p: sel } : {}) }).toString();
+  return './atlas.html' + (to ? '#' + to : '');
 }
 function readHash(): boolean {
   const q = new URLSearchParams(location.hash.slice(1));

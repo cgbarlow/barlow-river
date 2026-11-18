@@ -33,14 +33,12 @@ export interface AtlasStop {
   est?: boolean;
   /** whether this record is this person at all is disputed: the words from the tree */
   doubt?: string;
-  /** vaguer than another stop that already covers it; listed, not drawn */
-  coarse?: boolean;
 }
 
 export interface AtlasPerson {
   id: string;
   stops: AtlasStop[];
-  /** no record places them at birth, and no parent can lend a place: not drawn before this year */
+  /** not drawn before this year: the first record, or the first year the relative they are shown with is recorded */
   seen?: number;
   /** no place of their own: shown hollow where a close relative was */
   borrowed?: { from: string; how: 'parent' | 'partner' | 'sibling' | 'child' };

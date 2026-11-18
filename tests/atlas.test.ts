@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { buildAtlas, TOWN_ONLY_FROM } from '../pipeline/atlas.ts';
 import { COUNTRY_BOX, locate, PLACE, PLACES } from '../pipeline/gazetteer.ts';
 import { km, route, densify, slerp } from '../src/model/geo.ts';
-import { legsOf, staysOf, whereAt, mostLikely, SAIL_MAX } from '../src/model/journey.ts';
+import { legsOf, staysOf, whereAt, lastKnown, SAIL_MAX } from '../src/model/journey.ts';
 import type { RiverData, Person, Family } from '../src/model/types.ts';
 import type { AtlasPerson } from '../src/model/atlas-types.ts';
 import { World } from '../src/atlas/scene.ts';
@@ -69,7 +69,9 @@ describe('geometry', () => {
     const norwich: [number, number] = [1.297, 52.63], howick: [number, number] = [174.932, -36.894], london: [number, number] = [-0.128, 51.507];
     expect(route(norwich, london, 1800).kind).toBe('direct');
     expect(route(norwich, howick, 1855).kind).toBe('cape');
-    expect(route(norwich, howick, 1874).kind).toBe('suez');
+    expect(route(norwich, howick, 1874).kind).toBe('cape');
+    expect(route(norwich, howick, 1950).kind).toBe('panama');
+    expect(route(howick, norwich, 1950).kind).toBe('panama');
     expect(route(howick, norwich, 1860).kind).toBe('horn');
     const r = route(norwich, howick, 1855);
     expect(r.pts[0]).toEqual(norwich); expect(r.pts[r.pts.length - 1]).toEqual(howick);
@@ -106,8 +108,10 @@ describe('journeys', () => {
     const w = whereAt(st, 1839)!;
     expect(w).toMatchObject({ a: 'sproughton', b: 'howick', sail: false });
     expect(w.t).toBeCloseTo(0.5);
-    expect(mostLikely(st, 1830)).toBe('sproughton');
-    expect(mostLikely(st, 1850)).toBe('howick');
+    // to lend a place to a relative, a person is where they were last recorded
+    expect(lastKnown(st, 1830)).toBe('sproughton');
+    expect(lastKnown(st, 1850)).toBe('sproughton');
+    expect(lastKnown(st, 1855)).toBe('howick');
   });
   it('keeps birth first and death last whatever the years say', () => {
     const st = staysOf(person([{ y: 1639, p: 'mucklestone', kind: 'birth', why: 'born' }, { y: 1638, p: 'mucklestone', kind: 'baptism', why: 'baptised' }, { y: 1709, p: 'norwich', kind: 'death', why: 'died' }, { y: 1654, p: 'norwich', kind: 'child', why: 'birth of Noah' }]), place);
@@ -142,13 +146,29 @@ describe('placing people', () => {
     expect(kid.stops).toEqual([{ y: 1825, p: 'norwich', kind: 'borrowed', why: 'no place recorded: shown with her mother, Ann Finch', est: true }]);
     expect(a.unplaced).toEqual(['stranger']);
   });
-  it('sets a vague stop aside when a closer one covers it', () => {
-    const r = tiny([{ id: 'a', name: 'A B', b: { y: 1880, text: '', place: 'New Zealand' }, d: { y: 1940, text: '', place: 'Wellington, New Zealand' } },
-      { id: 'b', name: 'C D', b: { y: 1874, text: '', place: 'England' }, d: { y: 1940, text: '', place: 'Napier, New Zealand' } }]);
-    const a = buildAtlas(r).atlas;
-    expect(a.people[0].stops[0]).toMatchObject({ p: 'new-zealand', coarse: true });
-    expect(staysOf(a.people[0], place).map((s) => s.p)).toEqual(['wellington']);
-    expect(staysOf(a.people[1], place).map((s) => s.p)).toEqual(['england', 'napier']);
+  it('keeps a record that names only a country: a haze there from that year, then the closer place when one is recorded', () => {
+    const r = tiny([
+      { id: 'a', name: 'A B', b: { y: 1837, text: '', place: 'Birmingham, Warwickshire, England' }, d: { y: 1903, text: '', place: 'Wellington, New Zealand' }, events: [{ tag: 'MARR', label: 'Marriage', y: 1859, place: 'New Zealand' }, { tag: 'CENS', label: 'Census', y: 1878, place: 'Carterton, New Zealand' }] },
+      { id: 'b', name: 'C D', b: { y: 1880, text: '', place: 'New Zealand' }, d: { y: 1951, text: '', place: 'Wellington, New Zealand' } },
+      { id: 'c', name: 'E F', b: { y: 1700, text: '', place: 'Norwich, Norfolk, England' }, d: { y: 1770, text: '', place: 'Shipdham, Norfolk, England' }, events: [{ tag: 'CENS', label: 'Census', y: 1740, place: 'England' }] },
+    ]);
+    const [a, b, c] = buildAtlas(r).atlas.people;
+    const st = staysOf(a, place);
+    expect(st.map((s) => [s.p, s.from])).toEqual([['birmingham', 1837], ['new-zealand', 1859], ['carterton', 1878], ['wellington', 1903]]);
+    expect(st[2].within).toBe(true);
+    const legs = legsOf(st, place);
+    expect(legs[0]).toMatchObject({ a: 'birmingham', b: 'new-zealand', y0: 1837, y1: 1859 });
+    expect(legs[1]).toMatchObject({ within: true, sail: false });
+    // in New Zealand from 1859, not from 1878; and not drawn in Carterton before 1878
+    expect(whereAt(st, 1858)!.a).toBe('birmingham');
+    expect(whereAt(st, 1865)!.a).toBe('new-zealand');
+    expect(whereAt(st, 1878)!.a).toBe('carterton');
+    // born "New Zealand", died Wellington: a haze for life, not a light in Wellington from birth
+    expect(staysOf(b, place).map((s) => s.p)).toEqual(['new-zealand', 'wellington']);
+    expect(whereAt(staysOf(b, place), 1900)!.a).toBe('new-zealand');
+    // "England" for someone already in Norwich says nothing new
+    expect(staysOf(c, place).map((s) => s.p)).toEqual(['norwich', 'shipdham']);
+    expect(staysOf(c, place)[0].to).toBe(1740);
   });
   it('shows only the town for anyone who died in living memory', () => {
     const r = tiny([{ id: 'old', name: 'A B', b: { y: 1848, text: '' }, d: { y: 1912, text: '', place: 'Linwood, Christchurch, New Zealand' } },
@@ -192,18 +212,32 @@ describe('nobody is drawn before a record places them', () => {
       if (l.hollow || l.moving) continue;
       const own = l.actor.a.stops.filter((s) => s.kind !== 'borrowed');
       const anchored = own.some((s) => s.kind === 'birth' || s.kind === 'baptism');
-      expect(anchored || Math.min(...own.filter((s) => !s.coarse).map((s) => s.y)) <= y + 2, `${l.actor.p.name} in ${y}`).toBe(true);
+      expect(anchored || Math.min(...own.map((s) => s.y)) <= y + 2, `${l.actor.p.name} in ${y}`).toBe(true);
+      // and it is drawn in a place a record of theirs has named by then
+      if (l.site) expect(own.some((s) => s.y <= y + 2 && (world.siteId(s.p) === l.site)), `${l.actor.p.name} at ${l.site} in ${y}`).toBe(true);
     }
   });
   it('draws someone first recorded late in life hollow with a parent until then, or not at all', () => {
-    const late = atlas.people.filter((p) => !p.borrowed && !p.stops.some((s) => s.kind === 'birth' || s.kind === 'baptism') && Math.min(...p.stops.filter((s) => !s.coarse && s.kind !== 'borrowed').map((s) => s.y)) > P.get(p.id)!.b!.y + 2);
+    const late = atlas.people.filter((p) => !p.borrowed && !p.stops.some((s) => s.kind === 'birth' || s.kind === 'baptism') && Math.min(...p.stops.filter((s) => s.kind !== 'borrowed').map((s) => s.y)) > P.get(p.id)!.b!.y + 2);
     expect(late.length).toBeGreaterThan(20);
     for (const p of late) {
       const lent = p.stops[0].kind === 'borrowed';
-      expect(lent !== (p.seen != null), p.id).toBe(true);
+      expect(lent || p.seen != null, p.id).toBe(true);
       const a = world.byId.get(p.id)!;
       if (p.seen != null) { expect(world.lightOf(a, p.seen - 1)).toBeNull(); expect(a.on).toBe(Math.min(a.d, p.seen)); }
-      else { const l = world.scene(a.b + 0.5, null, null).lights.find((x) => x.actor === a)!; expect(l.hollow).toBe(true); }
+      if (lent) { const l = world.scene(a.on + 0.5, null, null).lights.find((x) => x.actor === a)!; expect(l.hollow).toBe(true); }
+    }
+  });
+  it('lends a place only from the year the lender is recorded', () => {
+    for (const p of atlas.people) {
+      const s0 = p.stops[0];
+      if (s0.kind !== 'borrowed') continue;
+      const who = /with (?:her|his|their) \w+, (.+?)(?:, from \d{4}.*)?$/.exec(s0.why)![1];
+      const lender = atlas.people.find((x) => P.get(x.id)!.name === who && (!p.borrowed || x.id === p.borrowed.from)) ?? atlas.people.find((x) => P.get(x.id)!.name === who)!;
+      const recs = lender.stops.filter((s) => s.kind !== 'borrowed');
+      const first = recs.length ? Math.min(...recs.map((s) => s.y)) : (lender.seen ?? lender.stops[0].y);
+      expect(s0.y, `${P.get(p.id)!.name} with ${who}`).toBeGreaterThanOrEqual(first);
+      expect(s0.y).toBeLessThan(P.get(p.id)!.d!.y);
     }
   });
   it('does not count a borrowed starting place as a recorded move', () => {
@@ -217,7 +251,7 @@ describe('nobody is drawn before a record places them', () => {
     const end = world.scene(2026, null, null, true);
     expect(end.lights).toHaveLength(0);
     expect(end.embers.length).toBeGreaterThan(40);
-    for (const e of end.embers) { expect(e.bright).toBe(true); expect(e.actor.a.stops.some((s) => (s.kind === 'death' || s.kind === 'burial') && !s.coarse)).toBe(true); }
+    for (const e of end.embers) { expect(e.bright).toBe(true); expect(e.actor.a.stops.some((s) => (s.kind === 'death' || s.kind === 'burial') && ['town', 'parish'].includes(place(s.p).prec))).toBe(true); }
   });
   it('counts each country from records, and agrees with itself about firsts', () => {
     const poland = world.countries().find((c) => c.name === 'Poland')!;
@@ -269,7 +303,7 @@ describe('the published atlas', () => {
   it('names no one in a reason who is not deceased and named in the river', () => {
     const deadNames = new Set(river.people.filter((p) => !p.living).flatMap((p) => [p.name!, (p.given ?? p.name!).split(' ')[0]]));
     for (const a of file.people) for (const s of a.stops) {
-      const m = /(?:of|with (?:her|his|their) \w+,|married) (.+?)(?:, until (?:her|his|their) own first record)?$/.exec(s.why);
+      const m = /(?:of|with (?:her|his|their) \w+,|married) (.+?)(?:, from \d{4}(?:, the first year (?:she|he|they) is recorded)?)?$/.exec(s.why);
       if (m) expect(deadNames.has(m[1]), s.why).toBe(true);
     }
   });

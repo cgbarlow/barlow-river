@@ -25,18 +25,23 @@ export function slerp(a: LonLat, b: LonLat, t: number): LonLat {
 const inEurope = (p: LonLat) => p[0] > -12 && p[0] < 32 && p[1] > 35 && p[1] < 62;
 const inAustralasia = (p: LonLat) => p[0] > 110 && p[1] < -10 && p[1] > -50;
 
-export type RouteKind = 'direct' | 'cape' | 'horn' | 'suez';
+export type RouteKind = 'direct' | 'cape' | 'horn' | 'panama';
+/**
+ * How a voyage between Europe and New Zealand is drawn. A convention, not a record:
+ * until the Panama Canal opened in 1914 ships for New Zealand, sail and steam alike,
+ * went out round the Cape of Good Hope and came home round Cape Horn.
+ */
 export const ROUTE_LABEL: Record<RouteKind, string> = {
   direct: '',
-  cape: 'Drawn along the usual sailing route of the time, round the Cape of Good Hope. The tree does not record the ship or the route.',
-  horn: 'Drawn along the usual homeward sailing route of the time, round Cape Horn. The tree does not record the ship or the route.',
-  suez: 'Drawn along the usual steamer route of the time, through the Suez Canal. The tree does not record the ship or the route.',
+  cape: 'Drawn along the usual route out at the time, round the Cape of Good Hope. The tree does not record the ship or the route.',
+  horn: 'Drawn along the usual route home at the time, round Cape Horn. The tree does not record the ship or the route.',
+  panama: 'Drawn through the Panama Canal, the usual route once it had opened. The tree does not record the ship or the route.',
 };
 
 const CHANNEL: LonLat[] = [[1.5, 51.05], [-5.5, 49.3]];
 const CAPE_OUT: LonLat[] = [[-13, 38], [-19, 27], [-26, 5], [-29, -24], [8, -40], [60, -45], [112, -47], [148, -46.5]];
-const SUEZ_OUT: LonLat[] = [[-10, 37], [-5.6, 35.95], [12, 37.2], [32.3, 31.5], [32.56, 29.9], [43.3, 12.6], [51.5, 12.5], [80, 5.5], [114.5, -35.5], [146.5, -39.8]];
 const HORN_HOME: LonLat[] = [[-150, -51], [-110, -55], [-68, -57.5], [-45, -45], [-30, -20], [-28, 2], [-34, 30], [-18, 44]];
+const PANAMA_OUT: LonLat[] = [[-30, 40], [-62, 20], [-79.9, 9.4], [-79.5, 8.9], [-95, -3], [-130, -22], [-160, -34]];
 
 function nzApproach(p: LonLat, fromEast = false): LonLat[] {
   // east coast ports are reached round the bottom of the South Island, Wellington
@@ -58,9 +63,9 @@ export function route(a: LonLat, b: LonLat, year: number): { kind: RouteKind; pt
   const eu = out ? a : b, nz = out ? b : a;
   // from the east of England and the Continent, down the Channel; from the west, straight to sea
   const lead: LonLat[] = eu[0] > -1.2 ? CHANNEL : [[-6.5, 50.5]];
-  if (year >= 1870) {
-    const pts = [eu, ...lead, ...SUEZ_OUT, ...nzApproach(nz), nz];
-    return { kind: 'suez', pts: out ? pts : pts.reverse() };
+  if (year >= 1915) {
+    const pts = [eu, ...lead, ...PANAMA_OUT, ...nzApproach(nz, true), nz];
+    return { kind: 'panama', pts: out ? pts : pts.reverse() };
   }
   if (out) return { kind: 'cape', pts: [eu, ...lead, ...CAPE_OUT, ...nzApproach(nz), nz] };
   return { kind: 'horn', pts: [nz, ...nzApproach(nz, true), ...HORN_HOME, ...[...lead].reverse(), eu] };

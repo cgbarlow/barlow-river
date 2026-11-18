@@ -52,6 +52,8 @@ export class Stage {
   goal: Goal | null = null;
   /** extra room to leave clear at the bottom (a phone's sheet) */
   inset = { bottom: 0 };
+  /** on a phone with the sheet open, two shores shows only the shore that matters */
+  focusSide: 'gb' | 'nz' = 'gb';
   private hits: Hit[] = [];
   private siteHits: Hit[] = [];
   private countryHits: { x0: number; y0: number; x1: number; y1: number; name: string }[] = [];
@@ -93,20 +95,23 @@ export class Stage {
       return [{ proj, vis: (ll) => geoDistance(ll, [cam.lon, cam.lat]) < 1.5, globe: true }];
     }
     const tall = hb > W * 1.05, g = tall ? 0 : Math.min(150, W * 0.11), top = 66, pad = 12;
-    const rects: [number, number, number, number][] = tall
-      ? [[pad, top, W - pad, top + (hb - top - 30) * 0.5 - 12], [pad, top + (hb - top - 30) * 0.5 + 12, W - pad, hb - 30]]
-      : [[pad, top, (W - g) / 2, hb - 56], [(W + g) / 2, top, W - pad, hb - 56]];
+    // a phone's sheet covers the lower shore: with it open, draw one shore in the space that is left
+    const one = tall && this.inset.bottom > 120;
+    const rects: [number, number, number, number][] = one
+      ? [[pad, top, W - pad, Math.max(top + 90, H - this.inset.bottom - 10)], [pad, top, W - pad, Math.max(top + 90, H - this.inset.bottom - 10)]]
+      : tall
+        ? [[pad, top, W - pad, top + (hb - top - 30) * 0.5 - 12], [pad, top + (hb - top - 30) * 0.5 + 12, W - pad, hb - 30]]
+        : [[pad, top, (W - g) / 2, hb - 56], [(W + g) / 2, top, W - pad, hb - 56]];
     const fit = (r: number[], box: number[]) => geoMercator().fitExtent([[r[0] + 10, r[1] + 10], [r[2] - 10, r[3] - 10]], { type: 'MultiPoint', coordinates: [[box[0], box[1]], [box[2], box[3]]] }).clipExtent([[r[0], r[1]], [r[2], r[3]]]);
-    const r0 = rects[0];
-    const pr: [number, number, number, number] = [r0[0] + 8, r0[1] + 8, r0[0] + 8 + Math.min(170, (r0[2] - r0[0]) * 0.3), r0[1] + 8 + Math.min(130, (r0[3] - r0[1]) * 0.27)];
-    const r1 = rects[1];
-    const ur: [number, number, number, number] = [r1[0] + 8, r1[1] + 8, r1[0] + 8 + (pr[2] - pr[0]) * 0.8, r1[1] + 8 + (pr[3] - pr[1]) * 0.8];
-    return [
-      { proj: fit(rects[0], GB), vis: inBox(GB), rect: rects[0], title: 'Britain and Ireland' },
-      { proj: fit(rects[1], NZ), vis: inBox(NZ), rect: rects[1], title: 'New Zealand' },
-      { proj: fit(pr, PL), vis: inBox(PL), rect: pr, title: 'Poland', small: true },
-      { proj: fit(ur, US), vis: inBox(US), rect: ur, title: 'United States', small: true },
-    ];
+    // the insets sit on open sea: Poland north-east of Scotland, the United States north-west of the North Island
+    const r0 = rects[0], r1 = rects[1];
+    const iw = (r: number[]) => Math.min(150, (r[2] - r[0]) * 0.26), ih = (r: number[]) => Math.min(112, (r[3] - r[1]) * 0.24);
+    const pr: [number, number, number, number] = [r0[2] - 8 - iw(r0), r0[1] + 8, r0[2] - 8, r0[1] + 8 + ih(r0)];
+    const ur: [number, number, number, number] = [r1[0] + 8, r1[1] + 8, r1[0] + 8 + iw(r1), r1[1] + 8 + ih(r1)];
+    const gb: Panel[] = [{ proj: fit(rects[0], GB), vis: inBox(GB), rect: rects[0], title: 'Britain and Ireland' }, { proj: fit(pr, PL), vis: inBox(PL), rect: pr, title: 'Poland', small: true }];
+    const nz: Panel[] = [{ proj: fit(rects[1], NZ), vis: inBox(NZ), rect: rects[1], title: 'New Zealand' }, { proj: fit(ur, US), vis: inBox(US), rect: ur, title: 'United States', small: true }];
+    if (one) return this.focusSide === 'nz' ? nz : gb;
+    return [gb[0], nz[0], gb[1], nz[1]];
   }
 
   /**
@@ -321,12 +326,19 @@ export class Stage {
   }
   private drawShores(ps: Panel[], sc: Scene, selected: string | null) {
     const c = this.ctx, tall = this.H > this.W * 1.05;
-    this.cached('shores', () => { const c = this.ctx; for (const p of ps) {
+    this.cached('shores' + ps.map((p) => p.title).join(), () => { const c = this.ctx; for (const p of ps) {
       const r = p.rect!; c.save(); c.beginPath(); c.rect(r[0], r[1], r[2] - r[0], r[3] - r[1]); c.clip();
       c.fillStyle = '#0e1d33'; c.fillRect(r[0], r[1], r[2] - r[0], r[3] - r[1]);
       const path = geoPath(p.proj, c); c.fillStyle = '#24395a'; c.strokeStyle = '#3a5580'; c.lineWidth = 0.8; c.beginPath(); path(this.lands.coarse); c.fill(); c.stroke(); c.restore();
       c.strokeStyle = '#2A3F5F'; c.lineWidth = 1; c.strokeRect(r[0] + 0.5, r[1] + 0.5, r[2] - r[0], r[3] - r[1]);
       c.fillStyle = '#9FB0C6'; c.font = '500 11px "IBM Plex Mono", ui-monospace, Menlo, monospace'; c.textBaseline = 'alphabetic'; c.fillText(p.title!.toUpperCase(), r[0] + 8, p.small ? r[1] + 16 : r[1] - 7);
+      // name the countries inside the big panel, faintly, like a map does
+      if (p.title === 'Britain and Ireland') {
+        c.save(); c.beginPath(); c.rect(r[0], r[1], r[2] - r[0], r[3] - r[1]); c.clip();
+        c.fillStyle = 'rgba(159,176,198,.5)'; c.font = 'italic 12px Newsreader, Georgia, serif'; c.textAlign = 'center';
+        for (const [name, lon, lat] of [['Ireland', -8.1, 53.4], ['Wales', -3.75, 52.35], ['England', -1.7, 54.35], ['Scotland', -4.2, 56.9]] as [string, number, number][]) { const q = p.proj([lon, lat]); if (q) c.fillText(name, q[0], q[1]); }
+        c.textAlign = 'left'; c.restore();
+      }
     } });
     const panelOf = (ll: LonLat) => ps.find((p) => p.vis!(ll));
     const pos = (ll: LonLat) => { const p = panelOf(ll); return p ? p.proj(ll) : null; };

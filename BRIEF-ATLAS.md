@@ -37,7 +37,7 @@ One control, three settings.
 
 - **Globe.** The Earth turns to follow the family. During play the camera starts over Norfolk and, when the first ship leaves, turns with it to the other side of the world.
 - **Map.** A flat world centred so that England and New Zealand are both in view and the voyage does not wrap.
-- **Both.** Globe and map side by side (stacked on a phone held upright), linked: same year, same selection, same hover.
+- **Both.** Globe and map side by side on a wide screen, linked: same year and same selection. Not offered on a phone, where there is no room for two.
 
 Switching between globe and map unrolls one into the other.
 

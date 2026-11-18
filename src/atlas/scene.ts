@@ -54,7 +54,7 @@ export class World {
       });
       const last = stays[stays.length - 1].stops;
       const first = place(stays[0].p);
-      const actor: Actor = { id: a.id, p, a, b: p.b.y, d: p.d.y, on: Math.min(p.d.y, a.seen ?? p.b.y), stays, legs, slots: [], hollow: Boolean(a.borrowed), ember: last.some((s) => s.kind === 'death' || s.kind === 'burial'), vague: first.prec === 'area' || first.prec === 'country', disputed: a.stops.some((s) => s.doubt) };
+      const actor: Actor = { id: a.id, p, a, b: p.b.y, d: p.d.y, on: Math.min(p.d.y, a.seen ?? p.b.y), stays, legs, slots: [], hollow: Boolean(a.borrowed), ember: last.some((s) => (s.kind === 'death' || s.kind === 'burial') && ['town', 'parish'].includes(place(s.p).prec)), vague: first.prec === 'area' || first.prec === 'country', disputed: a.stops.some((s) => s.doubt) };
       this.actors.push(actor); this.byId.set(a.id, actor);
     }
     // seats: greedy interval colouring per site
@@ -114,14 +114,14 @@ export class World {
       const dim = focus ? (focus.has(a.id) ? 1 : 0.16) : selected && !sel ? 0.4 : 1;
       if (year < a.on) {
         // the whole of a selected life is laid out, the part still to come faintly
-        if (sel) for (const l of a.legs) if (l.km > 3) traces.push({ actor: a, leg: l, style: 'ahead', alpha: 0.35 });
+        if (sel) for (const l of a.legs) if (l.km > 3 && !l.within) traces.push({ actor: a, leg: l, style: 'ahead', alpha: 0.35 });
         continue;
       }
       const dead = year >= a.d;
       const idx = dead ? a.stays.length - 1 : whereAt(a.stays, year)!.i;
       for (let j = 0; j < a.legs.length; j++) {
         const l = a.legs[j];
-        if (l.km <= 3) continue;
+        if (l.km <= 3 || l.within) continue;
         if (j < idx) traces.push({ actor: a, leg: l, style: l.doubt ? 'doubt' : l.assumed ? 'fade' : 'done', alpha: (sel ? 0.95 : finale ? 0.4 : dead ? 0.2 : 0.42) * dim });
         else if (sel && (dead || j > idx || !whereAt(a.stays, year)!.b)) traces.push({ actor: a, leg: l, style: 'ahead', alpha: 0.35 });
       }
@@ -136,7 +136,9 @@ export class World {
       if (year < a.on + 2) ripples.push({ ll: here, slot: a.slots[idx], age: (year - a.on) / 2, kind: 'birth', actor: a });
       const lent = a.hollow || s.stops.every((x) => x.kind === 'borrowed');
       const w = whereAt(a.stays, year)!;
-      if (!w.b) { lights.push({ actor: a, ll: here, slot: a.slots[idx], alpha: dim, haze, hollow: lent, site }); continue; }
+      // a solid light dims the longer it is since a record last placed the person here
+      const fresh = lent ? 1 : Math.max(0.45, 1 - Math.max(0, year - s.to) / 60);
+      if (!w.b) { lights.push({ actor: a, ll: here, slot: a.slots[idx], alpha: fresh * dim, haze, hollow: lent, site }); continue; }
       const l = a.legs[w.leg!];
       if (w.sail) {
         const p = along(l.pts, w.t!);
@@ -146,8 +148,8 @@ export class World {
       } else {
         // a long gap in the records: still drawn where last recorded, dimming as the years pass.
         // The light appears at the next place only in the year a record finds it there.
-        lights.push({ actor: a, ll: here, slot: a.slots[idx], alpha: (l.assumed ? 1 : 1 - 0.6 * w.t!) * dim, haze, hollow: lent, site });
-        if (l.km > 3) traces.push({ actor: a, leg: l, style: l.doubt ? 'doubt' : 'fade', alpha: (sel ? 0.9 : 0.5) * dim });
+        lights.push({ actor: a, ll: here, slot: a.slots[idx], alpha: fresh * dim, haze, hollow: lent, site });
+        if (l.km > 3 && !l.within) traces.push({ actor: a, leg: l, style: l.doubt ? 'doubt' : 'fade', alpha: (sel ? 0.9 : 0.5) * dim });
       }
     }
     return { year, lights, traces, embers, ripples, alive, ship };
