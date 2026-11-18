@@ -131,3 +131,15 @@ describe('public/data/river.json', () => {
     expect(needles.filter((n) => hay.includes(n))).toEqual([]);
   });
 });
+
+describe('facts', () => {
+  const river = JSON.parse(readFileSync('public/data/river.json', 'utf8'));
+  const P = new Map<string, any>(river.people.map((p: any) => [p.id, p]));
+  it('are computed, and name only the dead', () => {
+    expect(river.facts.length).toBeGreaterThanOrEqual(5);
+    for (const f of river.facts) for (const id of f.people) expect(P.get(id).living).toBe(false);
+  });
+  it('leads that light living people show them only as unnamed markers', () => {
+    for (const l of river.leads) for (const id of l.people) if (P.get(id).living) expect(P.get(id).name).toBeUndefined();
+  });
+});

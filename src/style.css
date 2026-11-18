@@ -34,6 +34,8 @@ h1 { margin: 2px 0 0; font-family: var(--serif); font-weight: 600; font-size: 36
 .lens button { min-height: 40px; padding: 0 14px; border: 0; border-radius: 7px; background: transparent; font-weight: 500; font-size: 13px; white-space: nowrap; transition: background .2s, color .2s; }
 .lens button:hover { background: var(--panel-2); }
 .lens button[aria-checked='true'] { background: var(--amber); color: var(--amber-ink); font-weight: 600; }
+.zoom .help { font: 600 17px var(--serif); color: var(--amber); }
+.guide p b { color: var(--ink); font-weight: 600; }
 .search { position: relative; display: flex; align-items: center; gap: 8px; background: var(--panel); border-radius: 10px; padding: 0 12px; min-height: 48px; color: var(--ink-3); }
 .search input { width: 160px; background: none; border: 0; outline: 0; color: var(--ink); font: 400 14px var(--sans); min-height: 44px; transition: width .2s; }
 .search input::placeholder { color: var(--ink-3); }
@@ -152,8 +154,8 @@ h1 { margin: 2px 0 0; font-family: var(--serif); font-weight: 600; font-size: 36
 .tip { position: fixed; z-index: 40; pointer-events: none; background: var(--panel-2); border: 1px solid #3A506F; border-radius: 8px; padding: 7px 10px; font-size: 13px; box-shadow: 0 10px 24px rgba(0,0,0,.4); max-width: 260px; }
 .tip b { font-family: var(--serif); font-weight: 600; font-size: 15px; display: block; }
 .tip small { color: var(--ink-3); }
-.hint { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%); background: rgba(23,39,63,.94); border: 1px solid #3A506F; border-radius: 12px; padding: 12px 16px; font-size: 14px; color: var(--ink); box-shadow: 0 14px 34px rgba(0,0,0,.45); text-align: center; max-width: 80%; animation: hint-in .5s both; pointer-events: none; }
-@keyframes hint-in { from { opacity: 0; transform: translate(-50%, -40%); } }
+.hint { position: absolute; left: 50%; bottom: 112px; transform: translate(-50%, 0); background: rgba(23,39,63,.94); border: 1px solid #3A506F; border-radius: 12px; padding: 12px 16px; font-size: 14px; color: var(--ink); box-shadow: 0 14px 34px rgba(0,0,0,.45); text-align: center; max-width: 80%; animation: hint-in .5s both; pointer-events: none; }
+@keyframes hint-in { from { opacity: 0; transform: translate(-50%, 12px); } }
 
 /* ---------- timeline ---------- */
 .time { grid-area: time; display: flex; align-items: center; gap: 14px; padding: 10px 24px 14px 32px; border-top: 1px solid #1B2C46; }
@@ -208,6 +210,7 @@ h1 { margin: 2px 0 0; font-family: var(--serif); font-weight: 600; font-size: 36
 .chip.proven, .chip.t-record { background: #12332F; color: #9BE3D6; }
 .chip.open, .chip.t-compiled { background: #1B2F52; color: #A9CBF5; }
 .chip.t-none, .chip.lead { background: #25344D; color: #C5D1E0; }
+.chip.fact { background: #1F2E12; color: #C6E59A; }
 .chip.draft { background: #2C2248; color: #CDB9F7; margin-left: 6px; }
 .who { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
 .who button, .rel { background: #1D3050; border: 0; border-radius: 14px; padding: 5px 10px; font-size: 12px; color: var(--ink); min-height: 28px; }

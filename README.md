@@ -4,6 +4,8 @@ An interactive exploration of the Barlow family tree. Fourteen generations drawn
 
 Status: built and working. Data is a snapshot exported from Iris on 18 November 2026.
 
+![The whole river, by surname](docs/screenshots/river.png)
+
 ## Run it
 
 ```bash
@@ -22,10 +24,14 @@ Then open the address it prints. `npm run build` writes a static site to `dist/`
 2. **Tap a person.** Their record opens: dates, places, photo, sources, research notes, family. Their ancestors and descendants light up. "Follow the water" sends a pulse from them downstream to the present.
 3. **Switch the lens.** By surname, by place, or by certainty (keys 1, 2, 3).
 4. **Open the case file.** Nine evidence cards, ruled out, in doubt or proven. Tapping one moves the river there and lights the people and the water it bears on. "Walk the evidence" steps through them upriver.
-5. **Read the leads.** Things found by rule that the author may not have noticed: a parent who would have been 15, a name given twice, people marked living in a generation born before 1921.
+5. **Read the findings.** Counted from the tree by rule. What it shows: the river reaches New Zealand in 1855, one couple had 14 children, 14% of people cite a record. And what is worth a second look: a parent who would have been 15, a name given twice in six families, people marked living in a generation born before 1921.
 6. **Add a piece of evidence.** A draft card, saved in your browser only. It produces a change request to apply in Iris. The site never writes to the tree.
 
-Also: search by name (`/`), zoom and pan, deep links (the address bar carries the year, person, lens and card).
+Also: search by name (`/`), zoom and pan, deep links (the address bar carries the year, person, lens and card), and a short guide behind the `?` button.
+
+On a wide screen, play starts close on the headwaters and pulls back as the river grows. On a phone the camera travels with the year.
+
+![The case file open on the family that was ruled out](docs/screenshots/case-file.png)
 
 ## How the river is drawn
 
@@ -42,13 +48,13 @@ This replaces the mockup's illustrative joins with real ones.
 
 The tree holds 109 living people. The rule is enforced when the data file is built, so nothing private ever reaches the page.
 
-- A living person is stored as an opaque id, their links, and a position estimated from their relatives. No name, date, sex, surname, place or text.
+- A living person is stored as an opaque id, their links, and a position estimated from their relatives to the nearest decade. No name, date, sex, surname, place or text.
 - `is_deceased` decides. A record with no flag counts as living unless it carries a date more than 120 years old.
 - Marriages with a living partner have no date.
 - Notes and descriptions are published only for people born before 1900 or dead before 1950, and any text that names a living person (by full name, or by a first name only living people have) is dropped.
 - The raw Iris export is never committed. `data/raw/` is in `.gitignore`.
 
-`npm test` checks all of this, including a scan of the published file for every living person's name when the raw export is present.
+`npm test` checks all of this, including a scan of the published file for every living person's name when the raw export is present. The tests also run on every push.
 
 What still shows: the shape of the tree. An unnamed light sits under its named, deceased parents. Decide whether that is acceptable before sharing the link beyond the family.
 
@@ -81,7 +87,8 @@ The case file cards in `src/casefile.ts` are written by hand from the Iris docum
 | `src/casefile.ts` | The open case: evidence cards, tests, story captions |
 | `src/evidence.ts` | Draft evidence and the Iris change request |
 | `tests/` | Unit tests. `npm test` |
-| `scripts/smoke.cjs` | End-to-end test in a real browser. Start the site, then `npm run smoke` |
+| `scripts/smoke.cjs` | End-to-end test in a real browser. `npm run verify` runs the unit tests, builds, serves the build and runs this against it |
+| `pipeline/facts.ts`, `pipeline/leads.ts` | The findings |
 | `docs/data-sources.md` | Where the data lives in Iris and what shape it is in |
 | `docs/council-report.md` | The Council review that chose this concept |
 | `mockup/` | The original static mockup |

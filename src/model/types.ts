@@ -83,4 +83,6 @@ export interface RiverData {
   people: Person[];
   families: Family[];
   leads: Lead[];
+  /** things the tree shows when you count: not problems, just facts */
+  facts: Lead[];
 }

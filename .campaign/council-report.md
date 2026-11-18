@@ -5,45 +5,47 @@ council-type: standalone
 
 # Council Report
 
-Pre-build review of the plan for The River (pedigree-as-river model, computed doubt, case file, leads, read-only evidence composer).
+Post-build review of The River. The pre-build plan review is in `council-report-plan.md`.
 
 ## Animal Perspectives
 
 ### Bear — Vision & Direction
-- The pedigree-as-river model is right: confluences at real marriages answer "where do the lines join" with data.
-- The computed head of proof is the hero moment. Open with the river filling itself.
-- One primary case; Leads are secondary. All seven named lines must stay visible, including the two that are not ancestral (Watkins, Klos side).
+- The build meets the concept and improves on it: real joins, computed head of proof, the oxbow lake, the ghost headwaters.
+- The opening undersells it. On a wide screen the first two centuries, where the case happens, play in a thin strip at the far left. Start close and pull back.
+- Interesting 5, Novel 5, Engaging 5.
 
 ### Cat — Risk & Scope
-- Name-matching to scrub notes is weak. Use an allow-list by era for free text, hash ids, ship no dates, sex or surname for living people. Cut family mode.
-- "Proven" over-claims. Tiers: record cited, compiled tree only, no source, in doubt, disputed, ruled out. Show the rule.
-- 111 people lack a birth year, 61 families lack a marriage date. Estimated positions must look estimated. Leads run on recorded dates only.
+- Privacy holds. The README is honest that the tree's shape still shows.
+- 149 deceased people have no death date; their light goes out at birth plus 70 and the river does not say so.
+- Leads are thin: eleven, six of one kind, and the first restates the case. Surprising is a 4.
+- Tests run only when a person runs them. `color-mix()` and `inert` need a recent browser.
+- The composer is large for a stretch goal. Leave it, add nothing.
 
 ### Owl — Process & Structure
-- Order: data and privacy tests, layout, render and scrubber, record/lenses/case, leads and composer, screenshots and review.
-- Stamp the export date. Document the refresh procedure. Deterministic build.
-- Drop speed control and pausing story beats.
+- Structure is clear. `src/main.ts` is at its limit.
+- Verification should be one command. Keep the plan review. Point the brief's unknowns at their answers.
 
 ### Puppy — Opportunities & Momentum
-- Follow the water: a pulse from the tapped person downstream to the mouth.
-- Oxbow lake and ghost headwaters are the delight. A "Surprise me" button. A beat for the three Peters.
+- The place lens shows the migration but nothing marks the moment. Caption the first births in New Zealand.
+- Compute the facts nobody asked for: biggest family, longest life, most alive at once, children lost young.
+- Pull-back intro makes play a film. Dynamic 4, with a case for 5.
 
 ### Rabbit — Resources & Stakeholders
-- Audience is relatives on phones: plain legend, first-load hint, big targets, list fallback.
-- Keep Polish diacritics, fold them in search. Fonts and photos fail soft. Link each record back to Iris.
+- A cousin arriving cold needs "How to read the river": lights, pebbles, diamonds, dashed water, the flag, the lake, the keys.
+- The author's path back to Iris works.
 
 ### Wolf — Cohesion & Balance
-- Name tributaries by the mother's surname; show wives of unknown parentage as springs.
-- A card for every line, not just Barlow. Phone layout needs real attention. Composer last and small.
+- Findings would spread attention across all seven lines.
+- Fold the repeated "name used twice" leads. The phone version is a full version.
 
 ## Consensus
 
-Proceed. The model is sound and more truthful than the mockup. The risks are over-claiming certainty and a too-clever privacy scrub. Additions are accepted where they reuse existing geometry; features that carry risk or little value are cut.
+Scores for the build: Interesting 5, Novel 5, Surprising 4, Delightful 5, Engaging 5, Interactive 5, Dynamic 4. Total 33 of 35, against 31 for the concept. The two scores below 5 have cheap fixes named by several advisors. Nothing should be cut.
 
 ## Recommended Next Steps
 
-1. Privacy: allow-list free text by era, hashed ids, nothing but an unnamed marker for the living, name-scan test, no family mode.
-2. Honest certainty tiers with the rule shown; estimated dates drawn as estimated; leads on recorded dates only.
-3. Auto-play intro, follow-the-water pulse, line cards for all seven lines, tributaries named by mothers' surnames.
-4. Phone-first panels, list fallback, diacritic-folding search, soft-fail fonts and photos, Iris back-links.
-5. Cut speed control and pausing beats; composer last; document the data refresh.
+1. Pull-back camera during play on wide screens.
+2. Findings computed from the tree, each lighting the river, including migration firsts. Fold repeated name-reuse leads.
+3. "How to read the river" help with shortcuts and the note on estimated deaths.
+4. One-command verify, and tests on every push.
+5. Keep the plan review. Point the brief at the answers.

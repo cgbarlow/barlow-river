@@ -1,11 +1,23 @@
-// End-to-end smoke test. Start the site first (npm run dev, or npm run preview),
-// then: npm run smoke [-- http://localhost:5173/]
+// End-to-end smoke test in a real browser.
+//   npm run smoke                      against a dev server you started (http://localhost:5173/)
+//   npm run smoke -- http://host/      against any address
+//   npm run verify                     builds, serves dist/ itself, and tests that
 const { chromium } = require('playwright');
-const url = process.argv[2] || 'http://localhost:5173/';
+const { spawn } = require('node:child_process');
+const selfServe = process.argv.includes('--preview');
+const url = selfServe ? 'http://localhost:4173/' : process.argv.slice(2).find((a) => a.startsWith('http')) || 'http://localhost:5173/';
+let server;
+async function serve() {
+  if (!selfServe) return;
+  server = spawn('npx', ['vite', 'preview', '--port', '4173', '--strictPort'], { stdio: 'ignore' });
+  for (let i = 0; i < 50; i++) { try { if ((await fetch(url)).ok) return; } catch { /* not up yet */ } await new Promise((r) => setTimeout(r, 200)); }
+  throw new Error('preview server did not start');
+}
 const results = [];
 const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 'ok  ' : 'FAIL'} ${name}${extra ? '  ' + extra : ''}`); };
 
 (async () => {
+  await serve();
   const browser = await chromium.launch();
   const errors = [];
   const open = async (hash = '', viewport = { width: 1440, height: 900 }) => {
@@ -24,6 +36,7 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 
   await page.waitForTimeout(2600);
   const y1 = await year(page);
   check('intro starts in the past and plays forward', y0 < 1700 && y1 > y0, `${y0} -> ${y1}`);
+  check('the camera starts close and pulls back', await page.evaluate(() => window.__river.river.k > 1));
   await page.keyboard.press(' ');
   const y2 = await year(page); await page.waitForTimeout(500);
   check('space pauses', (await year(page)) === y2);
@@ -75,6 +88,10 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 
   const nLeads = await page.locator('[data-lead]').count();
   await page.locator('[data-lead]').first().click();
   check('leads are listed and light people', nLeads >= 5 && (await page.locator('.p.lit').count()) >= 1, `${nLeads} leads`);
+  check('facts are computed and listed', (await page.locator('[data-lead^="fact:"]').count()) >= 5);
+  await page.locator('#help').click();
+  check('the reading guide opens', /How to read the river/.test(await page.locator('#record h2').textContent()));
+  await page.locator('#record [data-act="back"]').click();
   await page.locator('.tabs [data-tab="lines"]').click();
   check('all seven lines have a card', (await page.locator('[data-line]').count()) === 7);
   await page.locator('[data-line="Finch"]').click();
@@ -124,5 +141,6 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 
   await browser.close();
   const failed = results.filter((r) => !r).length;
   console.log(`\n${results.length - failed}/${results.length} passed`);
+  server?.kill();
   process.exit(failed ? 1 : 0);
 })();

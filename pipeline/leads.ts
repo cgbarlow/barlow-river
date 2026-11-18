@@ -11,6 +11,7 @@ export function findLeads(people: Person[], families: Family[], unflagged: strin
   const P = new Map(people.map((p) => [p.id, p]));
   const F = new Map(families.map((f) => [f.id, f]));
   const leads: Lead[] = [];
+  const reuse: { name: string; years: string; explained: boolean; group: Person[] }[] = [];
   const add = (kind: string, key: string, title: string, body: string, ps: Person[], y: number) =>
     leads.push({ id: `${kind}:${key}`, kind, title, body, people: ps.map((p) => p.id), y });
 
@@ -47,9 +48,7 @@ export function findLeads(people: Person[], families: Family[], unflagged: strin
       group.sort((a, b) => a.b!.y - b.b!.y);
       const died = group.slice(0, -1).filter((c) => rec(c, 'd') && c.d!.y <= group[group.length - 1].b!.y + 1);
       const years = group.map((c) => c.b!.text.replace(/^.*?(\d{4}(\/\d\d)?)$/, '$1')).join(', ');
-      add('name-reuse', f.id + first(group[0]), `${group.length} children named ${first(group[0])}`,
-        `One family baptised ${group.length} children ${first(group[0])}: ${years}. ${died.length ? `${died.length === 1 ? 'The earlier one' : 'The earlier ones'} had died, and the name was given again, which was normal practice.` : 'No death is recorded for the earlier one. If the earlier child did not die young, one of these may be a duplicate record.'}`,
-        group, group[0].b!.y);
+      reuse.push({ name: first(group[0]), years, explained: died.length > 0, group });
     }
 
     // children too close together
@@ -69,6 +68,12 @@ export function findLeads(people: Person[], families: Family[], unflagged: strin
       }
     }
   }
+
+  // a name given twice: one entry for the whole tree
+  const open = reuse.filter((r) => !r.explained);
+  if (reuse.length) add('name-reuse', 'all', `A name given twice in ${reuse.length} families`,
+    `${reuse.map((r) => `${r.name} (${r.years})`).join('; ')}. Giving a dead child's name to the next was normal, and ${reuse.length - open.length} of these have the earlier death on record. ${open.length ? `For ${open.map((r) => r.name).join(', ')} no death is recorded for the earlier child, so one of each pair may be a duplicate record.` : ''}`,
+    reuse.flatMap((r) => r.group), Math.min(...reuse.map((r) => r.group[0].b!.y)));
 
   for (const p of people) {
     if (p.living) continue;

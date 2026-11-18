@@ -74,6 +74,9 @@ export class River {
   inset = { right: 0, bottom: 0 };
   /** on narrow screens the camera shows a window of years and travels with the scrubber */
   follow = false;
+  /** while playing on a wide screen the camera starts close and pulls back as the river grows */
+  private autoCam = false;
+  private extent: { year: number; y0: number; y1: number }[] = [];
   /** earliest year the scrubber may reach */
   minYear = 1500;
   /** screen px to keep clear at the bottom of the fit view (the legend) */
@@ -340,6 +343,11 @@ export class River {
       }
     }
     for (const l of this.labelEls) l.el.classList.toggle('future', l.year > year);
+    if (this.autoCam) {
+      const t = this.autoTarget(), a = ripple ? 0.085 : 0.4;
+      this.k += (t.k - this.k) * a; this.tx += (t.tx - this.tx) * a; this.ty += (t.ty - this.ty) * a;
+      if (year >= this.data.meta.thisYear) { this.autoCam = false; this.fit(); } else this.apply();
+    }
     if (this.follow && this.narrow) {
       const tx = this.followTx(this.k);
       if (Math.abs(tx - this.tx) > 0.5) { this.tx = Math.abs(year - prev) > 30 ? tx : this.tx + (tx - this.tx) * 0.35; this.apply(); }
@@ -398,6 +406,28 @@ export class River {
     this.svg.setAttribute('viewBox', `0 0 ${this.w} ${this.h}`);
     if (wasFit) this.fit(false); else this.apply();
   }
+  startAutoCamera() {
+    if (this.narrow || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!this.isFit && !this.autoCam) return; // the viewer has moved the camera: leave it alone
+    if (!this.extent.length) {
+      const pts = [...this.L.spots.values()].sort((a, b) => a.year - b.year);
+      let y0 = this.L.trunk.y - 70, y1 = this.L.trunk.y + 70;
+      for (const p of pts) { y0 = Math.min(y0, p.y - 26); y1 = Math.max(y1, p.y + 26); this.extent.push({ year: p.year, y0, y1 }); }
+    }
+    this.autoCam = true;
+  }
+  private autoTarget() {
+    const b = this.L.bounds, year = this.year;
+    let e = this.extent[0];
+    for (const x of this.extent) { if (x.year > year + 12) break; e = x; }
+    const fit = this.fitView();
+    const w = this.w - this.inset.right, h = this.h;
+    const padT = 78, padB = this.padBottom, padX = 24;
+    const x0 = b.x0, x1 = Math.min(b.x1, this.L.X(year) + 190);
+    const k = Math.max(fit.k, Math.min(1.75, (w - padX * 2) / (x1 - x0), (h - padT - padB) / (e.y1 - e.y0)));
+    if (k <= fit.k * 1.02) return fit;
+    return { k, tx: padX - x0 * k, ty: padT + (h - padT - padB) / 2 - ((e.y0 + e.y1) / 2) * k };
+  }
   private get narrow() { return this.w < 700 || this.h < 330; }
   /** Let the camera travel with the year again (narrow screens). */
   resumeFollow() { if (this.narrow) { this.follow = true; this.tx = this.followTx(this.k); this.clampPan(); this.apply(); } }
@@ -432,7 +462,7 @@ export class River {
     this.follow = this.narrow;
     if (animate) this.flyTo(v.k, v.tx, v.ty); else { this.k = v.k; this.tx = v.tx; this.ty = v.ty; this.apply(); }
   }
-  get isFit() { return Math.abs(this.k - this.fitK) < 0.002; }
+  get isFit() { return Math.abs(this.k - this.fitK) < 0.002 || this.autoCam; }
   zoomBy(f: number, cx = (this.w - this.inset.right) / 2, cy = (this.h - this.inset.bottom) / 2) {
     const k = Math.max(this.fitK * 0.7, Math.min(9, this.k * f));
     const r = k / this.k;
@@ -461,6 +491,7 @@ export class River {
   }
   private flyTo(k: number, tx: number, ty: number, ms = 620) {
     cancelAnimationFrame(this.anim);
+    this.autoCam = false;
     if (Math.abs(k - this.fitK) > 0.002) this.follow = false;
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const k0 = this.k, x0 = this.tx, y0 = this.ty, t0 = performance.now();
@@ -486,12 +517,14 @@ export class River {
     this.svg.classList.toggle('zoom-close', k >= 3.2);
     this.drawGrid();
     this.placeCursor();
-    this.nameG.style.opacity = '0';
+    if (!this.autoCam) this.nameG.style.opacity = '0';
     this.queueLabels();
   }
   private queueLabels() {
+    // while the camera is travelling by itself, refresh names steadily instead of waiting for it to stop
+    if (this.autoCam) { if (!this.labelTimer) this.labelTimer = window.setTimeout(() => { this.labelTimer = 0; this.layoutNames(); }, 260); return; }
     clearTimeout(this.labelTimer);
-    this.labelTimer = window.setTimeout(() => this.layoutNames(), 140);
+    this.labelTimer = window.setTimeout(() => { this.labelTimer = 0; this.layoutNames(); }, 140);
   }
   /**
    * Name labels are placed in screen space, most important first, and a name
@@ -600,6 +633,7 @@ export class River {
       svg.setPointerCapture(e.pointerId);
       cancelAnimationFrame(this.anim);
       moved = 0; start = p;
+      if (!(e.target as Element).closest('.cursor')) this.autoCam = false;
       if (pointers.size === 2) { const [a, b] = [...pointers.values()]; pinch0 = Math.hypot(a.x - b.x, a.y - b.y); mode = 'pinch'; return; }
       mode = target.closest('.cursor') ? 'scrub' : 'pan';
       if (mode === 'scrub') svg.classList.add('scrubbing');
@@ -653,6 +687,7 @@ export class River {
       e.preventDefault();
       const p = local(e);
       if (e.shiftKey || (Math.abs(e.deltaX) > Math.abs(e.deltaY) && !e.ctrlKey)) { this.tx -= e.deltaX || e.deltaY; this.apply(); return; }
+      this.autoCam = false;
       const f = Math.exp(-e.deltaY * (e.ctrlKey ? 0.012 : 0.0022));
       const k = Math.max(this.fitK * 0.7, Math.min(9, this.k * f));
       const r = k / this.k;

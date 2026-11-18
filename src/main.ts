@@ -165,6 +165,7 @@ function play(keepHint = false) {
   stopWalk();
   river.resumeFollow();
   if (!keepHint) $('#hint').hidden = true;
+  river.startAutoCamera();
   if (state.year >= data.meta.thisYear) setYear(trackMin + 20);
   state.playing = true;
   document.body.classList.add('playing');
@@ -220,6 +221,8 @@ function buildHappenings() {
     add(f.m.y, anc ? 4 : 1.5, `${a.name} marries ${b.name}${where(f.m.place)}.${anc ? ' Two streams join.' : ''}`);
   }
   for (const b of BEATS) add(b.y, 9, b.text);
+  const nz = data.facts.find((f) => f.id === 'fact:first-nz');
+  if (nz) add(nz.y, 8.5, `${nameOf(nz.people[0])} is born in New Zealand, the first of the family there.`);
   happenings = map;
 }
 function caption(fromPlay: boolean) {
@@ -232,12 +235,12 @@ function caption(fromPlay: boolean) {
   const span = fromPlay ? 1 : 0;
   for (let t = y - span; t <= y; t++) for (const h of happenings!.get(t) ?? []) if (!best || h.w > best.w) best = h;
   if (!best) { if (!fromPlay) el.classList.remove('on'); return; }
-  if (fromPlay && now < captionHold && best.w < 9) return;
+  if (fromPlay && now < captionHold && best.w < 8) return;
   if (best.y === captionYear && el.dataset.t === best.text) return;
   captionYear = best.y; el.dataset.t = best.text;
   el.innerHTML = `<b>${best.y}</b>${esc(best.text)}`;
   el.classList.add('on');
-  captionHold = now + (best.w >= 9 ? 3400 : best.w >= 3 ? 1700 : 900);
+  captionHold = now + (best.w >= 8 ? 3400 : best.w >= 3 ? 1700 : 900);
 }
 
 function buildSpark() {
@@ -370,20 +373,24 @@ const LEAD_KIND: Record<string, string> = {
   'young-marriage': 'Unlikely age', 'long-life': 'Very long life', 'name-reuse': 'A name used twice', flag: 'Living or not?', unsourced: 'No sources', undated: 'No dates',
 };
 function leadsHtml(): string {
-  return `
-    <div class="kicker">Leads</div>
-    <h2>Things the river noticed</h2>
-    <p class="lede">Found by rule, not by a person, from recorded dates only. Each is a place where one record could change the picture. Some will turn out to be nothing.</p>
-    <div class="cards">${data.leads.map((l) => {
+  const list = (items: typeof data.leads, fact: boolean) => items.map((l) => {
       const on = state.lead === l.id;
       const few = l.people.length <= 8;
       return `<div class="card${on ? ' on' : ''}" data-lead="${esc(l.id)}" role="button" tabindex="0" aria-expanded="${on}">
-        <span class="chip lead">${esc(LEAD_KIND[l.kind] ?? 'Lead')}</span>
+        <span class="chip ${fact ? 'fact' : 'lead'}">${esc(fact ? 'The tree shows' : LEAD_KIND[l.kind] ?? 'Lead')}</span>
         <span class="t">${esc(l.title)}</span>
         <span class="b clip">${esc(l.body)}</span>
         <span class="more">${few ? `<span class="who">${chips(l.people)}</span>` : `${l.people.length} people are lit on the river.`}</span>
       </div>`;
-    }).join('')}</div>
+    }).join('');
+  return `
+    <div class="kicker">Findings</div>
+    <h2>What the river shows</h2>
+    <p class="lede">Counted from the tree by rule, not written by a person. Recorded dates only, and only the dead.</p>
+    <div class="cards">${list(data.facts, true)}</div>
+    <h3>Worth a second look</h3>
+    <p class="lede">Places where one record could change the picture. Some will turn out to be nothing.</p>
+    <div class="cards">${list(data.leads, false)}</div>
     <button class="btn wide quiet" data-act="surprise">Surprise me</button>`;
 }
 function lineInfo(name: string) {
@@ -638,8 +645,8 @@ function openCard(id: string, frame = true, keepYear = false) {
   writeHash();
 }
 function openLead(id: string) {
-  const lead = data.leads.find((l) => l.id === id);
-  if (!lead) return;
+  const lead = [...data.facts, ...data.leads].find((l) => l.id === id);
+  if (!lead || state.composing) return;
   stop();
   state.selected = null; river.setSelected(null);
   state.lead = state.lead === id ? null : id;
@@ -813,7 +820,8 @@ function bindChrome() {
     else if (act === 'savedraft') saveDraft();
     else if (act === 'walk') { if (walking) stopWalk(); else walkEvidence(); }
     else if (act === 'rule') { state.tab = 'case'; if (state.record) closeRecord(); renderTab(); openSheet(true); document.querySelector('.rule')?.scrollIntoView({ block: 'center' }); }
-    else if (act === 'surprise') { const pool = data.leads.filter((l) => l.id !== state.lead); state.lead = null; openLead(pool[Math.floor(Math.random() * pool.length)].id); document.querySelector('.card.on')?.scrollIntoView({ block: 'nearest' }); }
+    else if (act === 'help') { stopWalk(); showHelp(); }
+    else if (act === 'surprise') { const pool = [...data.facts, ...data.leads].filter((l) => l.id !== state.lead); state.lead = null; openLead(pool[Math.floor(Math.random() * pool.length)].id); document.querySelector('.card.on')?.scrollIntoView({ block: 'nearest' }); }
   });
   $('#record').addEventListener('change', (e) => { if (state.composing && (e.target as HTMLElement).matches('select')) syncCompose(); });
   document.addEventListener('keydown', (e) => {
@@ -827,6 +835,7 @@ function bindChrome() {
     else if (e.key === 'ArrowLeft') { stop(); setYear(state.year - (e.shiftKey ? 10 : 1)); }
     else if (e.key === 'ArrowRight') { stop(); setYear(state.year + (e.shiftKey ? 10 : 1)); }
     else if (e.key === '/') { $('#search').focus(); e.preventDefault(); }
+    else if (e.key === '?') showHelp();
     else if (e.key === 'Escape') { stopWalk(); if (state.record) { closeRecord(); select(null); } else if (state.card || state.lead) { state.card = null; state.lead = null; focusIds(null, false); renderTab(); writeHash(); } else { focusIds(null, false); document.querySelectorAll('.linecard.on').forEach((x) => x.classList.remove('on')); river.fit(); } }
     else if (e.key === '+' || e.key === '=') river.zoomBy(1.5);
     else if (e.key === '-') river.zoomBy(1 / 1.5);
@@ -838,6 +847,34 @@ function bindChrome() {
   addEventListener('hashchange', applyHash);
   addEventListener('resize', () => { syncInset(); syncLegendPad(); });
   bindSearch();
+}
+function showHelp() {
+  if (state.composing) return;
+  if (state.selected) select(null);
+  state.record = { kind: 'rule' };
+  const el = $('#record');
+  el.hidden = false;
+  const c = data.meta.counts;
+  el.innerHTML = `<button class="back" data-act="back">← Back</button>
+  <div class="kicker">A short guide</div>
+  <h2>How to read the river</h2>
+  <div class="rec guide">
+    <p><b>Time runs left to right.</b> Drag the year, or press play. What lies ahead of the year is shown faintly.</p>
+    <p><b>Each stream is a family line.</b> It starts with its earliest known person. Where two streams join, two people married. The Barlow stream is the trunk, and the river ends at the youngest generation alive today.</p>
+    <p><b>Each light is a person.</b> Bright while they are alive, dark once they have died. Ringed lights are direct ancestors. A dashed ring means the birth year is an estimate.</p>
+    <p><b>Diamonds are the living.</b> ${c.living} of the ${c.people} people in the tree are alive. They have no name, date or place here.</p>
+    <p><b>Broken water is doubt.</b> Solid water has a source. Dashed water is a link the tree itself calls a hypothesis. Dotted water is disputed. The flag marks how far up the Barlow stream the evidence runs without a break.</p>
+    <p><b>The lake is a dead end.</b> A family once thought to be ancestors, cut off when a will ruled them out. The three dotted springs at the far left are guesses at where the name came from.</p>
+    <p><b>Some dates are guesses.</b> ${data.people.filter((p) => !p.living && p.d?.est).length} people have no recorded death. Their light goes out seventy years after birth. Their record says “not recorded”.</p>
+    <h3>Things to try</h3>
+    <p>Tap any light for the person’s record, then “Follow the water”. Switch the lens to see where people lived, or how well each link is sourced. Open a card in the case file. Zoom in to see names.</p>
+    <h3>Keys</h3>
+    <dl class="kv"><dt>Space</dt><dd>Play or pause</dd><dt>← →</dt><dd>One year. With Shift, ten</dd><dt>1 2 3</dt><dd>Surname, place, certainty</dd><dt>/</dt><dd>Find a person</dd><dt>+ − 0</dt><dd>Zoom in, out, whole river</dd><dt>Esc</dt><dd>Close, clear</dd></dl>
+    <p class="fine">Best in a browser from 2023 or later.</p>
+  </div>`;
+  el.scrollTop = 0;
+  openSheet(true);
+  $('#panel-body').inert = true;
 }
 function showRequest(text: string) {
   state.record = { kind: 'rule' };

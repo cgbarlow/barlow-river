@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import { parseDate, type ParsedDate } from './dates.ts';
 import { regionOf, tidyPlace } from './places.ts';
 import { findLeads } from './leads.ts';
+import { findFacts } from './facts.ts';
 import type { Citation, DateInfo, Family, LifeEvent, Person, RiverData, Tier } from '../src/model/types.ts';
 
 type Any = Record<string, any>;
@@ -250,7 +251,7 @@ export function buildRiver(exp: Any, opts: BuildOptions = {}): RiverData {
       counts: { people: people.length, living: people.filter((p) => p.living).length, deceased: people.filter((p) => !p.living).length, families: families.length, sources: rawSources.length },
       thisYear,
     },
-    people, families, leads,
+    people, families, leads, facts: findFacts(people, [...families], thisYear),
   };
 }
 
