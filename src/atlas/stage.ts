@@ -90,7 +90,7 @@ export class Stage {
       const proj = geoOrthographic().rotate([-cam.lon, -cam.lat]).scale(this.R * cam.k).translate([W / 2, hb / 2]).clipAngle(90);
       return [{ proj, vis: (ll) => geoDistance(ll, [cam.lon, cam.lat]) < 1.5, globe: true }];
     }
-    const tall = hb > W * 1.05, g = tall ? 0 : Math.min(150, W * 0.11), top = 62, pad = 12;
+    const tall = hb > W * 1.05, g = tall ? 0 : Math.min(150, W * 0.11), top = 66, pad = 12;
     const rects: [number, number, number, number][] = tall
       ? [[pad, top, W - pad, top + (hb - top - 30) * 0.5 - 12], [pad, top + (hb - top - 30) * 0.5 + 12, W - pad, hb - 30]]
       : [[pad, top, (W - g) / 2, hb - 56], [(W + g) / 2, top, W - pad, hb - 56]];

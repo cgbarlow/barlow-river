@@ -15,14 +15,15 @@ body.kbd .views:focus { outline: 2px solid var(--amber); outline-offset: -2px; }
 .legend i.ln.q { border-top: 2px dotted #FF8A7A; }
 .legend .key-toggle { font-weight: 600; text-decoration: none; color: var(--ink); }
 .legend.collapsed > :not(.key-toggle) { display: none; }
-.countries { position: absolute; right: 16px; top: 8px; z-index: 2; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; max-width: 52%; }
+.countries { position: absolute; right: 16px; left: 16px; top: 8px; z-index: 2; display: flex; gap: 6px; flex-wrap: nowrap; justify-content: flex-end; overflow-x: auto; scrollbar-width: none; pointer-events: none; }
+.countries > * { pointer-events: auto; flex: none; }
 .countries button, .countries .sea { min-height: 32px; padding: 0 11px; border-radius: 16px; border: 1px solid var(--line); background: rgba(23,39,63,.92); color: var(--ink); font-size: 12.5px; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
 .countries b { font: 500 12px var(--mono); color: var(--amber); }
 .countries button.none { color: var(--ink-3); } .countries button.none b { color: var(--ink-3); }
 .countries button:hover { border-color: #4A6186; }
 .countries button[aria-pressed='true'] { background: var(--amber); border-color: var(--amber); color: var(--amber-ink); font-weight: 600; } .countries button[aria-pressed='true'] b { color: var(--amber-ink); }
 .countries .sea { border-style: dashed; color: var(--ink-2); }
-.atlas .caption { max-width: min(560px, 44%); pointer-events: none; }
+.atlas .caption { top: 48px; pointer-events: none; }
 .stops { list-style: none; margin: 8px 0 0; padding: 0; }
 .stops li { display: grid; grid-template-columns: 52px 1fr; gap: 10px; padding: 8px 0; border-top: 1px solid #22344f; font-size: 13.5px; line-height: 1.4; }
 .stops li b { font: 500 12.5px var(--mono); color: var(--amber); padding-top: 1px; }
@@ -50,8 +51,8 @@ body.kbd .views:focus { outline: 2px solid var(--amber); outline-offset: -2px; }
   .atlas .tools { flex-wrap: wrap; }
   .atlas .lens.view { order: 3; width: 100%; flex: none; }
   .atlas .lens.view button[data-view='both'] { display: none; }
-  .countries { left: 8px; right: 8px; top: 4px; max-width: none; flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; scrollbar-width: none; padding-bottom: 2px; }
-  .countries button, .countries .sea { min-height: 36px; flex: none; }
+  .countries { left: 8px; right: 8px; top: 4px; justify-content: flex-start; padding-bottom: 2px; }
+  .countries button, .countries .sea { min-height: 36px; }
   .atlas .caption { top: 46px; max-width: calc(100% - 28px); }
 }
 @media (max-height: 520px) and (min-aspect-ratio: 13/10) {
