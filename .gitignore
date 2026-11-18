@@ -1,0 +1,7 @@
+node_modules
+dist
+# Raw Iris exports hold living people. Never commit them.
+data/raw
+test-results
+.campaign/conversations
+*.local

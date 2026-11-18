@@ -84,6 +84,8 @@ From the Iris document "Hypothesis: the original Barlow village". Last reviewed 
 
 These were not checked during the review. Check them first.
 
+(Since built. All five are answered in `docs/data-sources.md` under "What the build confirmed".)
+
 - Whether every person record carries birth and death dates as fields. Dates and places do appear in the element description as text, for example "Born 1871 in New Zealand. Died 1949." That was seen on Carter and Klos records. The one record read in full (a 17th-century spouse) had no date fields. The build may need to parse the description, or read the GEDCOM fields if they exist.
 - Whether places come in a form that can be mapped or grouped. Places seen so far are free text: Norwich, Warsaw, Brzeg, Wanganui.
 - Who is living. Some records have a birth date and no death date. Check `is_deceased` on each rather than guessing from dates.

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F1B2D">
+<meta name="description" content="The Barlow family tree drawn as a river: streams that join at each marriage, and a case file for the one question the tree cannot yet answer.">
+<title>The River</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230F1B2D'/%3E%3Cpath d='M4 11c8 0 8 6 14 6h10M6 24c6 0 7-7 12-7' stroke='%23F2B544' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap">
+</head>
+<body>
+<div id="app" class="loading">
+  <header class="top">
+    <div class="brand">
+      <div class="eyebrow" id="eyebrow">Barlow family</div>
+      <h1>The River</h1>
+    </div>
+    <div class="tools">
+      <div class="search">
+        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <input id="search" type="search" placeholder="Find a person" autocomplete="off" spellcheck="false" aria-label="Find a person" aria-controls="results" role="combobox" aria-expanded="false">
+        <ul id="results" role="listbox" hidden></ul>
+      </div>
+      <div class="lens" role="radiogroup" aria-label="Colour the river by">
+        <button role="radio" data-lens="surname" aria-checked="true">By surname</button>
+        <button role="radio" data-lens="place" aria-checked="false">By place</button>
+        <button role="radio" data-lens="certainty" aria-checked="false">By certainty</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="stage" id="stage">
+    <svg id="river" role="application" aria-label="The river. Family lines drawn as streams across four centuries, joining at each marriage. Up and down arrows step through people in birth order."></svg>
+    <div class="caption" id="caption" aria-live="polite"></div>
+    <div class="legend" id="legend"></div>
+    <div class="zoom">
+      <button id="help" class="help" data-act="help" aria-label="How to read the river" title="How to read the river">?</button>
+      <button id="zin" aria-label="Zoom in">+</button>
+      <button id="zout" aria-label="Zoom out">−</button>
+      <button id="zfit" aria-label="Show the whole river" title="Show the whole river">
+        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+    <div class="tip" id="tip" hidden></div>
+    <div class="hint" id="hint" hidden>Drag the year, or press play. Tap any light to meet a person.</div>
+  </main>
+
+  <footer class="time">
+    <button id="play" class="play" aria-label="Play the timeline">
+      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16"><path class="i-play" d="M4 2 L13 8 L4 14 Z"/><path class="i-pause" d="M3.5 2h3.2v12H3.5zM9.3 2h3.2v12H9.3z"/></svg>
+    </button>
+    <div class="year-read"><span id="year">2026</span><small id="alive"></small></div>
+    <div class="track" id="track" role="slider" tabindex="0" aria-label="Year" aria-valuemin="1590" aria-valuemax="2026" aria-valuenow="2026">
+      <svg id="spark" preserveAspectRatio="none"></svg>
+      <div class="track-fill" id="track-fill"></div>
+      <div class="track-handle" id="track-handle"></div>
+      <div class="track-ticks" id="track-ticks"></div>
+    </div>
+  </footer>
+
+  <aside class="panel" id="panel" aria-label="Case file and details">
+    <button class="grab" id="grab" aria-label="Open or close the panel"><span></span></button>
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="case" aria-selected="true">Case file</button>
+      <button role="tab" data-tab="leads" aria-selected="false">Findings</button>
+      <button role="tab" data-tab="lines" aria-selected="false">Lines</button>
+    </nav>
+    <div class="panel-body" id="panel-body"></div>
+    <div class="record" id="record" hidden></div>
+  </aside>
+</div>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>
