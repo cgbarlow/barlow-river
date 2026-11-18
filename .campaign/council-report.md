@@ -5,45 +5,51 @@ council-type: standalone
 
 # Council Report
 
-Closing round. Earlier rounds: `council-report-plan.md`, `council-report-post-build.md`, `council-report-round-3.md`, `council-report-round-4.md`.
+Pre-build review of the plan for The Atlas (`BRIEF-ATLAS.md`): the River's timelapse on a globe, a flat map, or both. Version 1's closing report is kept as `council-report-closing.md`.
 
 ## Animal Perspectives
 
 ### Bear — Vision & Direction
-- A visitor sees time and doubt in the first ten seconds without reading: the river grows from three dotted guesses, a cut-off lake sits beside it, a flag marks where the evidence stops.
-- Surprises are now starred on the water and one arrives as a caption. Surprising moves to 5.
+- Place is the natural third axis after time and doubt. In the River it was only a colour.
+- The hero moment is the globe turning from Norfolk to New Zealand as the first ship leaves. Open on that.
+- Globe is the default and the film; the flat map is the reading view; side by side is an extra.
+- Doubt stays first-class. Pinning 340 people with confidence would betray version 1.
 
 ### Cat — Risk & Scope
-- Both items left unfixed last round are fixed: sideways phones show river and record side by side; people ahead of the year can be tapped.
-- "Narrowly" is dropped.
-- Two limits on what has been shown: the last five small fixes were verified by browser checks, not seen again by the reviewer; and publishing is proved only up to the artifact, because running the Pages workflow publishes a family's data.
-- Privacy held through every scan by three separate testers.
+- Two thirds of people have no place of their own. Borrowed places must look different at a glance; the headline count is people placed by record.
+- Sea routes are invention: draw dashed, label "customary route", never state a voyage year the records lack. "Arrived by" not "sailed in".
+- When a move happened is a window, not a date. Show the window in words.
+- Privacy: recent death places point at the living. Town only after 1950. `river.json` already ships one street address; fix in the Atlas data, report it, leave version 1 alone.
+- Hand-typed coordinates need a per-country box test. Cut order if short: the globe-to-map morph, then the certainty lens.
 
 ### Owl — Process & Structure
-- Council before, Council after, iteration, then four more rounds with two outside testers over seven passes.
-- Browser checks rose from 33 to 59. Unit and privacy tests pass on GitHub for each recent push.
-- Split `src/main.ts` before the next feature.
+- A separate `atlas.html` with its own entry honours "split `src/main.ts` before the next feature" without touching the River.
+- Data and tests first. `npm run verify` stays one command and runs both browser suites.
+- Keep this report beside the five from version 1.
 
 ### Puppy — Opportunities & Momentum
-- Tapping a faint light in the future and having the river run forward to it is the best small thing.
-- The stars add without clutter. Nothing left worth holding the work for.
+- Embers where people died: the map gets richer every decade.
+- Follow one person's journey with a button.
+- A caption when each line first appears in a new country. A thin atmosphere on the globe.
 
 ### Rabbit — Resources & Stakeholders
-- Any phone, held either way, gets the full experience and a guide. The author has a route back to Iris from every record.
-- What is missing is not in the build: someone has to decide to share it.
+- Phones: one-finger spin, pinch zoom, the page must not scroll under the gesture.
+- Norwich holds thirty-odd people within a kilometre: fan lights out, tap a place for a list, and give a list of everyone as the keyboard route.
+- Bundled basemap, no tiles, watch the weight. Polish names keep their diacritics.
 
 ### Wolf — Cohesion & Balance
-- The landscape phone, the one neglected surface, now has its own layout and checks. Attention is balanced.
+- The Polish lines are mostly living or undated; Poland may be four lights. Say why, and have the camera visit.
+- Wives are placed by their children's births. Use that evidence and credit it.
+- First-appearance captions for all seven lines.
 
 ## Consensus
 
-Final scores: Interesting 5, Novel 5, Surprising 5, Delightful 5, Engaging 5, Interactive 5, Dynamic 5. Total 35 of 35, against 31 for the concept. Done against the brief (five interactions, four rules) and against the bar: very polished, useful, delightful, novel, fully working. Nothing in the build stands between this and that bar.
-
-Not demonstrated: the last five small fixes were confirmed by automated checks rather than a person, and the site has not been published.
+Proceed. The concept scores Interesting 4, Novel 4, Surprising 4, Delightful 5, Engaging 5, Interactive 4, Dynamic 5: 31 of 35, the same as the River's concept. The risk every advisor named from a different side is honesty about the two thirds of people with no place of their own. Sea routes are kept but drawn as custom, not record. All three views are built; globe is the default.
 
 ## Recommended Next Steps
 
-1. Owner: decide whether to publish, given that the tree's shape shows.
-2. Owner: decide whether named, recently deceased, undated people should appear.
-3. Owner: decide whether public "Open in Iris" links should point at the test host.
-4. Split `src/main.ts` before the next feature.
+1. Three visibly different kinds of light (recorded, borrowed, area only) and a tray for the unplaced. Headline count: people placed by record.
+2. Moves as windows ("in Norwich 1851, in Howick by 1855"). Routes dashed and labelled customary. No invented dates.
+3. Children's birthplaces and marriage places as evidence for parents, credited on the person.
+4. Town-only places after 1950 in the Atlas data. Coordinate box test per country. Report the River's street address to the owner.
+5. Globe default with auto-camera to the first crossing; fan-out at crowded places; one-finger spin; list fallback; first-appearance captions for all seven lines; say why Poland is sparse.
