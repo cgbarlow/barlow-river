@@ -161,7 +161,7 @@ export class Stage {
     // that creeps every frame costs a full redraw of the land every frame.
     let dl = g.lon - c.lon; if (dl > 180) dl -= 360; if (dl < -180) dl += 360;
     if (!snap) {
-      const off = (Math.max(Math.abs(dl), Math.abs(g.lat - c.lat)) * c.k) / 1.2 + Math.abs(g.k - c.k) / c.k / 0.08;
+      const off = (Math.max(Math.abs(dl), Math.abs(g.lat - c.lat)) * c.k) / 1.2 + Math.abs(g.k - c.k) / c.k / 0.2;
       if (this.travelling ? off < 0.1 : off < 1) { this.travelling = false; return; }
       this.travelling = true;
     }
@@ -318,8 +318,11 @@ export class Stage {
       if (drawn >= labels || n < 0.5) continue;
       // a record that names only the country is marked as exactly that
       const text = pl.prec === 'country' ? `somewhere in ${pl.name}` : pl.name.split(',')[0].replace(' (then Alexandra)', ''), tw = c.measureText(text).width, off = 8 + gap * Math.sqrt(Math.min(n, 30));
-      const box = [q[0] + off, q[1] - 7, q[0] + off + tw, q[1] + 7];
-      if (p.rect && box[2] > p.rect[2] - 2) continue;
+      let box = [q[0] + off, q[1] - 7, q[0] + off + tw, q[1] + 7];
+      // no room on the right: put the name on the left of its place
+      const edge = p.rect ? p.rect[2] - 2 : this.W - 4;
+      if (box[2] > edge) box = [q[0] - off - tw, q[1] - 7, q[0] - off, q[1] + 7];
+      if (box[0] < (p.rect ? p.rect[0] + 2 : 4)) continue;
       if (boxes.some((b) => box[0] < b[2] + 4 && box[2] > b[0] - 4 && box[1] < b[3] && box[3] > b[1])) continue;
       boxes.push(box); drawn++;
       c.fillStyle = 'rgba(10,20,34,.72)'; c.fillRect(box[0] - 3, box[1], tw + 6, 14); c.fillStyle = '#C5D1E0'; c.fillText(text, box[0], q[1]);

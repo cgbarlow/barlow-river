@@ -150,7 +150,7 @@ process.on('exit', () => server?.kill());
   check('between times it holds steady', jump <= 4, `largest move in five years: ${jump} degrees`);
   await A(page, () => { window.__atlas.setYear(1868); window.__atlas.stages[0].resume(); window.__atlas.settle(); window.__atlas.play(); });
   const seen = [];
-  for (let i = 0; i < 260; i++) { await page.waitForTimeout(120); const c = await A(page, () => [window.__atlas.state.year, window.__atlas.stages[0].cam.lon, Boolean(window.__atlas.scene().ship)]); seen.push(c); if (c[0] > 1880) break; }
+  for (let i = 0; i < 260; i++) { await page.waitForTimeout(120); const c = await A(page, () => [window.__atlas.state.year, window.__atlas.stages[0].cam.lon, Boolean(window.__atlas.scene().ship), document.querySelector('#caption.on')?.textContent ?? '']); seen.push(c); if (c[0] > 1880) break; }
   await A(page, () => window.__atlas.stop());
   // through Suez a ship first runs south-west down the Channel; after that it only goes east
   let back = 0; for (let i = 1; i < seen.length; i++) { if (seen[i - 1][1] < 40) continue; let d = seen[i][1] - seen[i - 1][1]; if (d > 180) d -= 360; if (d < -180) d += 360; if (d < -0.5) back++; }
@@ -181,6 +181,10 @@ process.on('exit', () => server?.kill());
   check('Back from a country opened from another returns to the first', (await page.locator('#record h2').textContent()) === 'New Zealand');
   await page.locator('#record .back').click();
   check('going back again clears the country', (await page.locator('#countries [aria-pressed="true"]').count()) === 0 && (await A(page, () => window.__atlas.state.focus)) === null);
+  await A(page, () => window.__atlas.setYear(1700));
+  await page.locator('#countries [data-country="Wales"]').click();
+  check('a country that is dark this year opens on a year when someone is lit there', Number((await page.locator('#countries [data-country="Wales"] b').textContent())) > 0 && /[1-9]\d* lit in/.test(await page.locator('#record .life').textContent()), await page.locator('#record .life').textContent());
+  await page.locator('#record .back').click();
   await page.keyboard.press('s');
   await A(page, () => { window.__atlas.setYear(1790); window.__atlas.settle(); });
   const ny = await A(page, () => { const w = window.__atlas.world, s = window.__atlas.stages[0]; const a = w.actors.find((x) => w.countryOf(x, 1790) === 'United States'); return a ? s.screenOf(a.id) : null; });
@@ -218,6 +222,8 @@ process.on('exit', () => server?.kill());
   check('a voyage that falls inside one year is counted as at sea', /At sea\s*2/.test(await page.locator('#countries').textContent()) && (await A(page, () => Boolean(window.__atlas.scene().ship))));
   const sums = await A(page, () => { const out = []; for (const y of [1700, 1855, 1874, 1900, 1960]) { window.__atlas.setYear(y); window.__atlas.settle(); const c = window.__atlas.counts(); out.push(Object.values(c).reduce((a, b) => a + b, 0) === window.__atlas.scene().alive && document.querySelector('#alive').textContent.startsWith(String(window.__atlas.scene().alive))); } return out; });
   check('chips, the count under the year and the lights drawn agree', sums.every(Boolean), JSON.stringify(sums));
+  const atSea = seen.filter((c) => c[2]);
+  check('while the ship is at sea the caption is about that voyage', atSea.length > 5 && atSea.filter((c) => /Edwin Watkins and Fanny Page Loveless/.test(c[3])).length >= atSea.length * 0.8, `${atSea.filter((c) => /Edwin Watkins/.test(c[3])).length} of ${atSea.length} samples`);
   await A(page, () => window.__atlas.setYear(1880));
 
   // 8. lenses
@@ -247,6 +253,9 @@ process.on('exit', () => server?.kill());
   // 9. the panel: findings, places, people
   const cards = await page.locator('#panel-body [data-finding]').count();
   check('findings are listed', cards >= 7, String(cards));
+  const allF = await A(page, () => { const out = []; for (const f of [...window.__atlas.atlas.facts, ...window.__atlas.atlas.leads]) { window.__atlas.openFinding(f.id); const sc = window.__atlas.scene(); const ok = f.people.some((id) => sc.lights.some((l) => l.actor.id === id)) || f.people.every((id) => { const a = window.__atlas.world.byId.get(id); return !a || a.on >= a.d; }); if (!ok) out.push(f.id); window.__atlas.openFinding(f.id); } return out; });
+  check('every finding opens on a year when someone it is about is lit', allF.length === 0, allF.join(', '));
+  check('the split-family finding only counts brothers and sisters alive to be parted', /still living then/.test(await page.locator('#panel-body [data-finding="a-split-siblings"]').textContent()));
   await page.locator('#panel-body [data-finding="a-first-crossing"]').click();
   check('a finding moves the year and lights its people', (await year(page)) === 1855 && (await A(page, () => window.__atlas.state.focus?.size)) >= 1 && (await page.locator('#panel-body .card.on + .who button').count()) >= 1);
   await page.locator('.tabs [data-tab="places"]').click();
@@ -304,7 +313,7 @@ process.on('exit', () => server?.kill());
   const t1 = Date.now(); let held = 0;
   for (let i = 0; i < 60; i++) { await page.waitForTimeout(100); const now = await page.locator('#caption').textContent(); if (now !== cap || !(await page.locator('#caption.on').count())) break; held = Date.now() - t1; }
   check('a caption stays up long enough to read', held >= 1800, `${held} ms`);
-  check('a caption gives the age and what the voyage meant for the children', /Thomas Finch, 32,/.test(cap) && /children/.test(cap), cap.slice(60, 200));
+  check('a caption keeps a loose year loose and says what the voyage meant for the children', /Thomas Finch is in Howick/.test(cap) && /about 1823/.test(cap) && /children are born in New Zealand/.test(cap), cap.slice(0, 200));
   check('a caption says what the records say, and no more', /1855/.test(cap) && /Last recorded in/.test(cap) && !/sailed|ship/.test(cap), cap.slice(0, 70));
   const capBox = await page.locator('#caption').boundingBox(), stBox = await page.locator('#stage').boundingBox();
   check('captions sit at the bottom, clear of the countries and the rim pointers', capBox.y > stBox.y + stBox.height * 0.6);

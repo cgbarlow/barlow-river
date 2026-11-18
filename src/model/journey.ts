@@ -14,7 +14,7 @@ import { km, type LonLat } from './geo.ts';
 export const SAIL_MAX = 3;
 
 export interface Stay { p: string; from: number; to: number; stops: AtlasStop[]; /** a closer place inside the vaguer one before it (New Zealand, then Carterton): the same stay known better, not a move */ within?: boolean }
-export interface Leg { a: string; b: string; y0: number; y1: number; km: number; sail: boolean; /** rests on a disputed identity: the words from the record */ doubt?: string; /** not a move: a closer place inside the vaguer one before it */ within?: boolean; /** starts from a borrowed place, so it is an inference and not a recorded move */ assumed?: boolean }
+export interface Leg { a: string; b: string; y0: number; y1: number; km: number; sail: boolean; /** rests on a disputed identity: the words from the record */ doubt?: string; /** not a move: a closer place inside the vaguer one before it */ within?: boolean; /** starts from a borrowed place, so it is an inference and not a recorded move */ assumed?: boolean; /** the year at that end is only approximate in the record */ approx0?: boolean; approx1?: boolean }
 
 const ORDER: Record<string, number> = { borrowed: 0, birth: 1, baptism: 1, census: 2, event: 2, marriage: 2, child: 2, death: 8, burial: 9 };
 
@@ -69,7 +69,10 @@ export function legsOf(stays: Stay[], place: (id: string) => AtlasPlace): Leg[] 
     const y0 = stays[i - 1].to, y1 = stays[i].from;
     const doubt = [...stays[i - 1].stops, ...stays[i].stops].find((s) => s.doubt)?.doubt;
     const assumed = lent(stays[i - 1]), within = Boolean(stays[i].within);
-    out.push({ a: a.id, b: b.id, y0, y1, km: km(ll(a), ll(b)), sail: y1 - y0 <= SAIL_MAX && !assumed && !within, ...(assumed ? { assumed } : {}), ...(within ? { within } : {}), ...(doubt && stays[i - 1].stops.every((s) => s.doubt) !== stays[i].stops.every((s) => s.doubt) ? { doubt } : {}) });
+    const ap0 = stays[i - 1].stops.some((x) => x.y === y0 && x.approx) && !stays[i - 1].stops.some((x) => x.y === y0 && !x.approx);
+    const ap1 = stays[i].stops.some((x) => x.y === y1 && x.approx) && !stays[i].stops.some((x) => x.y === y1 && !x.approx);
+    // a voyage is only drawn sailing when both ends are firm dates
+    out.push({ a: a.id, b: b.id, y0, y1, km: km(ll(a), ll(b)), sail: y1 - y0 <= SAIL_MAX && !assumed && !within && !ap0 && !ap1, ...(ap0 ? { approx0: true } : {}), ...(ap1 ? { approx1: true } : {}), ...(assumed ? { assumed } : {}), ...(within ? { within } : {}), ...(doubt && stays[i - 1].stops.every((s) => s.doubt) !== stays[i].stops.every((s) => s.doubt) ? { doubt } : {}) });
   }
   return out;
 }
@@ -101,15 +104,16 @@ export function whereAt(stays: Stay[], year: number): Where | null {
     // nor from a vague place to a closer one inside it: that is not a journey
     if (lent(s) || next.within) { if (year >= next.from) continue; return { i, a: s.p, b: next.p, t: w > 0 ? (year - s.to) / w : 0, sail: false, leg: i }; }
     // both ends recorded in the same year: the voyage is drawn across that year
-    if (w === 0 && year >= next.from && year < next.from + 1) return { i, a: s.p, b: next.p, t: year - next.from, sail: true, leg: i };
+    if (w === 0 && !(s.stops.some((x) => x.y === s.to && x.approx) && !s.stops.some((x) => x.y === s.to && !x.approx)) && !(next.stops.some((x) => x.y === next.from && x.approx) && !next.stops.some((x) => x.y === next.from && !x.approx)) && year >= next.from && year < next.from + 1) return { i, a: s.p, b: next.p, t: year - next.from, sail: true, leg: i };
     if (year >= next.from) continue;
-    if (w <= SAIL_MAX) {
+    const loose = s.stops.some((x) => x.y === s.to && x.approx) && !s.stops.some((x) => x.y === s.to && !x.approx) || next.stops.some((x) => x.y === next.from && x.approx) && !next.stops.some((x) => x.y === next.from && !x.approx);
+    if (w <= SAIL_MAX && !loose) {
       // a voyage is drawn over its window, never less than a year
       const span = Math.max(1, w), start = next.from - span;
       if (year <= start) return { i, a: s.p };
       return { i, a: s.p, b: next.p, t: (year - start) / span, sail: true, leg: i };
     }
-    return { i, a: s.p, b: next.p, t: (year - s.to) / w, sail: false, leg: i };
+    return { i, a: s.p, b: next.p, t: w > 0 ? (year - s.to) / w : 0, sail: false, leg: i };
   }
   return { i: stays.length - 1, a: stays[stays.length - 1].p };
 }
@@ -125,7 +129,8 @@ export function lastKnown(stays: Stay[], year: number): string | null {
 export function windowText(leg: Leg, name: (id: string) => string): string {
   const a = name(leg.a), b = name(leg.b);
   if (leg.assumed) return `No record gives a place before ${leg.y1}: ${a} is where a parent was. First recorded in ${b} in ${leg.y1}.`;
-  if (leg.y1 === leg.y0) return `In ${a} and in ${b} in ${leg.y0}.`;
+  const y0 = `${leg.approx0 ? 'about ' : ''}${leg.y0}`, y1 = `${leg.approx1 ? 'about ' : ''}${leg.y1}`;
+  if (leg.y1 === leg.y0) return `In ${a} and in ${b} in ${y0}.`;
   const n = leg.y1 - leg.y0;
-  return `Last known in ${a} in ${leg.y0}. In ${b} by ${leg.y1}. The move was some time in ${n === 1 ? 'that year' : `those ${n} years`}.`;
+  return `Last known in ${a} in ${y0}. In ${b} by ${y1}. The move was some time in ${n === 1 ? 'that year' : `those ${leg.approx0 || leg.approx1 ? 'roughly ' : ''}${n} years`}.`;
 }

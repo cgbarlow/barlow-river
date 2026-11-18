@@ -232,7 +232,7 @@ describe('nobody is drawn before a record places them', () => {
     for (const p of atlas.people) {
       const s0 = p.stops[0];
       if (s0.kind !== 'borrowed') continue;
-      const who = /with (?:her|his|their) \w+, (.+?)(?:, from \d{4}.*)?$/.exec(s0.why)![1];
+      const who = /with (?:her|his|their) \w+, (.+?)(?:, from \d{4}.*|, recorded here from \d{4})?$/.exec(s0.why)![1];
       const lender = atlas.people.find((x) => P.get(x.id)!.name === who && (!p.borrowed || x.id === p.borrowed.from)) ?? atlas.people.find((x) => P.get(x.id)!.name === who)!;
       // and only ever from someone with a record of their own: no borrowing from the borrowed
       expect(lender.borrowed, `${P.get(p.id)!.name} with ${who}`).toBeUndefined();
@@ -242,7 +242,28 @@ describe('nobody is drawn before a record places them', () => {
       if (p.seen != null) expect(p.seenWhy, P.get(p.id)!.name).toMatch(p.seen === first ? /the first (year .+ is recorded|record)/ : /married|was born|first/);
       expect(s0.y, `${P.get(p.id)!.name} with ${who}`).toBeGreaterThanOrEqual(first);
       expect(s0.y).toBeLessThan(P.get(p.id)!.d!.y);
+      // the lender was alive: nobody is drawn with someone already dead
+      expect(s0.y, `${P.get(p.id)!.name} with ${who}`).toBeLessThan(P.get(lender.id)!.d!.y);
+      // a child who follows a parent only goes where that parent has a record, and only until sixteen
+      for (const s of p.stops.slice(1).filter((x) => x.kind === 'borrowed')) { expect(s.y).toBeLessThanOrEqual(P.get(p.id)!.b!.y + 16); expect(recs.some((r) => r.y === s.y)).toBe(true); }
     }
+  });
+  it('keeps a loose year loose: no voyage is drawn sailing on a "c." date, and the words say about', () => {
+    const loose = atlas.people.flatMap((p) => p.stops.filter((s) => s.approx).map((s) => ({ p, s })));
+    expect(loose.length).toBeGreaterThan(3);
+    for (const { p } of loose) for (const l of legsOf(staysOf(p, place), place)) if (l.approx0 || l.approx1) expect(l.sail).toBe(false);
+    const tom = atlas.people.find((p) => P.get(p.id)!.name === 'Thomas Finch' && P.get(p.id)!.b!.y === 1823)!;
+    expect(P.get(tom.id)!.b!.approx).toBe(true);
+    expect(legsOf(staysOf(tom, place), place)[0].approx0).toBe(true);
+    expect(atlas.facts.find((f) => f.id === 'a-first-crossing')!.body).toMatch(/about 1823/);
+    expect(atlas.facts.find((f) => f.id === 'a-first-poland')!.title).toMatch(/about 1959/);
+  });
+  it('counts a family as split only when a brother or sister was alive to be left', () => {
+    const f = atlas.facts.find((x) => x.id === 'a-split-siblings')!;
+    const w2 = new World(river, atlas);
+    const stayers = f.people.filter((id) => w2.places.get(w2.byId.get(id)!.stays.slice(-1)[0].p)!.country !== 'New Zealand');
+    expect(stayers.length).toBeGreaterThan(0);
+    for (const id of stayers) expect(P.get(id)!.d!.y, P.get(id)!.name).toBeGreaterThan(f.y);
   });
   it('does not count a borrowed starting place as a recorded move', () => {
     const p = atlas.people.find((x) => !x.borrowed && x.stops[0].kind === 'borrowed')!;
@@ -300,14 +321,14 @@ describe('the published atlas', () => {
     for (const a of file.people) {
       expect(a.stops.length).toBeGreaterThan(0);
       for (const s of a.stops) { expect(s.why.length).toBeGreaterThan(2); expect(PLACE.has(s.p)).toBe(true); }
-      if (a.borrowed) { expect(a.stops).toHaveLength(1); expect(a.stops[0].kind).toBe('borrowed'); expect(P.get(a.borrowed.from)!.living).toBe(false); }
+      if (a.borrowed) { expect(a.stops.every((s) => s.kind === 'borrowed')).toBe(true); expect(P.get(a.borrowed.from)!.living).toBe(false); }
       else expect(a.stops.some((s) => s.kind !== 'borrowed')).toBe(true);
     }
   });
   it('names no one in a reason who is not deceased and named in the river', () => {
     const deadNames = new Set(river.people.filter((p) => !p.living).flatMap((p) => [p.name!, (p.given ?? p.name!).split(' ')[0]]));
     for (const a of file.people) for (const s of a.stops) {
-      const m = /(?:of|with (?:her|his|their) \w+,|married) (.+?)(?:, from \d{4}(?:, the first year (?:she|he|they) is recorded)?)?$/.exec(s.why);
+      const m = /(?:of|with (?:her|his|their) \w+,|married) (.+?)(?:, from \d{4}(?:, the first year (?:she|he|they) is recorded)?|, recorded here from \d{4})?$/.exec(s.why);
       if (m) expect(deadNames.has(m[1]), s.why).toBe(true);
     }
   });

@@ -31,6 +31,8 @@ export interface AtlasStop {
   why: string;
   /** the year is estimated, not recorded */
   est?: boolean;
+  /** the record itself gives the year loosely: "c. 1823", "after 1808" */
+  approx?: boolean;
   /** whether this record is this person at all is disputed: the words from the tree */
   doubt?: string;
 }
