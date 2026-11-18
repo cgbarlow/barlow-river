@@ -88,7 +88,7 @@ process.on('exit', () => server?.kill());
   check('tapping a light opens the person', (await page.locator('#record h2').textContent()) === 'Edwin Watkins');
   check('the record lists the places in order with the evidence', (await page.locator('#record .stops li').count()) >= 6 && /census/.test(await page.locator('#record .stops').textContent()) && /birth of/.test(await page.locator('#record .stops').textContent()));
   check('a voyage is described as custom, not record', /usual .* route/.test(await page.locator('#record .move.sail').first().textContent()) && /does not record the ship/.test(await page.locator('#record').textContent()));
-  check('the record links to the River for the same person', (await page.locator('#record a[href*="index.html#p="]').getAttribute('href')).includes(encodeURIComponent(edwin)));
+  check('the record links to the River for the same person', (await page.locator('#open-river').getAttribute('href')).includes(encodeURIComponent(edwin)));
   check('the address bar carries the person and the year', /p=/.test(page.url()) || (await page.waitForTimeout(400), /p=/.test(page.url())));
 
   // 5. follow the journey: the light sails
@@ -162,7 +162,9 @@ process.on('exit', () => server?.kill());
   check('every country in the records has a chip with its count for the year', ['England', 'New Zealand', 'Poland', 'Ireland', 'Wales', 'United States'].every((n) => chips.some((c) => c.startsWith(n))) && /England \d+/.test(chips.join('|')), chips.join(' | '));
   const sum = await A(page, () => { const c = window.__atlas.counts(); return [Object.values(c).reduce((a, b) => a + b, 0), window.__atlas.scene().alive]; });
   check('the counts add up to the lights that are lit', sum[0] === sum[1], sum.join(' vs '));
-  await A(page, () => { window.__atlas.setYear(1850); window.__atlas.stages[0].resume(); window.__atlas.settle(); });
+  await A(page, () => window.__atlas.setYear(1850));
+  check('before the first record there, New Zealand counts nobody', /New Zealand 0/.test((await page.locator('#countries [data-country="New Zealand"]').textContent()).replace(/\s+/g, ' ')) && (await A(page, () => window.__atlas.scene().lights.filter((l) => l.ll[0] > 100).length)) === 0);
+  await A(page, () => { window.__atlas.setYear(1862); window.__atlas.stages[0].resume(); window.__atlas.settle(); });
   const ptr = await A(page, () => { const s = window.__atlas.stages[0], q = s.pointerScreen('New Zealand'), r = s.canvas.getBoundingClientRect(); return q ? [r.left + q[0], r.top + q[1], s.pointerScreen('England') ? 1 : 0] : null; });
   check('from Europe, the globe points to New Zealand at its rim and not to England', ptr && ptr[2] === 0, JSON.stringify(ptr));
   await page.mouse.click(ptr[0], ptr[1]);
@@ -172,13 +174,40 @@ process.on('exit', () => server?.kill());
   await page.locator('#countries [data-country="Poland"]').click();
   const pol = await page.locator('#record').textContent();
   check('a country chip opens the country and explains a dark one', /Poland/.test(await page.locator('#record h2').textContent()) && /nearly dark/.test(pol) && (await page.locator('#countries [data-country="Poland"]').getAttribute('aria-pressed')) === 'true' && (await year(page)) >= 1900);
+  const polCount = await A(page, () => { const c = window.__atlas.world.countries().find((x) => x.name === 'Poland'); return c.people.length; });
+  const polListed = await page.evaluate(() => new Set([...document.querySelectorAll('#record h3')].filter((h) => !/Places|Of those/.test(h.textContent)).flatMap((h) => [...h.nextElementSibling.querySelectorAll('[data-go]')].map((b) => b.dataset.go))).size);
+  check('the country lists everyone it counts', polListed === polCount, `${polListed} listed, ${polCount} counted`);
   await page.locator('#record .back').click();
-  check('going back clears the country', (await page.locator('#countries [aria-pressed="true"]').count()) === 0 && (await A(page, () => window.__atlas.state.focus)) === null);
+  check('Back from a country opened from another returns to the first', (await page.locator('#record h2').textContent()) === 'New Zealand');
+  await page.locator('#record .back').click();
+  check('going back again clears the country', (await page.locator('#countries [aria-pressed="true"]').count()) === 0 && (await A(page, () => window.__atlas.state.focus)) === null);
   await page.keyboard.press('s');
   await A(page, () => { window.__atlas.setYear(1790); window.__atlas.settle(); });
   const ny = await A(page, () => { const w = window.__atlas.world, s = window.__atlas.stages[0]; const a = w.actors.find((x) => w.countryOf(x, 1790) === 'United States'); return a ? s.screenOf(a.id) : null; });
   check('on two shores, someone in the United States is drawn in an inset of its own', Array.isArray(ny), JSON.stringify(ny));
   await page.keyboard.press('g');
+  await A(page, () => window.__atlas.setYear(1880));
+
+  // 7d. a selected person stays in view; Back goes back; the end is not empty
+  await A(page, (id) => { window.__atlas.setYear(1893); window.__atlas.select(id); window.__atlas.settle(); }, edwin);
+  await A(page, () => { window.__atlas.setYear(1862); window.__atlas.settle(); });
+  const kept = await A(page, (id) => { const s = window.__atlas.stages[0], q = s.screenOf(id); return q && q[0] > 40 && q[0] < s.W - 40 && q[1] > 40 && q[1] < s.H - 40; }, edwin);
+  check('a selected person stays in view when the year moves', kept === true);
+  await page.locator('#record .stops [data-place]').first().click();
+  const placeName1 = await page.locator('#record h2').textContent();
+  await page.locator('#record .back').click();
+  check('Back from a place returns to the person it was opened from', placeName1 !== 'Edwin Watkins' && (await page.locator('#record h2').textContent()) === 'Edwin Watkins');
+  await page.locator('#record .stops [data-place]').first().click();
+  await page.waitForTimeout(400);
+  await page.goBack(); await page.waitForTimeout(400);
+  check('the browser’s Back does the same and stays on the page', /atlas\.html/.test(page.url()) && (await page.locator('#record h2').textContent()) === 'Edwin Watkins');
+  await page.locator('#record .back').click();
+  await page.locator('#track').focus(); await page.keyboard.press('End');
+  await A(page, () => window.__atlas.settle());
+  const fin = await A(page, () => { const s = window.__atlas.scene(); return [s.lights.length, s.embers.length, s.embers.every((e) => e.bright)]; });
+  check('at the present the map is not empty: embers stay lit and a line says why it is dark', (await year(page)) === 2026 && fin[0] === 0 && fin[1] > 40 && fin[2] && /living relatives carry on/.test(await page.locator('#caption.on').textContent()) && /109 living, not shown/.test(await page.locator('#alive').textContent()));
+  await page.keyboard.press('Home');
+  check('Home goes to the first year', (await year(page)) < 1600);
   await A(page, () => window.__atlas.setYear(1880));
 
   // 8. lenses
@@ -239,7 +268,9 @@ process.on('exit', () => server?.kill());
   await A(page, () => { window.__atlas.setYear(1852); window.__atlas.play(); });
   let cap = '';
   for (let i = 0; i < 40 && !/1855/.test(cap); i++) { await page.waitForTimeout(150); if (await page.locator('#caption.on').count()) cap = await page.locator('#caption').textContent(); }
-  check('a caption says what the records say, and what they do not', /1855/.test(cap) && /not recorded/.test(cap), cap.slice(0, 70));
+  check('a caption says what the records say, and no more', /1855/.test(cap) && /Last recorded in/.test(cap) && !/sailed|ship/.test(cap), cap.slice(0, 70));
+  const capBox = await page.locator('#caption').boundingBox(), stBox = await page.locator('#stage').boundingBox();
+  check('captions sit at the bottom, clear of the countries and the rim pointers', capBox.y > stBox.y + stBox.height * 0.6);
   await A(page, () => window.__atlas.stop());
   await page.close();
 
@@ -257,7 +288,7 @@ process.on('exit', () => server?.kill());
   page = await open('#y=1862');
   await A(page, (id) => window.__atlas.select(id), edwin);
   await page.waitForTimeout(400);
-  await page.locator('#record a[href*="index.html"]').click();
+  await page.locator('#open-river').click();
   await page.waitForSelector('#river');
   await page.waitForSelector('#record:not([hidden]) h2');
   check('“Open in the River” opens the same person there', (await page.locator('#record h2').textContent()) === 'Edwin Watkins');
@@ -265,7 +296,14 @@ process.on('exit', () => server?.kill());
   await page.locator('#record a[href*="atlas.html#p="]').click();
   await page.waitForSelector('#views');
   await page.waitForSelector('#record:not([hidden]) h2');
-  check('and “See on the map” comes back', (await page.locator('#record h2').textContent()) === 'Edwin Watkins');
+  check('and “See on the map” comes back, on the same year, with the light lit', (await page.locator('#record h2').textContent()) === 'Edwin Watkins' && (await year(page)) === 1862 && (await A(page, (id) => window.__atlas.scene().lights.some((l) => l.actor.id === id), edwin)));
+  await page.close();
+
+  page = await open('#v=shores');
+  check('a link with no year opens on a year with people in it', (await A(page, () => window.__atlas.scene().alive)) > 50 && (await year(page)) < 2000, String(await year(page)));
+  await page.close();
+  page = await open(`#p=${encodeURIComponent(edwin)}`);
+  check('a link to a person with no year opens in their lifetime', (await year(page)) >= 1848 && (await year(page)) < 1912 && (await A(page, (id) => window.__atlas.scene().lights.some((l) => l.actor.id === id), edwin)));
   await page.close();
 
   // 15. a phone
@@ -287,10 +325,14 @@ process.on('exit', () => server?.kill());
   // 16. a phone on its side, and reduced motion
   page = await open('#y=1880', { width: 800, height: 380 }, { hasTouch: true, isMobile: true });
   check('sideways, the map still draws beside the panel', (await inked(page)) > 150 && (await page.locator('#view-a').boundingBox()).height > 120);
+  const reach = await page.evaluate(() => [...document.querySelectorAll('.view button, #lens button, #countries [data-country="England"], #play, #help')].filter((b) => getComputedStyle(b).display !== 'none').map((b) => { const r = b.getBoundingClientRect(), e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return [b.dataset.view || b.dataset.lens || b.dataset.country || b.id, Boolean(e && (e === b || b.contains(e))), Math.round(r.width)]; }));
+  check('sideways, every view, lens and the first country can be tapped', reach.length >= 8 && reach.every((r) => r[1] && r[2] >= 30), JSON.stringify(reach.filter((r) => !r[1])));
+  await page.locator('.view [data-view="shores"]').tap();
+  check('sideways, a tap switches to two shores', (await A(page, () => window.__atlas.stages[0].kind)) === 'shores');
   await page.close();
   page = await open('', { width: 1280, height: 800 }, { reducedMotion: 'reduce' });
   await page.waitForTimeout(1500);
-  check('with reduced motion nothing plays by itself', !(await A(page, () => window.__atlas.state.playing)) && (await inked(page)) > 500);
+  check('with reduced motion nothing plays by itself, and it opens on a peopled year', !(await A(page, () => window.__atlas.state.playing)) && (await inked(page)) > 500 && (await A(page, () => window.__atlas.scene().alive)) > 50);
   await page.close();
 
   check('no errors in the console', errors.length === 0, errors.slice(0, 3).join(' | '));

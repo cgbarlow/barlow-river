@@ -85,7 +85,9 @@ export class Stage {
   // ---------- camera ----------
   private get R() { return Math.min(this.W, this.H - this.inset.bottom) * 0.44; }
   private panels(): Panel[] {
-    const { W, H, cam } = this, hb = H - this.inset.bottom;
+    const { W, H, cam } = this;
+    // two shores is a fixed picture: a phone's sheet slides over it instead of squeezing it
+    const hb = this.kind === 'shores' ? H : H - this.inset.bottom;
     if (this.kind === 'globe') {
       const proj = geoOrthographic().rotate([-cam.lon, -cam.lat]).scale(this.R * cam.k).translate([W / 2, hb / 2]).clipAngle(90);
       return [{ proj, vis: (ll) => geoDistance(ll, [cam.lon, cam.lat]) < 1.5, globe: true }];
@@ -196,7 +198,7 @@ export class Stage {
       const text = `${it.name}  ${it.n}`, tw = c.measureText(text).width + 30, th = 26;
       // walk out from the middle until the chip touches the edge
       const mx = W / 2 - tw / 2 - 14, my = hb / 2 - th / 2 - 14, t = Math.min(Math.abs(dx) > 1e-6 ? mx / Math.abs(dx) : 1e9, Math.abs(dy) > 1e-6 ? my / Math.abs(dy) : 1e9);
-      const x = cx + dx * t; let y = Math.max(104, cy + dy * t);
+      const x = cx + dx * t; let y = Math.min(hb - 110, Math.max(62, cy + dy * t));
       let box = [x - tw / 2, y - th / 2, x + tw / 2, y + th / 2];
       for (let i = 0; i < 8 && boxes.some((o) => box[0] < o[2] + 6 && box[2] > o[0] - 6 && box[1] < o[3] + 4 && box[3] > o[1] - 4); i++) { y += th + 6; box = [x - tw / 2, y - th / 2, x + tw / 2, y + th / 2]; }
       boxes.push(box);
@@ -259,11 +261,15 @@ export class Stage {
       if (slot > 0) { const o = spiral(slot, gap); q[0] += o[0]; q[1] += o[1]; }
       return q;
     };
-    for (const e of sc.embers) { const q = at(e.ll, e.slot); if (!q) continue; c.globalAlpha = 0.5 * e.alpha; c.fillStyle = this.colourOf(e.actor); c.beginPath(); c.arc(q[0], q[1], 1.3, 0, 7); c.fill(); }
+    for (const e of sc.embers) {
+      const q = at(e.ll, e.slot); if (!q) continue;
+      if (e.bright) { c.globalAlpha = 0.5 * e.alpha; c.drawImage(glow(this.colourOf(e.actor), true), q[0] - 9, q[1] - 9, 18, 18); }
+      c.globalAlpha = (e.bright ? 0.95 : 0.5) * e.alpha; c.fillStyle = this.colourOf(e.actor); c.beginPath(); c.arc(q[0], q[1], e.bright ? 1.8 : 1.3, 0, 7); c.fill();
+    }
     c.globalCompositeOperation = 'lighter';
     for (const l of sc.lights) {
       const q = at(l.ll, l.slot); if (!q) continue;
-      c.globalAlpha = l.alpha * (l.haze ? 0.35 : l.actor.hollow ? 0.45 : 1);
+      c.globalAlpha = l.alpha * (l.haze ? 0.35 : l.hollow ? 0.45 : 1);
       const r = l.haze ? 26 : l.moving ? 15 : 11; c.drawImage(glow(this.colourOf(l.actor), l.haze), q[0] - r, q[1] - r, r * 2, r * 2);
     }
     c.globalCompositeOperation = 'source-over';
@@ -273,7 +279,7 @@ export class Stage {
       const col = this.colourOf(l.actor);
       c.globalAlpha = l.alpha;
       if (l.haze) { c.strokeStyle = col; c.lineWidth = 1; c.setLineDash([2, 3]); c.beginPath(); c.arc(q[0], q[1], 6, 0, 7); c.stroke(); c.setLineDash([]); }
-      else if (l.actor.hollow) { c.strokeStyle = col; c.lineWidth = 1.4; c.beginPath(); c.arc(q[0], q[1], 2.6, 0, 7); c.stroke(); }
+      else if (l.hollow) { c.strokeStyle = col; c.lineWidth = 1.4; c.beginPath(); c.arc(q[0], q[1], 2.6, 0, 7); c.stroke(); }
       else { c.fillStyle = col; c.beginPath(); c.arc(q[0], q[1], l.moving ? 3.8 : 2.8, 0, 7); c.fill(); c.fillStyle = '#fff'; c.globalAlpha = l.alpha * 0.7; c.beginPath(); c.arc(q[0], q[1], 1, 0, 7); c.fill(); }
       if (l.actor.id === selected && (!selAt || l.alpha >= 0.5)) selAt = q;
       this.hits.push({ x: q[0], y: q[1], id: l.actor.id });
@@ -289,6 +295,15 @@ export class Stage {
     for (const l of sc.lights) if (l.site) count.set(l.site, (count.get(l.site) ?? 0) + l.alpha);
     for (const e of sc.embers) if (!count.has(e.site)) count.set(e.site, 0.01);
     const boxes: number[][] = [];
+    if (selAt) {
+      // the selected person's name goes on first; place names give way to it
+      const a = this.world.byId.get(selected!)!;
+      c.strokeStyle = '#fff'; c.lineWidth = 1.5; c.beginPath(); c.arc(selAt[0], selAt[1], 7.5, 0, 7); c.stroke();
+      c.font = '600 12.5px Inter, system-ui, sans-serif'; c.textBaseline = 'middle';
+      const tw = c.measureText(a.p.name!).width, lx = Math.max(6, Math.min(selAt[0] + 12, this.W - tw - 10));
+      c.fillStyle = 'rgba(10,20,34,.9)'; c.fillRect(lx - 4, selAt[1] - 24, tw + 8, 17); c.fillStyle = '#fff'; c.fillText(a.p.name!, lx, selAt[1] - 15);
+      boxes.push([lx - 4, selAt[1] - 24, lx + tw + 4, selAt[1] - 7]);
+    }
     c.font = '500 11px Inter, system-ui, sans-serif'; c.textBaseline = 'middle';
     let drawn = 0;
     for (const [sid, n] of [...count].sort((a, b) => b[1] - a[1])) {
@@ -303,16 +318,9 @@ export class Stage {
       c.fillStyle = 'rgba(10,20,34,.72)'; c.fillRect(box[0] - 3, box[1], tw + 6, 14); c.fillStyle = '#C5D1E0'; c.fillText(text, box[0], q[1]);
       this.siteHits.push({ x: box[0] + tw / 2, y: q[1], id: sid });
     }
-    if (selAt) {
-      const a = this.world.byId.get(selected!)!;
-      c.strokeStyle = '#fff'; c.lineWidth = 1.5; c.beginPath(); c.arc(selAt[0], selAt[1], 7.5, 0, 7); c.stroke();
-      c.font = '600 12.5px Inter, system-ui, sans-serif'; const tw = c.measureText(a.p.name!).width;
-      const lx = Math.min(selAt[0] + 12, this.W - tw - 10);
-      c.fillStyle = 'rgba(10,20,34,.88)'; c.fillRect(lx - 4, selAt[1] - 24, tw + 8, 17); c.fillStyle = '#fff'; c.fillText(a.p.name!, lx, selAt[1] - 15);
-    }
   }
   private drawShores(ps: Panel[], sc: Scene, selected: string | null) {
-    const c = this.ctx, tall = this.H - this.inset.bottom > this.W * 1.05;
+    const c = this.ctx, tall = this.H > this.W * 1.05;
     this.cached('shores', () => { const c = this.ctx; for (const p of ps) {
       const r = p.rect!; c.save(); c.beginPath(); c.rect(r[0], r[1], r[2] - r[0], r[3] - r[1]); c.clip();
       c.fillStyle = '#0e1d33'; c.fillRect(r[0], r[1], r[2] - r[0], r[3] - r[1]);
@@ -338,7 +346,7 @@ export class Stage {
     }
     const local: Scene = { ...sc, lights: sc.lights.filter((l) => !l.moving || !sc.traces.some((t) => t.actor === l.actor && t.style === 'sail' && crossing(t))) };
     for (const p of ps) { this.traces(p, sc, (t) => !crossing(t)); this.marks(p, local, selected, p.small ? 5 : 7, p.small ? 3 : 14); }
-    if (!tall) { c.save(); c.translate(this.W / 2, (this.H - this.inset.bottom) / 2); c.rotate(-Math.PI / 2); c.fillStyle = '#6E8099'; c.font = 'italic 13px Newsreader, Georgia, serif'; c.textAlign = 'center'; c.fillText('about 19,000 km of sea, folded away', 0, 4); c.restore(); }
+    if (!tall) { c.save(); c.translate(this.W / 2, this.H / 2); c.rotate(-Math.PI / 2); c.fillStyle = '#6E8099'; c.font = 'italic 13px Newsreader, Georgia, serif'; c.textAlign = 'center'; c.fillText('about 19,000 km of sea, folded away', 0, 4); c.restore(); }
   }
 
   // ---------- pointer ----------

@@ -560,7 +560,7 @@ function personHtml(p: Person): string {
       ${L.route(p.id).length > 1 ? '<button class="btn solid" data-act="follow">Follow the water</button>' : '<span class="badge">This water does not reach the river</span>'}
       <button class="btn quiet" data-act="goyear" data-y="${p.b?.y}">Go to ${p.b?.y}</button>
       <button class="btn quiet" data-act="relate">Related to…</button>
-      <a class="btn quiet" href="./atlas.html#p=${encodeURIComponent(p.id)}">See on the map</a>
+      <a class="btn quiet" id="see-map" href="./atlas.html#p=${encodeURIComponent(p.id)}&y=${Math.min(data.meta.thisYear - 1, Math.max(p.b?.y ?? 0, state.year))}">See on the map</a>
     </div>
     <h3>Record</h3>
     <dl class="kv">${kv.join('')}</dl>
@@ -1046,6 +1046,11 @@ function writeHash() {
     if (state.line) q.set('line', state.line);
     const s = q.toString();
     history.replaceState(null, '', s ? '#' + s : location.pathname + location.search);
+    // the Atlas opens on the same year and person
+    const sel = state.selected && !P.get(state.selected)?.living ? state.selected : null;
+    const to = new URLSearchParams({ ...(state.year < data.meta.thisYear ? { y: String(state.year) } : {}), ...(sel ? { p: sel } : {}) }).toString();
+    const link = document.querySelector<HTMLAnchorElement>('a.mode-link');
+    if (link) link.href = './atlas.html' + (to ? '#' + to : '');
   }, 250);
 }
 function readHash(): boolean {

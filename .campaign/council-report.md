@@ -5,51 +5,47 @@ council-type: standalone
 
 # Council Report
 
-Pre-build review of the plan for The Atlas (`BRIEF-ATLAS.md`): the River's timelapse on a globe, a flat map, or both. Version 1's closing report is kept as `council-report-closing.md`.
+Post-build review of The Atlas, with an outside tester's report in hand. Earlier: `council-report-atlas-plan.md`, `council-report-atlas-mockups.md`.
 
 ## Animal Perspectives
 
 ### Bear — Vision & Direction
-- Place is the natural third axis after time and doubt. In the River it was only a colour.
-- The hero moment is the globe turning from Norfolk to New Zealand as the first ship leaves. Open on that.
-- Globe is the default and the film; the flat map is the reading view; side by side is an extra.
-- Doubt stays first-class. Pinning 340 people with confidence would betray version 1.
+- The concept survived the build. The two views do different jobs.
+- The film has no ending: a play-through stops on a dark map reading "0 lit".
+- The camera is right: Europe, one crossing with the 1874 ship, New Zealand.
 
 ### Cat — Risk & Scope
-- Two thirds of people have no place of their own. Borrowed places must look different at a glance; the headline count is people placed by record.
-- Sea routes are invention: draw dashed, label "customary route", never state a voyage year the records lack. "Arrived by" not "sailed in".
-- When a move happened is a window, not a date. Show the window in words.
-- Privacy: recent death places point at the living. Town only after 1950. `river.json` already ships one street address; fix in the Atlas data, report it, leave version 1 alone.
-- Hand-typed coordinates need a per-country box test. Cut order if short: the globe-to-map morph, then the certainty lens.
+- "No place by guesswork" is broken. 63 people are drawn from birth at the place of their first record, sometimes decades later. A light sits in New Zealand from 1828; the page's own finding says 1855.
+- The long fade has the same fault: a ghost brightens at the destination decades early.
+- Poland has three different "first" years. The country panel counts 5 and lists 2.
+- The landscape phone is broken: a view and all three lenses cannot be tapped.
 
 ### Owl — Process & Structure
-- A separate `atlas.html` with its own entry honours "split `src/main.ts` before the next feature" without touching the River.
-- Data and tests first. `npm run verify` stays one command and runs both browser suites.
-- Keep this report beside the five from version 1.
+- 74 automated checks passed and an outside tester still found twelve defects. Each fix gets a check.
+- River to Atlas should carry the year. Back should go back.
 
 ### Puppy — Opportunities & Momentum
-- Embers where people died: the map gets richer every decade.
-- Follow one person's journey with a button.
-- A caption when each line first appears in a new country. A thin atmosphere on the globe.
+- The ship through Suez with the globe turning under it is the moment.
+- Captions repeat "when the move happened is not recorded". Say it once.
+- Two cheap findings: women placed only by a child's birth; people born in Europe who died in New Zealand.
 
 ### Rabbit — Resources & Stakeholders
-- Phones: one-finger spin, pinch zoom, the page must not scroll under the gesture.
-- Norwich holds thirty-odd people within a kilometre: fan lights out, tap a place for a list, and give a list of everyone as the keyboard route.
-- Bundled basemap, no tiles, watch the weight. Polish names keep their diacritics.
+- The caption covers the rim pointers when they matter most. Move it to the bottom.
+- A selected person should stay in view when the year moves.
+- A link with no year, and reduced motion, open on an empty 2026.
 
 ### Wolf — Cohesion & Balance
-- The Polish lines are mostly living or undated; Poland may be four lights. Say why, and have the camera visit.
-- Wives are placed by their children's births. Use that evidence and credit it.
-- First-appearance captions for all seven lines.
+- Poland's people who only died there are missing from Poland's own list.
+- Wales has no caption.
 
 ## Consensus
 
-Proceed. The concept scores Interesting 4, Novel 4, Surprising 4, Delightful 5, Engaging 5, Interactive 4, Dynamic 5: 31 of 35, the same as the River's concept. The risk every advisor named from a different side is honesty about the two thirds of people with no place of their own. Sea routes are kept but drawn as custom, not record. All three views are built; globe is the default.
+The Council adopts the outside tester's scores: Interesting 4, Novel 4, Surprising 3, Delightful 3, Engaging 3, Interactive 4, Dynamic 4. Total 25 of 35, against 31 for the concept. Not done. The page is dishonest or empty exactly where the records are thin: before a first record, across a long gap, and after the last named death. Drawing people only where recorded will darken the map further, and the Council accepts that.
 
 ## Recommended Next Steps
 
-1. Three visibly different kinds of light (recorded, borrowed, area only) and a tray for the unplaced. Headline count: people placed by record.
-2. Moves as windows ("in Norwich 1851, in Howick by 1855"). Routes dashed and labelled customary. No invented dates.
-3. Children's birthplaces and marriage places as evidence for parents, credited on the person.
-4. Town-only places after 1950 in the Atlas data. Coordinate box test per country. Report the River's street address to the owner.
-5. Globe default with auto-camera to the first crossing; fan-out at crowded places; one-finger spin; list fallback; first-appearance captions for all seven lines; say why Poland is sparse.
+1. No light before a record: hollow with a parent until the first record, or not drawn until then. Long gaps hold at the last known place, dimming.
+2. An ending: embers and traces stay lit at the present, with a line saying the living carry on unseen. Open on a peopled year when no year is given.
+3. Landscape phone fixed; caption moved to the bottom; selected person kept in view; year carried from the River; Back goes back.
+4. Country panel lists everyone it counts; one "first" year per country, from records only; wording contradictions fixed.
+5. Captions varied; Wales captioned; two new findings.

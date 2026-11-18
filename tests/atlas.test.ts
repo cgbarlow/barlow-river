@@ -6,6 +6,7 @@ import { km, route, densify, slerp } from '../src/model/geo.ts';
 import { legsOf, staysOf, whereAt, mostLikely, SAIL_MAX } from '../src/model/journey.ts';
 import type { RiverData, Person, Family } from '../src/model/types.ts';
 import type { AtlasPerson } from '../src/model/atlas-types.ts';
+import { World } from '../src/atlas/scene.ts';
 
 const place = (id: string) => PLACE.get(id)!;
 const river: RiverData = JSON.parse(readFileSync('public/data/river.json', 'utf8'));
@@ -165,6 +166,67 @@ describe('placing people', () => {
   });
 });
 
+describe('nobody is drawn before a record places them', () => {
+  const world = new World(river, atlas);
+  it('holds a light where it was last recorded across a long gap, and does not show it at the next place early', () => {
+    const tom = world.actors.find((a) => a.p.name === 'Thomas Finch' && a.b === 1823)!;
+    expect(world.countryOf(tom, 1840)).toBe('England');
+    expect(world.countryOf(tom, 1854)).toBe('England');
+    expect(world.countryOf(tom, 1855)).toBe('New Zealand');
+    const sc = world.scene(1850, null, null);
+    const his = sc.lights.filter((l) => l.actor === tom);
+    expect(his).toHaveLength(1);
+    expect(his[0].ll[0]).toBeLessThan(10);
+    expect(his[0].alpha).toBeLessThan(1);
+  });
+  it('lights nobody in New Zealand before the first record there', () => {
+    const first = atlas.facts.find((f) => f.id === 'a-first-crossing')!.y;
+    for (let y = 1600; y < first; y++) {
+      expect(world.scene(y, null, null).lights.filter((l) => l.ll[0] > 100).map((l) => l.actor.p.name), String(y)).toEqual([]);
+      for (const a of world.actors) expect(world.countryOf(a, y)).not.toBe('New Zealand');
+    }
+    expect(world.scene(first + 0.5, null, null).lights.some((l) => l.ll[0] > 100)).toBe(true);
+  });
+  it('gives every solid light a record at or before the year it is drawn', () => {
+    for (let y = 1600; y <= 2020; y += 7) for (const l of world.scene(y, null, null).lights) {
+      if (l.hollow || l.moving) continue;
+      const own = l.actor.a.stops.filter((s) => s.kind !== 'borrowed');
+      const anchored = own.some((s) => s.kind === 'birth' || s.kind === 'baptism');
+      expect(anchored || Math.min(...own.filter((s) => !s.coarse).map((s) => s.y)) <= y + 2, `${l.actor.p.name} in ${y}`).toBe(true);
+    }
+  });
+  it('draws someone first recorded late in life hollow with a parent until then, or not at all', () => {
+    const late = atlas.people.filter((p) => !p.borrowed && !p.stops.some((s) => s.kind === 'birth' || s.kind === 'baptism') && Math.min(...p.stops.filter((s) => !s.coarse && s.kind !== 'borrowed').map((s) => s.y)) > P.get(p.id)!.b!.y + 2);
+    expect(late.length).toBeGreaterThan(20);
+    for (const p of late) {
+      const lent = p.stops[0].kind === 'borrowed';
+      expect(lent !== (p.seen != null), p.id).toBe(true);
+      const a = world.byId.get(p.id)!;
+      if (p.seen != null) { expect(world.lightOf(a, p.seen - 1)).toBeNull(); expect(a.on).toBe(Math.min(a.d, p.seen)); }
+      else { const l = world.scene(a.b + 0.5, null, null).lights.find((x) => x.actor === a)!; expect(l.hollow).toBe(true); }
+    }
+  });
+  it('does not count a borrowed starting place as a recorded move', () => {
+    const p = atlas.people.find((x) => !x.borrowed && x.stops[0].kind === 'borrowed')!;
+    const legs = legsOf(staysOf(p, place), place);
+    expect(legs[0].assumed).toBe(true);
+    expect(legs[0].sail).toBe(false);
+    for (const f of atlas.facts.filter((x) => x.kind === 'crossing')) expect(f.body).not.toMatch(/borrowed/);
+  });
+  it('leaves an ember only where a death or burial is recorded, and turns them up at the present', () => {
+    const end = world.scene(2026, null, null, true);
+    expect(end.lights).toHaveLength(0);
+    expect(end.embers.length).toBeGreaterThan(40);
+    for (const e of end.embers) { expect(e.bright).toBe(true); expect(e.actor.a.stops.some((s) => (s.kind === 'death' || s.kind === 'burial') && !s.coarse)).toBe(true); }
+  });
+  it('counts each country from records, and agrees with itself about firsts', () => {
+    const poland = world.countries().find((c) => c.name === 'Poland')!;
+    expect(poland.people.length).toBeGreaterThanOrEqual(4);
+    const ys = poland.people.filter((a) => !a.hollow).flatMap((a) => a.a.stops.filter((s) => s.kind !== 'borrowed' && place(s.p).country === 'Poland').map((s) => s.y));
+    expect(Math.min(...ys)).toBe(atlas.facts.find((f) => f.id === 'a-first-poland')!.y);
+  });
+});
+
 describe('the published atlas', () => {
   const file: typeof atlas = JSON.parse(readFileSync('public/data/atlas.json', 'utf8'));
   it('is what the pipeline builds from the published river', () => {
@@ -207,7 +269,7 @@ describe('the published atlas', () => {
   it('names no one in a reason who is not deceased and named in the river', () => {
     const deadNames = new Set(river.people.filter((p) => !p.living).flatMap((p) => [p.name!, (p.given ?? p.name!).split(' ')[0]]));
     for (const a of file.people) for (const s of a.stops) {
-      const m = /(?:of|with (?:her|his|their) \w+,|married) (.+)$/.exec(s.why);
+      const m = /(?:of|with (?:her|his|their) \w+,|married) (.+?)(?:, until (?:her|his|their) own first record)?$/.exec(s.why);
       if (m) expect(deadNames.has(m[1]), s.why).toBe(true);
     }
   });

@@ -40,6 +40,8 @@ export interface AtlasStop {
 export interface AtlasPerson {
   id: string;
   stops: AtlasStop[];
+  /** no record places them at birth, and no parent can lend a place: not drawn before this year */
+  seen?: number;
   /** no place of their own: shown hollow where a close relative was */
   borrowed?: { from: string; how: 'parent' | 'partner' | 'sibling' | 'child' };
 }

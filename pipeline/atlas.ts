@@ -97,6 +97,28 @@ export function buildAtlas(river: RiverData): AtlasBuild {
     const pl = PLACE.get(pid)!;
     return pl.town ?? pl.id;
   };
+  // ---- nobody is drawn before a record places them ----
+  // Someone whose first record comes years after birth is shown hollow with a parent
+  // until then. With no parent to borrow from they are not drawn until that record.
+  const pron = (p: Person) => (p.sex === 'F' ? 'her' : p.sex === 'M' ? 'his' : 'their');
+  for (const p of [...dead].sort((a, b) => a.b!.y - b.b!.y)) {
+    const a = out.get(p.id);
+    if (!a) continue;
+    const real = a.stops.filter((s) => !s.coarse);
+    const firstY = Math.min(...real.map((s) => s.y));
+    if (a.stops.some((s) => s.kind === 'birth' || s.kind === 'baptism') || firstY <= p.b!.y + 2) continue;
+    const par = p.parents ? F.get(p.parents) : undefined;
+    const ps = (par?.partners ?? []).map((id) => P.get(id)!).filter((q) => q && !q.living).sort((x, y) => (x.sex === 'F' ? 0 : 1) - (y.sex === 'F' ? 0 : 1));
+    let done = false;
+    for (const q of ps) {
+      const pl = lend(q.id, p.b!.y, true);
+      if (!pl) continue;
+      a.stops = sortStops([{ y: p.b!.y, p: pl, kind: 'borrowed', why: `birthplace not recorded: shown with ${pron(p)} ${q.sex === 'F' ? 'mother' : 'father'}, ${q.name}, until ${pron(p)} own first record`, est: true }, ...a.stops]);
+      stays.delete(p.id); done = true; break;
+    }
+    if (!done) a.seen = firstY;
+  }
+
   for (let pass = 0; pass < 6; pass++) {
     const round: AtlasPerson[] = [];
     for (const p of dead) {
@@ -120,7 +142,7 @@ export function buildAtlas(river: RiverData): AtlasBuild {
       if (!hit) continue;
       const lender = P.get(hit[0].from)!;
       const rel = hit[0].how === 'parent' ? (lender.sex === 'F' ? 'mother' : lender.sex === 'M' ? 'father' : 'parent') : hit[0].how === 'partner' ? (lender.sex === 'F' ? 'wife' : lender.sex === 'M' ? 'husband' : 'partner') : hit[0].how;
-      round.push({ id: p.id, borrowed: hit[0], stops: [{ y, p: hit[1]!, kind: 'borrowed', why: `no place recorded: shown with ${p.sex === 'F' ? 'her' : p.sex === 'M' ? 'his' : 'their'} ${rel}, ${lender.name}`, est: true }] });
+      round.push({ id: p.id, borrowed: hit[0], stops: [{ y, p: hit[1]!, kind: 'borrowed', why: `no place recorded: shown with ${pron(p)} ${rel}, ${lender.name}`, est: true }] });
     }
     if (!round.length) break;
     for (const a of round) out.set(a.id, a);
@@ -130,7 +152,7 @@ export function buildAtlas(river: RiverData): AtlasBuild {
   for (const a of people) for (const s of a.stops) used.add(s.p);
   const unplaced = dead.filter((p) => !out.has(p.id)).map((p) => p.id);
   const places = PLACES.filter((p) => used.has(p.id));
-  const moves = people.reduce((n, a) => n + legsOf(staysOf(a, place0), place0).filter((l) => l.km > 3).length, 0);
+  const moves = people.reduce((n, a) => n + legsOf(staysOf(a, place0), place0).filter((l) => l.km > 3 && !l.assumed).length, 0);
   const { facts, leads } = findings(people, P, F);
   return {
     atlas: {
@@ -149,7 +171,8 @@ function findings(people: AtlasPerson[], P: Map<string, Person>, F: Map<string, 
   const own = people.filter((a) => !a.borrowed);
   const name = (id: string) => P.get(id)!.name!;
   const yr = (id: string) => P.get(id)!.b!.y;
-  const all = own.map((a) => ({ a, st: staysOf(a, place), legs: legsOf(staysOf(a, place), place) }));
+  // findings count recorded places and recorded moves only, never a borrowed starting place
+  const all = own.map((a) => { const every = staysOf(a, place); return { a, st: every.filter((s) => s.stops.some((x) => x.kind !== 'borrowed')), legs: legsOf(every, place).filter((l) => !l.assumed) }; });
 
   // first to reach each country
   const firstIn = new Map<string, { id: string; y: number; born: boolean }>();
@@ -205,6 +228,21 @@ function findings(people: AtlasPerson[], P: Map<string, Person>, F: Map<string, 
     facts.push({ id: 'a-split-family', kind: 'crossing', y: firstAway.b!.y, people: kids.map((c) => c.id), title: `One family, children born in ${split.cs.join(' and ')}`,
       body: `The children of ${parents}. ${first(kids[0])} was born in ${(locate(kids[0].b!.place) as AtlasPlace).name} in ${kids[0].b!.y}; ${first(firstAway)} in ${(locate(firstAway.b!.place) as AtlasPlace).name} in ${firstAway.b!.y}. The voyage falls between those two births.` });
   }
+  // on the map only because a child's birth was recorded
+  const byChild = own.filter((a) => a.stops.filter((x) => x.kind !== 'borrowed').every((x) => x.kind === 'child'));
+  const mothers = byChild.filter((a) => P.get(a.id)!.sex === 'F');
+  if (byChild.length > 3) {
+    const ys = byChild.flatMap((a) => a.stops.filter((x) => x.kind === 'child').map((x) => x.y));
+    facts.push({ id: 'a-by-child', kind: 'places', y: Math.min(...ys), people: byChild.map((a) => a.id), title: `${byChild.length} people are on the map only because a child was born`,
+      body: `${mothers.length} of them are women. No record of their own names a place: not a birth, a marriage or a burial. The only thing that says where they were is the entry for a child's birth or baptism.` });
+  }
+  // began in Europe, ended in New Zealand, and the other way
+  const ended = all.filter((x) => x.st.length > 1).map((x) => ({ id: x.a.id, from: place(x.st[0].p).country, to: place(x.st[x.st.length - 1].p).country }));
+  const out = ended.filter((e) => e.from !== 'New Zealand' && e.to === 'New Zealand'), home = ended.filter((e) => e.from === 'New Zealand' && e.to !== 'New Zealand');
+  if (out.length) {
+    facts.push({ id: 'a-one-way', kind: 'crossing', y: Math.max(...out.map((e) => P.get(e.id)!.b!.y)), people: [...out, ...home].map((e) => e.id), title: home.length ? `${out.length} went out to New Zealand. ${home.length} came back` : `${out.length} went out to New Zealand. Nobody is recorded coming back`,
+      body: `${out.length} people are first recorded on one side of the world and last recorded in New Zealand. ${home.length ? `${home.map((e) => name(e.id)).join(' and ')} went the other way.` : 'Not one person in the tree is first recorded in New Zealand and last recorded anywhere else.'} For this family the voyage was one way.` });
+  }
   for (const [c, f] of firstIn) {
     if (c === 'England' || c === 'New Zealand') continue;
     facts.push({ id: 'a-first-' + c.toLowerCase().replace(/\W+/g, '-'), kind: 'places', y: f.y, people: [f.id], title: `${c}: first recorded in ${f.y}`,
@@ -214,23 +252,23 @@ function findings(people: AtlasPerson[], P: Map<string, Person>, F: Map<string, 
   // ---- worth a second look ----
   for (const { a, st } of all) {
     // back and forth across the world, or two far places in the same year
-    const far2 = legsOf(st, place).filter((l) => l.km > 9000);
+    const far2 = legsOf(st, place).filter((l) => l.km > 9000 && !l.assumed);
     if (far2.length >= 2) {
       leads.push({ id: 'a-return-' + a.id, kind: 'return', y: far2[1].y1, people: [a.id], title: `${name(a.id)} is recorded on both sides of the world, then back`,
         body: `${st.map((s) => `${place(s.p).name} ${s.from}`).join(', ')}. Either a return voyage, which is rare, or a record attached to the wrong person. Worth checking which.` });
     }
     for (const l of legsOf(st, place)) {
-      if (l.km < 9000 || l.y1 - l.y0 > 0) continue;
+      if (l.km < 9000 || l.y1 - l.y0 > 0 || l.assumed) continue;
       const key = `a-same-year-${l.y1}-${l.a}-${l.b}`;
       const had = leads.find((x) => x.id === key);
       if (had) { had.people.push(a.id); had.title = `${had.people.map(name).join(' and ')}: both sides of the world in ${l.y1}`; continue; }
       leads.push({ id: key, kind: 'same-year', y: l.y1, people: [a.id], title: `${name(a.id)}: both sides of the world in ${l.y1}`,
-        body: `Recorded in ${place(l.a).name} and in ${place(l.b).name} in the same year. A sailing ship took about three months, so it is possible, just. Worth checking both dates.` });
+        body: `Recorded in ${place(l.a).name} and in ${place(l.b).name} in the same year. The voyage took two to three months, so it is possible, just. Worth checking both dates.` });
     }
   }
   for (const { a, legs } of all) for (const l of legs) if (l.doubt) {
     leads.push({ id: 'a-doubt-' + a.id, kind: 'doubt', y: l.y1, people: [a.id], title: `The oldest move on the map is the one in doubt`,
-      body: `${name(a.id)}: baptised in ${place(l.a).name} in ${l.y0}, a father in ${place(l.b).name} by ${l.y1}. ${Math.round(km(ll(place(l.a)), ll(place(l.b))) / 10) * 10} km, and he would have been ${l.y1 - yr(a.id)}. The tree itself says: ${l.doubt}. If these are two men, this journey never happened.` });
+      body: `${name(a.id)}: recorded as a child in ${place(l.a).name} in ${l.y0}, a father in ${place(l.b).name} by ${l.y1}. ${Math.round(km(ll(place(l.a)), ll(place(l.b))) / 10) * 10} km, and he would have been ${l.y1 - yr(a.id)}. The tree itself says: ${l.doubt}. If these are two men, this journey never happened.` });
   }
   return { facts, leads };
 }

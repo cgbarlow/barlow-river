@@ -12,6 +12,8 @@ export interface Actor {
   a: AtlasPerson;
   b: number;
   d: number;
+  /** the first year the light is drawn: birth, or the first record when nothing places them sooner */
+  on: number;
   stays: Stay[];
   legs: RoutedLeg[];
   /** seat at each stay's site, so lights at a crowded place do not sit on each other */
@@ -24,9 +26,9 @@ export interface Actor {
   disputed: boolean;
 }
 
-export interface Light { actor: Actor; ll: LonLat; slot: number; alpha: number; haze: boolean; site?: string; moving?: boolean }
+export interface Light { actor: Actor; ll: LonLat; slot: number; alpha: number; haze: boolean; /** drawn as a ring: this place is borrowed from a relative */ hollow: boolean; site?: string; moving?: boolean }
 export interface Trace { actor: Actor; leg: RoutedLeg; upto?: number; style: 'done' | 'sail' | 'fade' | 'doubt' | 'ahead'; alpha: number }
-export interface Ember { actor: Actor; ll: LonLat; slot: number; alpha: number; site: string }
+export interface Ember { actor: Actor; ll: LonLat; slot: number; alpha: number; site: string; bright?: boolean }
 export interface Ripple { ll: LonLat; slot: number; age: number; kind: 'birth' | 'death'; actor: Actor }
 export interface Scene { year: number; lights: Light[]; traces: Trace[]; embers: Ember[]; ripples: Ripple[]; alive: number; ship: LonLat | null }
 
@@ -52,14 +54,14 @@ export class World {
       });
       const last = stays[stays.length - 1].stops;
       const first = place(stays[0].p);
-      const actor: Actor = { id: a.id, p, a, b: p.b.y, d: p.d.y, stays, legs, slots: [], hollow: Boolean(a.borrowed), ember: last.some((s) => s.kind === 'death' || s.kind === 'burial'), vague: first.prec === 'area' || first.prec === 'country', disputed: a.stops.some((s) => s.doubt) };
+      const actor: Actor = { id: a.id, p, a, b: p.b.y, d: p.d.y, on: Math.min(p.d.y, a.seen ?? p.b.y), stays, legs, slots: [], hollow: Boolean(a.borrowed), ember: last.some((s) => s.kind === 'death' || s.kind === 'burial'), vague: first.prec === 'area' || first.prec === 'country', disputed: a.stops.some((s) => s.doubt) };
       this.actors.push(actor); this.byId.set(a.id, actor);
     }
     // seats: greedy interval colouring per site
     const items: { a: Actor; i: number; site: string; start: number; end: number }[] = [];
     for (const a of this.actors) a.stays.forEach((s, i) => {
       const site = this.siteId(s.p);
-      items.push({ a, i, site, start: i ? a.stays[i - 1].to : a.b, end: i < a.stays.length - 1 ? a.stays[i + 1].from : a.d });
+      items.push({ a, i, site, start: i ? a.stays[i - 1].to : a.on, end: i < a.stays.length - 1 ? a.stays[i + 1].from : a.d });
       const list = this.atSite.get(site) ?? []; if (!list.includes(a)) list.push(a); this.atSite.set(site, list);
     });
     items.sort((x, y) => x.start - y.start);
@@ -71,20 +73,19 @@ export class World {
   site(placeId: string): AtlasPlace { return this.places.get(this.siteId(placeId))!; }
   ll(placeId: string): LonLat { const s = this.site(placeId); return [s.lon, s.lat]; }
 
-  /** where one person's light is in a year, or null when they are not alive */
+  /** where one person's light is in a year, or null when they are not drawn */
   lightOf(a: Actor, year: number): LonLat | null {
-    if (year < a.b || year >= a.d) return null;
+    if (year < a.on || year >= a.d) return null;
     const w = whereAt(a.stays, year)!;
     if (w.b && w.sail) return along(a.legs[w.leg!].pts, w.t!);
-    return this.ll(w.b && (w.t ?? 0) > 0.5 ? w.b : w.a);
+    return this.ll(w.a);
   }
-
-  /** the country a person is in that year, 'sea' on a dated voyage, null when not alive */
+  /** the country a person is in that year, 'sea' on a dated voyage, null when not drawn. Across a long gap they count where last recorded. */
   countryOf(a: Actor, year: number): string | null {
-    if (year < a.b || year >= a.d) return null;
+    if (year < a.on || year >= a.d) return null;
     const w = whereAt(a.stays, year)!;
     if (w.b && w.sail) return a.legs[w.leg!].km > 1500 ? 'sea' : this.places.get(w.b)!.country;
-    return this.places.get(w.b && (w.t ?? 0) > 0.5 ? w.b : w.a)!.country;
+    return this.places.get(w.a)!.country;
   }
   /** every country the records name, with the middle of its places and everyone ever recorded there */
   countries(): { name: string; ll: LonLat; people: Actor[]; sites: string[]; first: number }[] {
@@ -97,18 +98,21 @@ export class World {
     }
     for (const c of m.values()) {
       c.ll = [c.sites.reduce((t, s) => t + this.places.get(s)!.lon, 0) / c.sites.length, c.sites.reduce((t, s) => t + this.places.get(s)!.lat, 0) / c.sites.length];
-      for (const a of c.people) for (const st of a.stays) if (this.places.get(st.p)!.country === c.name) c.first = Math.min(c.first, st.from);
+      // the first year a record, not a borrowed place, puts someone here
+      for (const a of c.people) for (const st of a.a.stops) if (st.kind !== 'borrowed' && this.places.get(st.p)!.country === c.name) c.first = Math.min(c.first, st.y);
+      if (!isFinite(c.first)) for (const a of c.people) c.first = Math.min(c.first, a.on);
     }
     return [...m.values()].sort((a, b) => b.people.length - a.people.length);
   }
 
-  scene(year: number, focus: Set<string> | null, selected: string | null): Scene {
+  /** `finale` is the present day: nobody named is alive, so what the map remembers is turned up */
+  scene(year: number, focus: Set<string> | null, selected: string | null, finale = false): Scene {
     const lights: Light[] = [], traces: Trace[] = [], embers: Ember[] = [], ripples: Ripple[] = [];
     let alive = 0, ship: LonLat | null = null;
     for (const a of this.actors) {
       const sel = a.id === selected;
       const dim = focus ? (focus.has(a.id) ? 1 : 0.16) : selected && !sel ? 0.4 : 1;
-      if (year < a.b) {
+      if (year < a.on) {
         // the whole of a selected life is laid out, the part still to come faintly
         if (sel) for (const l of a.legs) if (l.km > 3) traces.push({ actor: a, leg: l, style: 'ahead', alpha: 0.35 });
         continue;
@@ -118,30 +122,31 @@ export class World {
       for (let j = 0; j < a.legs.length; j++) {
         const l = a.legs[j];
         if (l.km <= 3) continue;
-        if (j < idx) traces.push({ actor: a, leg: l, style: l.doubt ? 'doubt' : 'done', alpha: (sel ? 0.95 : dead ? 0.2 : 0.42) * dim });
+        if (j < idx) traces.push({ actor: a, leg: l, style: l.doubt ? 'doubt' : l.assumed ? 'fade' : 'done', alpha: (sel ? 0.95 : finale ? 0.4 : dead ? 0.2 : 0.42) * dim });
         else if (sel && (dead || j > idx || !whereAt(a.stays, year)!.b)) traces.push({ actor: a, leg: l, style: 'ahead', alpha: 0.35 });
       }
       const s = a.stays[idx], here = this.ll(s.p), site = this.siteId(s.p);
       if (dead) {
-        if (a.ember) embers.push({ actor: a, ll: here, slot: a.slots[idx], alpha: dim, site });
+        if (a.ember) embers.push({ actor: a, ll: here, slot: a.slots[idx], alpha: dim, site, bright: finale });
         if (year < a.d + 3) ripples.push({ ll: here, slot: a.slots[idx], age: (year - a.d) / 3, kind: 'death', actor: a });
         continue;
       }
       alive++;
       const prec = this.places.get(s.p)!.prec, haze = prec === 'area' || prec === 'country';
-      if (year < a.b + 2) ripples.push({ ll: here, slot: a.slots[idx], age: (year - a.b) / 2, kind: 'birth', actor: a });
+      if (year < a.on + 2) ripples.push({ ll: here, slot: a.slots[idx], age: (year - a.on) / 2, kind: 'birth', actor: a });
+      const lent = a.hollow || s.stops.every((x) => x.kind === 'borrowed');
       const w = whereAt(a.stays, year)!;
-      if (!w.b) { lights.push({ actor: a, ll: here, slot: a.slots[idx], alpha: dim, haze, site }); continue; }
-      const l = a.legs[w.leg!], next = a.stays[w.leg! + 1];
+      if (!w.b) { lights.push({ actor: a, ll: here, slot: a.slots[idx], alpha: dim, haze, hollow: lent, site }); continue; }
+      const l = a.legs[w.leg!];
       if (w.sail) {
         const p = along(l.pts, w.t!);
-        lights.push({ actor: a, ll: p, slot: -1, alpha: dim, haze: false, moving: true });
+        lights.push({ actor: a, ll: p, slot: -1, alpha: dim, haze: false, hollow: false, moving: true });
         if (l.km > 3) traces.push({ actor: a, leg: l, upto: w.t, style: 'sail', alpha: 0.95 * dim });
         if (l.km > 9000) ship = p;
       } else {
-        const np = this.places.get(next.p)!.prec;
-        lights.push({ actor: a, ll: here, slot: a.slots[idx], alpha: Math.max(0.18, 1 - w.t!) * dim, haze, site });
-        lights.push({ actor: a, ll: this.ll(next.p), slot: a.slots[w.leg! + 1], alpha: Math.max(0.18, w.t!) * dim, haze: np === 'area' || np === 'country', site: this.siteId(next.p) });
+        // a long gap in the records: still drawn where last recorded, dimming as the years pass.
+        // The light appears at the next place only in the year a record finds it there.
+        lights.push({ actor: a, ll: here, slot: a.slots[idx], alpha: (l.assumed ? 1 : 1 - 0.6 * w.t!) * dim, haze, hollow: lent, site });
         if (l.km > 3) traces.push({ actor: a, leg: l, style: l.doubt ? 'doubt' : 'fade', alpha: (sel ? 0.9 : 0.5) * dim });
       }
     }
