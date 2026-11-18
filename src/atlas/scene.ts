@@ -87,7 +87,8 @@ export class World {
   countryOf(a: Actor, year: number): string | null {
     if (year < a.on || year >= a.d) return null;
     const w = whereAt(a.stays, year)!;
-    if (w.b && w.sail) return a.legs[w.leg!].km > 1500 ? 'sea' : this.places.get(w.b)!.country;
+    // on a short move, still counted where they set out from until most of the way there
+    if (w.b && w.sail) return a.legs[w.leg!].km > 1500 ? 'sea' : this.places.get((w.t ?? 0) < 0.75 ? w.a : w.b)!.country;
     return this.places.get(w.a)!.country;
   }
   /** every country the records name, with the middle of its places and everyone ever recorded there */

@@ -63,6 +63,10 @@ export class Stage {
   private back: HTMLCanvasElement | null = null;
   private backKey = '';
   private travelling = false;
+  /** during play the globe only ever pulls back on one side of the world, never breathes in and out */
+  private kFloor = Infinity;
+  private lastYear = -Infinity;
+  private lastSide = '';
 
   readonly canvas: HTMLCanvasElement;
   kind: ViewKind;
@@ -91,7 +95,8 @@ export class Stage {
     // two shores is a fixed picture: a phone's sheet slides over it instead of squeezing it
     const hb = this.kind === 'shores' ? H : H - this.inset.bottom;
     if (this.kind === 'globe') {
-      const proj = geoOrthographic().rotate([-cam.lon, -cam.lat]).scale(this.R * cam.k).translate([W / 2, hb / 2]).clipAngle(90);
+      // with a phone's sheet open, centre in what is left below the row of countries
+      const proj = geoOrthographic().rotate([-cam.lon, -cam.lat]).scale(this.R * cam.k).translate([W / 2, this.inset.bottom > 0 ? 44 + (hb - 44) / 2 : hb / 2]).clipAngle(90);
       return [{ proj, vis: (ll) => geoDistance(ll, [cam.lon, cam.lat]) < 1.5, globe: true }];
     }
     const tall = hb > W * 1.05, g = tall ? 0 : Math.min(150, W * 0.11), top = 66, pad = 12;
@@ -129,7 +134,12 @@ export class Stage {
     const mine = sc.lights.filter((l) => !l.moving && l.ll[0] > -30 && (l.ll[0] > 100) === nz);
     // with only a handful of lights left, hold a steady view: chasing them makes the zoom pump
     if (mine.length < 12) return nz ? { lon: 174.2, lat: -40.6, k: 5.4 } : { lon: -0.6, lat: 52.6, k: 6 };
-    return this.around(mine.map((l) => l.ll), mine.map((l) => l.alpha), 9);
+    const g = this.around(mine.map((l) => l.ll), mine.map((l) => l.alpha), 9);
+    const side = nz ? 'nz' : 'eu';
+    if (sc.year < this.lastYear - 0.01 || side !== this.lastSide) this.kFloor = Infinity;
+    this.lastYear = sc.year; this.lastSide = side;
+    this.kFloor = Math.min(this.kFloor, g.k);
+    return { ...g, k: this.kFloor };
   }
   /** Centre on these points, and stand back far enough to see nearly all of them. */
   private around(lls: LonLat[], weights: number[] | null, maxK: number): Goal {
@@ -149,7 +159,7 @@ export class Stage {
   }
   resume() { this.auto = true; this.goal = null; }
   zoomBy(f: number) {
-    this.takeOver();
+    this.takeOver(); this.ev.onHover(null, null, 0, 0);
     if (this.kind === 'globe') this.cam.k = Math.max(0.9, Math.min(60, this.cam.k * f));
   }
   private takeOver() { if (this.auto || this.goal) { this.auto = false; this.goal = null; this.ev.onUser(); } }

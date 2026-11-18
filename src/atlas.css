@@ -82,7 +82,9 @@ body.kbd .views:focus { outline: 2px solid var(--amber); outline-offset: -2px; }
   .countries { left: 8px; right: 0; top: 4px; padding: 0 28px 2px 0; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); }
   .countries > :first-child { margin-left: 0; }
   .countries button, .countries .sea { min-height: 36px; }
-  .atlas .caption { bottom: 84px; max-width: calc(100% - 28px); font-size: 14px; }
+  /* clear of the zoom column on the right */
+  .atlas .caption { bottom: 84px; left: 12px; right: 68px; width: auto; max-width: none; transform: translateY(6px); text-align: left; font-size: 14px; }
+  .atlas .caption.on { transform: none; }
   .atlas .time { gap: 8px; }
   .atlas #alive { font-size: 10.5px; }
 }

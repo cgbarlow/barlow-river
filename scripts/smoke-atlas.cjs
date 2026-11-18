@@ -318,6 +318,16 @@ process.on('exit', () => server?.kill());
   const capBox = await page.locator('#caption').boundingBox(), stBox = await page.locator('#stage').boundingBox();
   check('captions sit at the bottom, clear of the countries and the rim pointers', capBox.y > stBox.y + stBox.height * 0.6);
   await A(page, () => window.__atlas.stop());
+  // 12b. every caption is about a record
+  const badCaps = await A(page, () => window.__atlas.beats().filter((b) => /first recorded in \d|^By /.test(b.text) && (b.ids ?? []).some((id) => { const a = window.__atlas.world.byId.get(id); return !a || a.a.stops.every((s) => s.kind === 'borrowed'); })).map((b) => b.text.slice(0, 60)));
+  check('no caption says “recorded” of someone with no record of their own', badCaps.length === 0, badCaps.join(' | '));
+  const caps = await A(page, () => window.__atlas.beats().map((b) => b.y));
+  let quiet = 0; for (let i = 1; i < caps.length; i++) if (caps[i - 1] >= 1700) quiet = Math.max(quiet, caps[i] - caps[i - 1]);
+  check('no half-century passes without a caption after 1700', quiet <= 50, `longest gap ${quiet} years, ${caps.length} captions`);
+  await A(page, () => window.__atlas.openFinding('a-first-wales'));
+  check('the Wales finding opens on a year when Wales is lit', Number(await page.locator('#countries [data-country="Wales"] b').textContent()) > 0, await page.locator('#countries [data-country="Wales"]').textContent());
+  await page.keyboard.press('Escape');
+
   await page.close();
 
   // 13. deep links
@@ -376,6 +386,12 @@ process.on('exit', () => server?.kill());
   const stacked = await A(page, () => { const s = window.__atlas.stages[0], w = window.__atlas.world; const e = w.actors.find((a) => s.screenOf(a.id) && w.lightOf(a, 1880)?.[0] < 10), n = w.actors.find((a) => s.screenOf(a.id) && w.lightOf(a, 1880)?.[0] > 150); return e && n ? s.screenOf(n.id)[1] - s.screenOf(e.id)[1] : 0; });
   check('on a phone the two shores stack', stacked > 80, String(stacked));
   await page.locator('#legend .key-toggle').tap();
+  await A(page, () => { window.__atlas.setYear(1852); window.__atlas.play(); });
+  for (let i = 0; i < 40 && !(await page.locator('#caption.on').count()); i++) await page.waitForTimeout(150);
+  await A(page, () => window.__atlas.stop());
+  const cz = await page.evaluate(() => { const c = document.querySelector('#caption').getBoundingClientRect(), z = document.querySelector('.zoom').getBoundingClientRect(); return [Math.round(c.right), Math.round(z.left), c.width > 150]; });
+  check('on a phone the caption stays clear of the buttons', cz[0] <= cz[1] && cz[2], JSON.stringify(cz));
+  await A(page, () => window.__atlas.setYear(1880));
   check('on a phone the Key opens', !(await page.locator('#legend.collapsed').count()) && /Hollow/.test(await page.locator('#legend').innerText()));
   await page.locator('#legend .key-toggle').tap();
   const hdr = await page.locator('.top').boundingBox();
