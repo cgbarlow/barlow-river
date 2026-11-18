@@ -91,6 +91,7 @@ The case file cards in `src/casefile.ts` are written by hand from the Iris docum
 | `pipeline/facts.ts`, `pipeline/leads.ts` | The findings |
 | `docs/data-sources.md` | Where the data lives in Iris and what shape it is in |
 | `docs/council-report.md` | The Council review that chose this concept |
+| `.campaign/` | The three Council reviews of this build: the plan, the first build, the iterated build |
 | `mockup/` | The original static mockup |
 
 ## Not done

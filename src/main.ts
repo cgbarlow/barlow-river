@@ -405,7 +405,7 @@ function leadsHtml(): string {
         <span class="chip ${fact ? 'fact' : 'lead'}">${esc(fact ? 'The tree shows' : LEAD_KIND[l.kind] ?? 'Lead')}</span>
         <span class="t">${esc(l.title)}</span>
         <span class="b clip">${esc(l.body)}</span>
-        <span class="more">${few ? `<span class="who">${chips(l.people)}</span>` : `${l.people.length} people are lit on the river.`}</span>
+        <span class="more">${few ? `<span class="who">${chips(l.people)}</span>` : `<span class="who">${chips(l.people.filter((id) => !P.get(id)!.living).slice(0, 6))}</span>${l.people.length} people are lit on the river. These are the first few.`}</span>
       </div>`;
     }).join('');
   return `
