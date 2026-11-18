@@ -49,7 +49,8 @@ export class World {
       const stays = staysOf(a, place);
       const legs = legsOf(stays, place).map((l) => {
         const A = place(l.a), B = place(l.b);
-        const r = route([A.lon, A.lat], [B.lon, B.lat], l.y1);
+        // a dated voyage takes the route of its year; an undated one, the route of the middle of its window
+        const r = route([A.lon, A.lat], [B.lon, B.lat], l.sail ? l.y1 : (l.y0 + l.y1) / 2);
         return { ...l, kind: r.kind, pts: densify(r.pts, 220).pts };
       });
       const last = stays[stays.length - 1].stops;
@@ -64,6 +65,8 @@ export class World {
       items.push({ a, i, site, start: i ? a.stays[i - 1].to : a.on, end: i < a.stays.length - 1 ? a.stays[i + 1].from : a.d });
       const list = this.atSite.get(site) ?? []; if (!list.includes(a)) list.push(a); this.atSite.set(site, list);
     });
+    // a record can name a place the person is not drawn at ("Kent" for someone already in Woolwich): it still belongs to that place
+    for (const a of this.actors) for (const s of a.a.stops) { const site = this.siteId(s.p); const list = this.atSite.get(site) ?? []; if (!list.includes(a)) list.push(a); this.atSite.set(site, list); }
     items.sort((x, y) => x.start - y.start);
     const pools = new Map<string, number[]>();
     for (const it of items) { const pool = pools.get(it.site) ?? []; pools.set(it.site, pool); let k = pool.findIndex((e) => e <= it.start); if (k < 0) k = pool.length; pool[k] = it.end; it.a.slots[it.i] = k; }

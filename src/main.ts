@@ -175,6 +175,9 @@ function setYear(y: number, fromPlay = false) {
   document.querySelectorAll<SVGRectElement>('#spark rect').forEach((r) => r.classList.toggle('past', Number(r.dataset.y) <= state.year));
   caption(fromPlay);
   writeHash();
+  // keep the link to the Atlas on the year being shown, so a copied link is right too
+  const toAtlas = document.querySelector<HTMLAnchorElement>('a.mode-link');
+  if (toAtlas && P) toAtlas.href = atlasHref();
 }
 function play(keepHint = false) {
   if (state.playing) return;

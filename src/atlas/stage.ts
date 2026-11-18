@@ -127,7 +127,8 @@ export class Stage {
     if (ride && sc.ship && sc.year >= ride[0] && sc.year < ride[1]) return { lon: sc.ship[0], lat: sc.ship[1], k: 1.7 };
     const nz = sc.year >= this.plan.turn;
     const mine = sc.lights.filter((l) => !l.moving && l.ll[0] > -30 && (l.ll[0] > 100) === nz);
-    if (!mine.length) return nz ? { lon: 174.6, lat: -40.4, k: 4.5 } : { lon: 0.4, lat: 52.4, k: 6 };
+    // with only a handful of lights left, hold a steady view: chasing them makes the zoom pump
+    if (mine.length < 12) return nz ? { lon: 174.2, lat: -40.6, k: 5.4 } : { lon: -0.6, lat: 52.6, k: 6 };
     return this.around(mine.map((l) => l.ll), mine.map((l) => l.alpha), 9);
   }
   /** Centre on these points, and stand back far enough to see nearly all of them. */
@@ -315,7 +316,8 @@ export class Stage {
       const pl = this.world.places.get(sid)!, q = at([pl.lon, pl.lat], 0); if (!q) continue;
       this.siteHits.push({ x: q[0], y: q[1], id: sid });
       if (drawn >= labels || n < 0.5) continue;
-      const text = pl.name.split(',')[0].replace(' (then Alexandra)', ''), tw = c.measureText(text).width, off = 8 + gap * Math.sqrt(Math.min(n, 30));
+      // a record that names only the country is marked as exactly that
+      const text = pl.prec === 'country' ? `somewhere in ${pl.name}` : pl.name.split(',')[0].replace(' (then Alexandra)', ''), tw = c.measureText(text).width, off = 8 + gap * Math.sqrt(Math.min(n, 30));
       const box = [q[0] + off, q[1] - 7, q[0] + off + tw, q[1] + 7];
       if (p.rect && box[2] > p.rect[2] - 2) continue;
       if (boxes.some((b) => box[0] < b[2] + 4 && box[2] > b[0] - 4 && box[1] < b[3] && box[3] > b[1])) continue;

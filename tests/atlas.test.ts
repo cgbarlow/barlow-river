@@ -234,8 +234,12 @@ describe('nobody is drawn before a record places them', () => {
       if (s0.kind !== 'borrowed') continue;
       const who = /with (?:her|his|their) \w+, (.+?)(?:, from \d{4}.*)?$/.exec(s0.why)![1];
       const lender = atlas.people.find((x) => P.get(x.id)!.name === who && (!p.borrowed || x.id === p.borrowed.from)) ?? atlas.people.find((x) => P.get(x.id)!.name === who)!;
+      // and only ever from someone with a record of their own: no borrowing from the borrowed
+      expect(lender.borrowed, `${P.get(p.id)!.name} with ${who}`).toBeUndefined();
       const recs = lender.stops.filter((s) => s.kind !== 'borrowed');
-      const first = recs.length ? Math.min(...recs.map((s) => s.y)) : (lender.seen ?? lender.stops[0].y);
+      expect(recs.length).toBeGreaterThan(0);
+      const first = Math.min(...recs.map((s) => s.y));
+      if (p.seen != null) expect(p.seenWhy, P.get(p.id)!.name).toMatch(p.seen === first ? /the first (year .+ is recorded|record)/ : /married|was born|first/);
       expect(s0.y, `${P.get(p.id)!.name} with ${who}`).toBeGreaterThanOrEqual(first);
       expect(s0.y).toBeLessThan(P.get(p.id)!.d!.y);
     }
@@ -310,6 +314,8 @@ describe('the published atlas', () => {
   it('finds the first crossing and the move in doubt', () => {
     expect(file.facts.find((f) => f.id === 'a-first-crossing')!.y).toBe(1855);
     expect(file.facts.length).toBeGreaterThanOrEqual(5);
+    expect(file.facts.some((f) => f.id === 'a-split-siblings')).toBe(true);
+    expect(file.facts.some((f) => f.id === 'a-silence')).toBe(true);
     expect(file.leads.length).toBeGreaterThanOrEqual(2);
   });
   it.skipIf(!existsSync('data/raw/iris-export.json'))('names no living person from the raw export', async () => {

@@ -13,6 +13,9 @@ body.kbd .views:focus { outline: 2px solid var(--amber); outline-offset: -2px; }
 .legend i.ln { width: 22px; height: 0; border-radius: 0; border-top: 2px solid var(--ink-2); }
 .legend i.ln.d { border-top-style: dashed; }
 .legend i.ln.q { border-top: 2px dotted #FF8A7A; }
+.legend button.swatch { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); text-decoration: none; font-size: inherit; min-height: 28px; padding: 0 6px; margin: 0 -6px; border-radius: 6px; white-space: nowrap; }
+.legend button.swatch:hover { background: var(--panel-2); color: var(--ink); }
+.legend button.swatch[aria-pressed='true'] { background: var(--amber); color: var(--amber-ink); font-weight: 600; }
 .legend .key-toggle { font-weight: 600; text-decoration: none; color: var(--ink); }
 .legend.collapsed > :not(.key-toggle) { display: none; }
 /* the River's phone rule hides everything and draws its own label; the Atlas keeps a real button */
@@ -110,4 +113,6 @@ body.kbd .views:focus { outline: 2px solid var(--amber); outline-offset: -2px; }
   .countries > :first-child { margin-left: 0; }
   .countries button, .countries .sea { min-height: 30px; font-size: 11.5px; padding: 0 8px; }
   .atlas .caption { bottom: 8px; font-size: 13px; max-width: calc(100% - 150px); }
+  /* no room for zoom buttons beside a map this small: pinch instead */
+  .atlas #zin, .atlas #zout { display: none; }
 }

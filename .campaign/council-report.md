@@ -5,38 +5,38 @@ council-type: standalone
 
 # Council Report
 
-Third round on The Atlas, after a second outside tester re-checked the first round's fixes. Earlier: `council-report-atlas-plan.md`, `council-report-atlas-mockups.md`, `council-report-atlas-post-build.md`.
+Fourth round on The Atlas, after a third outside tester checked every person in every year against the page's own rules. Earlier rounds: `council-report-atlas-plan.md`, `-mockups.md`, `-post-build.md`, `-round-3.md`.
 
 ## Animal Perspectives
 
 ### Bear — Vision & Direction
-- The story is there and cannot be read: captions pass in under a second. Hold the film when it has something to say.
+- Honest and calm now. What it lacks is stakes: the captions after 1855 are a list of "by X, Y is in Z". Say how old they were and which children were born on which shore.
 
 ### Cat — Risk & Scope
-- "No light before a record" has three holes. Records naming only a country or county are discarded, so people sit in Birmingham for nineteen years after marrying in New Zealand. Five people are still solid from birth at a much later town. Hollow lights are lent places their lender had not reached.
-- Borrowed years have leaked into sentences that say "recorded".
-- The Suez route for an 1874 voyage is probably wrong and cannot be verified here. Draw the Cape and stop naming a canal.
+- Seven hollow lights are borrowed from someone who is themselves borrowed, up to three removes from one 1880 birth. Cut the chains.
+- Eight panels call an estimated marriage year "the first year that relative is recorded".
+- Owner to confirm: "Beverley", born about 1948 with no death recorded, is drawn as deceased because the tree flags her so.
 
 ### Owl — Process & Structure
-- Two outside passes each found what the automated checks missed. Each fix gets a test in the data layer.
+- Three outside passes, each narrower. Country counts should move with the drawing, not half a year ahead.
 
 ### Puppy — Opportunities & Momentum
-- A light that dims the longer it is since a record makes the honest version better to look at.
+- The crossing is the one dramatic moment and lasts three seconds. Slow it. Let a tap on a family line in the Key light that line.
 
 ### Rabbit — Resources & Stakeholders
-- The Key cannot be opened on a phone. The phone header takes more than a quarter of the screen.
+- People known only to "New Zealand" pile up at the country's centre and read as a town. Draw them offshore, marked "somewhere in New Zealand".
 
 ### Wolf — Cohesion & Balance
-- Wales and Ireland are unlabelled on Two Shores, and the Poland inset covers part of Ireland.
+- Wales has no caption. Families that split across the two shores would give more lines a finding.
 
 ## Consensus
 
-The Council adopts the second tester's scores: Interesting 3, Novel 4, Surprising 3, Delightful 3, Engaging 3, Interactive 4, Dynamic 4. Total 24 of 35. Ten of the eleven first-round items are fixed or mostly fixed; the honesty rule is partly fixed. No privacy problem and no bouncing camera were found in either pass. Not done.
+The Council adopts the third tester's scores: Interesting 4, Novel 4, Surprising 3, Delightful 3, Engaging 3, Interactive 4, Dynamic 4. Total 25 of 35. Five of the page's seven rules pass outright for every person in every year; two fail narrowly. The tester attributes part of the gap on Interesting, Delightful and Engaging to the family's records, not the build.
 
 ## Recommended Next Steps
 
-1. Use country and county records instead of discarding them: a haze in that country from that year.
-2. Lend a place to a hollow light only from the year the lender is recorded.
-3. "Recorded" on the page means a record, never a borrowed year.
-4. Hold play long enough to read each caption.
-5. Phones: a Key that opens, a shorter header, the selected person visible above the sheet. Insets moved off Ireland and northern New Zealand; Wales and Ireland named.
+1. No second-hand borrowing. Say what a start year really is.
+2. Captions with ages, and children born before and after a crossing. A caption for Wales.
+3. "Somewhere in" marks for country-only records, offshore.
+4. A slower crossing; steady zoom when few lights remain; counts in step with the drawing.
+5. Two cross-check findings: families split across the shores, and the longest silence in the records. Tap a line in the Key to light it.

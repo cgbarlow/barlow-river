@@ -66,7 +66,8 @@ const ROWS: Row[] = [
   ['helston', 'Helston, Cornwall', 50.102, -5.275, 'town', 'England', 'Cornwall'],
   ['constantine', 'Constantine, Cornwall', 50.118, -5.176, 'town', 'England', 'Cornwall'],
   ['illogan', 'Illogan, Cornwall', 50.250, -5.268, 'town', 'England', 'Cornwall'],
-  ['england', 'England', 52.60, -1.50, 'country', 'England', 'Elsewhere in England'],
+  // A record that names only a country is drawn just offshore, so it cannot be mistaken for a town
+  ['england', 'England', 53.45, 1.70, 'country', 'England', 'Elsewhere in England'],
   // Wales, Ireland, America
   ['gellifelen', 'Clydach Works, Llanelly, Breconshire', 51.807, -3.126, 'town', 'Wales', 'Elsewhere in England'],
   ['trevethin', 'Trevethin, Monmouthshire', 51.712, -3.045, 'town', 'Wales', 'Elsewhere in England'],
@@ -96,14 +97,14 @@ const ROWS: Row[] = [
   ['hamilton', 'Hamilton, Waikato', -37.787, 175.279, 'town', 'New Zealand', 'New Zealand'],
   ['paeroa', 'Paeroa, Hauraki', -37.380, 175.670, 'town', 'New Zealand', 'New Zealand'],
   ['northland', 'Northland', -35.60, 174.00, 'area', 'New Zealand', 'New Zealand'],
-  ['new-zealand', 'New Zealand', -40.60, 175.60, 'country', 'New Zealand', 'New Zealand'],
+  ['new-zealand', 'New Zealand', -40.20, 171.00, 'country', 'New Zealand', 'New Zealand'],
   // Poland
   ['koszalin', 'Koszalin', 54.194, 16.172, 'town', 'Poland', 'Poland'],
   ['pulawy', 'Puławy', 51.416, 21.969, 'town', 'Poland', 'Poland'],
   ['przeworsk', 'Przeworsk', 50.059, 22.494, 'town', 'Poland', 'Poland'],
   ['zamosc', 'Zamość', 50.723, 23.252, 'town', 'Poland', 'Poland'],
   ['stalowa-wola', 'Stalowa Wola', 50.583, 22.054, 'town', 'Poland', 'Poland'],
-  ['poland', 'Poland', 52.00, 19.40, 'country', 'Poland', 'Poland'],
+  ['poland', 'Poland', 54.90, 17.60, 'country', 'Poland', 'Poland'],
 ];
 
 export const PLACES: AtlasPlace[] = ROWS.map(([id, name, lat, lon, prec, country, region, town]) => ({ id, name, lat, lon, prec, country, region, ...(town ? { town } : {}) }));

@@ -40,6 +40,8 @@ export interface AtlasPerson {
   stops: AtlasStop[];
   /** not drawn before this year: the first record, or the first year the relative they are shown with is recorded */
   seen?: number;
+  /** what that year is, in words: "the first year Jan Chmielewski is recorded", "about when they married" */
+  seenWhy?: string;
   /** no place of their own: shown hollow where a close relative was */
   borrowed?: { from: string; how: 'parent' | 'partner' | 'sibling' | 'child' };
 }

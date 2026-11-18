@@ -73,7 +73,7 @@ Two thirds of people have no place of their own. That is the central risk and th
 - **Derived from the published file.** `public/data/atlas.json` is computed from the already privacy-filtered people, so the Atlas cannot publish anything the River does not.
 - **Basemap.** Natural Earth land outlines (public domain), bundled. No tiles, no outside requests.
 - **Drawing.** d3-geo projections on a canvas. Hit-testing and keyboard stepping kept in step with the canvas so every person is reachable without a pointer.
-- **Voyages.** A move between Europe and New Zealand is drawn along the usual sea route of its era (the Cape before 1870, Suez after), marked as the customary route and not a record of that voyage. Short moves are straight arcs.
+- **Voyages.** A move between Europe and New Zealand is drawn along the usual sea route of its era (out round the Cape of Good Hope; through Panama after 1914), marked as the customary route and not a record of that voyage. Short moves are straight arcs.
 
 ## Rules
 

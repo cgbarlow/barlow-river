@@ -227,6 +227,23 @@ process.on('exit', () => server?.kill());
   check('the certainty lens names its four kinds', /Placed by a record/.test(await page.locator('#legend').textContent()) && /Identity disputed/.test(await page.locator('#legend').textContent()));
   await page.keyboard.press('1');
 
+  // 8b. the Key is a filter; a dated voyage can be ridden
+  await page.locator('#legend .key-toggle').click();
+  await page.locator('#legend [data-group="Finch"]').click();
+  const grp = await A(page, () => { const st = window.__atlas.state; return [st.group, st.focus?.size ?? 0, window.__atlas.scene().lights.filter((l) => l.alpha > 0.3).length, window.__atlas.scene().lights.length]; });
+  check('tapping a line in the Key lights only that line', grp[0] === 'Finch' && grp[1] > 10 && grp[2] > 0 && grp[2] < grp[3], JSON.stringify(grp));
+  await page.locator('#legend [data-group="Finch"]').click();
+  check('tapping it again clears it', (await A(page, () => window.__atlas.state.focus)) === null);
+  await page.locator('#legend .key-toggle').click();
+  await page.locator('#panel-body [data-finding^="a-same-year"]').click();
+  await page.locator('#panel-body [data-ride]').click();
+  let rode = false;
+  for (let i = 0; i < 80 && !rode; i++) { await page.waitForTimeout(150); rode = await A(page, () => Boolean(window.__atlas.scene().ship)); }
+  check('a finding about a dated voyage offers to sail it, and the ship sails', rode && (await A(page, () => window.__atlas.state.playing)));
+  await A(page, () => window.__atlas.stop());
+  await page.keyboard.press('Escape');
+  await A(page, () => window.__atlas.setYear(1880));
+
   // 9. the panel: findings, places, people
   const cards = await page.locator('#panel-body [data-finding]').count();
   check('findings are listed', cards >= 7, String(cards));
@@ -240,6 +257,7 @@ process.on('exit', () => server?.kill());
   await page.locator('#record .back').click();
   await page.locator('.tabs [data-tab="people"]').click();
   const nPeople = await page.locator('#plist [data-go]').count();
+  check('the list says who has a light and who only an ember', /\d+ people with a light/.test(await page.locator('#panel-body .kicker').textContent()));
   check('every person on the map is in the list', nPeople === (await A(page, () => window.__atlas.world.actors.length)), String(nPeople));
   check('the unplaced are named, and the living are counted but not named', (await page.locator('#panel-body [data-none]').count()) === (await A(page, () => window.__atlas.atlas.unplaced.length)) && /109 living relatives/.test(await page.locator('#panel-body').textContent()));
   await page.locator('#pfilter').fill('howick');
@@ -286,6 +304,7 @@ process.on('exit', () => server?.kill());
   const t1 = Date.now(); let held = 0;
   for (let i = 0; i < 60; i++) { await page.waitForTimeout(100); const now = await page.locator('#caption').textContent(); if (now !== cap || !(await page.locator('#caption.on').count())) break; held = Date.now() - t1; }
   check('a caption stays up long enough to read', held >= 1800, `${held} ms`);
+  check('a caption gives the age and what the voyage meant for the children', /Thomas Finch, 32,/.test(cap) && /children/.test(cap), cap.slice(60, 200));
   check('a caption says what the records say, and no more', /1855/.test(cap) && /Last recorded in/.test(cap) && !/sailed|ship/.test(cap), cap.slice(0, 70));
   const capBox = await page.locator('#caption').boundingBox(), stBox = await page.locator('#stage').boundingBox();
   check('captions sit at the bottom, clear of the countries and the rim pointers', capBox.y > stBox.y + stBox.height * 0.6);
