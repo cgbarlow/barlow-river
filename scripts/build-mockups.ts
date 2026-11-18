@@ -45,7 +45,7 @@ const MODES: [string, string, string, string][] = [
   ['c-two-shores', 'shores', 'C · Two Shores', 'The family lives in two small places on opposite sides of the world. So draw those two places large, and the crossing between them.'],
 ];
 for (const [file, mode, title, blurb] of MODES) {
-  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Atlas mockup ${title}</title><style>${css}</style></head>
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Atlas Mockup ${title.slice(0, 1)}</title><style>${css}</style></head>
 <body data-mode="${mode}"><header><div><small>Mockup · Barlow family · The Atlas</small><h1>${title}</h1><p>${blurb}</p></div><nav>${MODES.map((m) => `<a href="${m[0]}.html"${m[0] === file ? ' class="on"' : ''}>${m[2].slice(0, 1)}</a>`).join('')}</nav></header>
 <main id="stage"><canvas id="c"></canvas><canvas id="inset"></canvas><div id="caption"></div><div id="legend"></div><div id="tip" hidden></div><aside id="card" hidden></aside></main>
 <footer><button id="play" aria-label="Play">▶</button><div id="year">1600</div><input id="track" type="range" min="1590" max="2026" value="1600" aria-label="Year"><div id="alive"></div></footer>
