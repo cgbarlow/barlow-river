@@ -5,44 +5,45 @@ council-type: standalone
 
 # Council Report
 
-Fourth and final round. Earlier rounds: `council-report-plan.md`, `council-report-post-build.md`, `council-report-round-3.md`.
+Closing round. Earlier rounds: `council-report-plan.md`, `council-report-post-build.md`, `council-report-round-3.md`, `council-report-round-4.md`.
 
 ## Animal Perspectives
 
 ### Bear — Vision & Direction
-- The build shows time and doubt, and now also answers what a relative asks: who was this, how am I connected, how sure are we. "What rests on this link" is the brief's idea in one sentence on the link it concerns.
-- Life in sentences lifted the thin records. Interesting 5. Novel 5.
+- A visitor sees time and doubt in the first ten seconds without reading: the river grows from three dotted guesses, a cut-off lake sits beside it, a flag marks where the evidence stops.
+- Surprises are now starred on the water and one arrives as a caption. Surprising moves to 5.
 
 ### Cat — Risk & Scope
-- Surprising is a 4: most surprises sit in a tab; only one comes to you on the river.
-- "Very polished: yes, narrowly." Left unfixed: a record on a landscape phone leaves a sliver of river; people ahead of the year cannot be tapped.
-- Privacy scanned clean in three separate passes. The birth-order leak relative to a living sibling was closed.
-- A decision, not a defect: named, recently deceased, undated people drawn as alive until last year.
+- Both items left unfixed last round are fixed: sideways phones show river and record side by side; people ahead of the year can be tapped.
+- "Narrowly" is dropped.
+- Two limits on what has been shown: the last five small fixes were verified by browser checks, not seen again by the reviewer; and publishing is proved only up to the artifact, because running the Pages workflow publishes a family's data.
+- Privacy held through every scan by three separate testers.
 
 ### Owl — Process & Structure
-- The requested loop ran in full, then three more rounds. Browser checks rose from 33 to 55, one per defect fixed.
-- New logic went into `src/model/kin.ts` with tests. `src/main.ts` should be split before the next feature.
-- Publishing runs only by hand. Correct.
+- Council before, Council after, iteration, then four more rounds with two outside testers over seven passes.
+- Browser checks rose from 33 to 59. Unit and privacy tests pass on GitHub for each recent push.
+- Split `src/main.ts` before the next feature.
 
 ### Puppy — Opportunities & Momentum
-- The pulse now travels on the trunk. Delightful 5.
-- Cheap answer to Cat: put place-bound findings on the river as markers.
+- Tapping a faint light in the future and having the river run forward to it is the best small thing.
+- The stars add without clutter. Nothing left worth holding the work for.
 
 ### Rabbit — Resources & Stakeholders
-- The phone gets the full thing. Real photos load.
-- "Open in Iris" links point at the owner's test host. Owner's call.
+- Any phone, held either way, gets the full experience and a guide. The author has a route back to Iris from every record.
+- What is missing is not in the build: someone has to decide to share it.
 
 ### Wolf — Cohesion & Balance
-- Every line gets attention through its people. The landscape phone is the one weak surface, not worth holding for.
+- The landscape phone, the one neglected surface, now has its own layout and checks. Attention is balanced.
 
 ## Consensus
 
-Scores: Interesting 5, Novel 5, Surprising 4, Delightful 5, Engaging 5, Interactive 5, Dynamic 5. Total 34 of 35, against 31 for the concept. Done against the brief: all five interactions, all four rules. Against the bar: useful, delightful and novel without reservation; fully working, confirmed twice from outside; very polished, narrowly.
+Final scores: Interesting 5, Novel 5, Surprising 5, Delightful 5, Engaging 5, Interactive 5, Dynamic 5. Total 35 of 35, against 31 for the concept. Done against the brief (five interactions, four rules) and against the bar: very polished, useful, delightful, novel, fully working. Nothing in the build stands between this and that bar.
 
-Owner's decisions, not the build's: whether to publish given the tree's shape shows; whether recently deceased, undated people should appear; whether public links to Iris should point at the test host.
+Not demonstrated: the last five small fixes were confirmed by automated checks rather than a person, and the site has not been published.
 
 ## Recommended Next Steps
 
-1. Put place-bound findings on the river as markers.
-2. Keep all four reports.
-3. Split `src/main.ts` before the next feature.
+1. Owner: decide whether to publish, given that the tree's shape shows.
+2. Owner: decide whether named, recently deceased, undated people should appear.
+3. Owner: decide whether public "Open in Iris" links should point at the test host.
+4. Split `src/main.ts` before the next feature.
