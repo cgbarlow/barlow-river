@@ -101,3 +101,12 @@ Work stays on the branch `claude/sweet-brown-e2amxn`. `main` is not touched. Not
 4. Person and place panels, lenses, findings, links between modes.
 5. Phone layouts, keyboard, guide.
 6. Outside testing, Council review of the build, iterate.
+
+## What was decided after the mockups
+
+Three mockups were made before the build (`mockup/atlas/`): A, a globe; B, one flat world map; C, two shores. The Council reviewed them (`.campaign/council-report-atlas-mockups.md`) and the owner said to carry on with its consensus.
+
+- **A and C are built. B is dropped.** At world scale England and New Zealand are one blob each. "Map" in this brief now means Two Shores.
+- **The camera does not bounce.** In the mockups the globe swung between Britain and New Zealand whenever the balance of lights shifted. The owner asked for that to stop. The camera now stays in Europe, crosses once, and stays in New Zealand.
+- **Other countries are shown.** Asked for by the owner during the build: a row of countries with counts, pointers at the globe's rim, and insets on Two Shores for Poland and the United States.
+- **Globe to map does not unroll.** That was the first thing the Council said to cut, and with Two Shores as the map there is nothing to unroll into.

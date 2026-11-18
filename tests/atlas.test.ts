@@ -89,9 +89,14 @@ describe('journeys', () => {
     const st = staysOf(person([{ y: 1848, p: 'lambeth', kind: 'birth', why: 'born' }, { y: 1872, p: 'lambeth', kind: 'census', why: 'census' }, { y: 1874, p: 'christchurch', kind: 'child', why: 'birth of Agnes' }]), place);
     const leg = legsOf(st, place)[0];
     expect(leg).toMatchObject({ y0: 1872, y1: 1874, sail: true });
-    expect(whereAt(st, 1860)).toEqual({ a: 'lambeth' });
+    expect(whereAt(st, 1860)).toEqual({ i: 0, a: 'lambeth' });
     expect(whereAt(st, 1873)).toMatchObject({ a: 'lambeth', b: 'christchurch', t: 0.5, sail: true });
-    expect(whereAt(st, 1880)).toEqual({ a: 'christchurch' });
+    expect(whereAt(st, 1880)).toEqual({ i: 1, a: 'christchurch' });
+  });
+  it('draws a voyage across the year when both ends are recorded in it', () => {
+    const st = staysOf(person([{ y: 1874, p: 'lambeth', kind: 'marriage', why: 'married' }, { y: 1874, p: 'christchurch', kind: 'child', why: 'birth of Agnes' }, { y: 1912, p: 'christchurch', kind: 'death', why: 'died' }]), place);
+    expect(whereAt(st, 1874.5)).toMatchObject({ a: 'lambeth', b: 'christchurch', t: 0.5, sail: true });
+    expect(whereAt(st, 1875)).toEqual({ i: 1, a: 'christchurch' });
   });
   it('does not pretend to know when a long window is all there is', () => {
     const st = staysOf(person([{ y: 1823, p: 'sproughton', kind: 'birth', why: 'born' }, { y: 1855, p: 'howick', kind: 'child', why: 'birth of George' }]), place);

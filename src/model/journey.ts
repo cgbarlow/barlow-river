@@ -58,6 +58,8 @@ export function legsOf(stays: Stay[], place: (id: string) => AtlasPlace): Leg[] 
 export const ll = (p: AtlasPlace): LonLat => [p.lon, p.lat];
 
 export interface Where {
+  /** index of the stay they are at, or are leaving */
+  i: number;
   /** the place they are at, or are leaving */
   a: string;
   /** the place they are going to, when between two */
@@ -74,20 +76,20 @@ export function whereAt(stays: Stay[], year: number): Where | null {
   if (!stays.length) return null;
   for (let i = 0; i < stays.length; i++) {
     const s = stays[i], next = stays[i + 1];
-    if (!next || year <= s.to) return { a: s.p };
+    if (!next || year <= s.to) return { i, a: s.p };
     const w = next.from - s.to;
     // both ends recorded in the same year: the voyage is drawn across that year
-    if (w === 0 && year >= next.from && year < next.from + 1) return { a: s.p, b: next.p, t: year - next.from, sail: true, leg: i };
+    if (w === 0 && year >= next.from && year < next.from + 1) return { i, a: s.p, b: next.p, t: year - next.from, sail: true, leg: i };
     if (year >= next.from) continue;
     if (w <= SAIL_MAX) {
       // a voyage is drawn over its window, never less than a year
       const span = Math.max(1, w), start = next.from - span;
-      if (year <= start) return { a: s.p };
-      return { a: s.p, b: next.p, t: (year - start) / span, sail: true, leg: i };
+      if (year <= start) return { i, a: s.p };
+      return { i, a: s.p, b: next.p, t: (year - start) / span, sail: true, leg: i };
     }
-    return { a: s.p, b: next.p, t: (year - s.to) / w, sail: false, leg: i };
+    return { i, a: s.p, b: next.p, t: (year - s.to) / w, sail: false, leg: i };
   }
-  return { a: stays[stays.length - 1].p };
+  return { i: stays.length - 1, a: stays[stays.length - 1].p };
 }
 
 /** The single likeliest place in a year: used to lend a place to a relative. */

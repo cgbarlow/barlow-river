@@ -36,6 +36,27 @@ On a wide screen, play starts close on the headwaters and pulls back as the rive
 
 ![The case file open on the family that was ruled out](docs/screenshots/case-file.png)
 
+## The Atlas: the same tree on the Earth
+
+A second mode, at `atlas.html`. The River shows time and doubt. The Atlas adds place. Brief: `BRIEF-ATLAS.md`.
+
+1. **Press play.** A light comes on where each person was born and goes out when they die. Where a death place is recorded, an ember stays. The camera follows the family, and turns to the other side of the world when it goes there.
+2. **Two ways to draw the Earth, or both.** A globe, and two shores: Britain and New Zealand drawn large with the ocean folded away, and small insets for Poland and the United States. On a wide screen, globe and shores side by side (keys G, S, B). The globe's camera stays with the family in Europe, crosses to New Zealand once, with the one voyage the records date closely, and stays there.
+3. **Tap a light.** The places the records put that person, in order, each with the evidence: born, baptised, census, married, the birth of a child, buried. Then each move, with the years it could have happened in. "Follow the journey" plays that one life.
+4. **Tap a place.** Who was born there, who died there, who is only recorded there, and from when to when.
+5. **See every country.** A row above the map names each country in the records and counts the lights lit there that year: England, New Zealand, Wales, Poland, Ireland, the United States, and anyone at sea. On the globe, a country out of view is named at the rim in the direction it lies. Tap either to go there and see who it was.
+6. **Switch the lens.** By surname, by birthplace, or by how well the place is known.
+7. **Read the findings.** The first of the family in New Zealand, the life that ended farthest from where it began, a couple recorded on both sides of the world in one year, and the oldest move on the map, which is the one in doubt.
+
+What it will not pretend to know:
+
+- **A solid light has a record.** A hollow light has none: the person is drawn where a close relative was, and never moves. A haze is a place known only to a county or country. Eight people have no place and nobody to borrow from. They are listed, not drawn.
+- **When a move happened is almost never recorded.** Where the records pin it to within three years, the light travels. Otherwise it fades out of one place and into the other across the years it could have been.
+- **Sea routes are custom, not record.** A voyage to New Zealand is drawn the way ships went at the time: round the Cape before 1870, through Suez after. The tree names no ship.
+- **Living people are not on the map.** No light, no place.
+
+How it is made: `pipeline/gazetteer.ts` places every place name in the tree by hand, so no family data is sent to a geocoding service. `pipeline/atlas.ts` builds `public/data/atlas.json` from the published `river.json`, never from the raw export, so the Atlas cannot publish anything the River does not. Anyone who died from 1950 on is shown to the town only. The basemap is Natural Earth, bundled (`scripts/build-land.ts` writes it, coarse for the world and detailed for Britain, Ireland and New Zealand); nothing is fetched from a map service.
+
 ## How the river is drawn
 
 This replaces the mockup's illustrative joins with real ones.
@@ -74,7 +95,7 @@ npm run data
 npm test
 ```
 
-3. Commit `public/data/river.json`.
+3. Commit `public/data/river.json` and `public/data/atlas.json`. `npm run data` builds both. If the tree has a place name the gazetteer does not know, the build stops and lists it: add it to `pipeline/gazetteer.ts`.
 
 The case file cards in `src/casefile.ts` are written by hand from the Iris document "Hypothesis: the original Barlow village". When that document changes, update the cards. A test fails if a card points at someone who is no longer in the tree.
 
@@ -91,11 +112,16 @@ The case file cards in `src/casefile.ts` are written by hand from the Iris docum
 | `src/casefile.ts` | The open case: evidence cards, tests, story captions |
 | `src/evidence.ts` | Draft evidence and the Iris change request |
 | `tests/` | Unit tests. `npm test` |
-| `scripts/smoke.cjs` | End-to-end test in a real browser. `npm run verify` runs the unit tests, builds, serves the build and runs this against it |
+| `scripts/smoke.cjs`, `scripts/smoke-atlas.cjs` | End-to-end tests in a real browser, one per mode. `npm run verify` runs the unit tests, builds, serves the build and runs both |
+| `BRIEF-ATLAS.md` | The brief for the Atlas |
+| `pipeline/gazetteer.ts`, `pipeline/atlas.ts` | Places set by hand; stops, borrowed places and findings for the Atlas |
+| `src/model/journey.ts`, `src/model/geo.ts` | Where a person was in a year; distances and sea routes |
+| `src/atlas/` | The Atlas page: `scene.ts` (what is lit), `stage.ts` (globe and two shores), `main.ts` (the page) |
+| `mockup/atlas/` | Three working mockups made to choose the Atlas's direction. A and C were built; B, the flat world map, was dropped |
 | `pipeline/facts.ts`, `pipeline/leads.ts` | The findings |
 | `docs/data-sources.md` | Where the data lives in Iris and what shape it is in |
 | `docs/council-report.md` | The Council review that chose this concept |
-| `.campaign/` | The three Council reviews of this build: the plan, the first build, the iterated build |
+| `.campaign/` | The Council reviews: five for the River, and those for the Atlas (`council-report-atlas-*.md`) |
 | `mockup/` | The original static mockup |
 
 ## Publishing

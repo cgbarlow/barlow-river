@@ -29,6 +29,8 @@ a { color: var(--amber); text-underline-offset: 2px; }
 .top { grid-area: top; display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; padding: 20px 24px 10px 32px; flex-wrap: wrap; }
 .eyebrow { font-family: var(--mono); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
 h1 { margin: 2px 0 0; font-family: var(--serif); font-weight: 600; font-size: 36px; line-height: 1.05; letter-spacing: -.01em; }
+.mode-link { font: 500 13px var(--sans); letter-spacing: 0; margin-left: 12px; color: var(--ink-3); text-decoration: none; white-space: nowrap; vertical-align: middle; padding: 6px 0; display: inline-block; }
+.mode-link:hover, .mode-link:focus-visible { color: var(--amber); }
 .tools { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .lens { display: flex; gap: 4px; background: var(--panel); border-radius: 10px; padding: 4px; }
 .lens button { min-height: 40px; padding: 0 14px; border: 0; border-radius: 7px; background: transparent; font-weight: 500; font-size: 13px; white-space: nowrap; transition: background .2s, color .2s; }
@@ -314,6 +316,7 @@ pre.req { background: var(--bg); border-radius: 8px; padding: 12px; font: 400 11
   #app { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'top' 'stage' 'time'; }
   .top { padding: 12px 14px 8px; gap: 8px; align-items: center; }
   h1 { font-size: 24px; }
+  .mode-link { margin-left: 8px; font-size: 12px; }
   .eyebrow { font-size: 9.5px; }
   .tools { width: 100%; gap: 8px; flex-wrap: nowrap; }
   .lens { flex: 1; }

@@ -560,6 +560,7 @@ function personHtml(p: Person): string {
       ${L.route(p.id).length > 1 ? '<button class="btn solid" data-act="follow">Follow the water</button>' : '<span class="badge">This water does not reach the river</span>'}
       <button class="btn quiet" data-act="goyear" data-y="${p.b?.y}">Go to ${p.b?.y}</button>
       <button class="btn quiet" data-act="relate">Related to…</button>
+      <a class="btn quiet" href="./atlas.html#p=${encodeURIComponent(p.id)}">See on the map</a>
     </div>
     <h3>Record</h3>
     <dl class="kv">${kv.join('')}</dl>
