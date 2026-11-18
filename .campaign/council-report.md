@@ -5,43 +5,44 @@ council-type: standalone
 
 # Council Report
 
-Third round, on the iterated build. Earlier rounds: `council-report-plan.md` (before the build) and `council-report-post-build.md`.
+Fourth and final round. Earlier rounds: `council-report-plan.md`, `council-report-post-build.md`, `council-report-round-3.md`.
 
 ## Animal Perspectives
 
 ### Bear — Vision & Direction
-- All five changes from the post-build review are in and working: pull-back camera, findings, reading guide, one-command verify with CI, reports kept.
-- The pull-back moved Dynamic, the brief's weak score, from 3 to 5 in the outside reviewer's hands.
-- Novel is a 4, not the 5 given last round. The model is new; the parts around it are familiar.
+- The build shows time and doubt, and now also answers what a relative asks: who was this, how am I connected, how sure are we. "What rests on this link" is the brief's idea in one sentence on the link it concerns.
+- Life in sentences lifted the thin records. Interesting 5. Novel 5.
 
 ### Cat — Risk & Scope
-- The case text now separates "not in doubt" from "proven" and counts the trunk ancestors with no source. An outside finding the Council missed.
-- Last round's 33 was generous: it was given to a build with a dead Edit button and a lost year line. Both fixed, both now checked in the browser test.
-- Not settled by any test here: photos against the real image host, and whether the visible shape of the tree is private enough. Both are the owner's.
-- Nothing blocks calling this done.
+- Surprising is a 4: most surprises sit in a tab; only one comes to you on the river.
+- "Very polished: yes, narrowly." Left unfixed: a record on a landscape phone leaves a sliver of river; people ahead of the year cannot be tapped.
+- Privacy scanned clean in three separate passes. The birth-order leak relative to a living sibling was closed.
+- A decision, not a defect: named, recently deceased, undated people drawn as alive until last year.
 
 ### Owl — Process & Structure
-- The review loop ran in full, twice. Browser checks rose from 33 to 46 as defects were fixed.
-- `src/main.ts` should be split before the next feature.
+- The requested loop ran in full, then three more rounds. Browser checks rose from 33 to 55, one per defect fixed.
+- New logic went into `src/model/kin.ts` with tests. `src/main.ts` should be split before the next feature.
+- Publishing runs only by hand. Correct.
 
 ### Puppy — Opportunities & Momentum
-- The New Zealand caption lands during play.
-- Cheap win left: findings that light many people should name the first few.
+- The pulse now travels on the trunk. Delightful 5.
+- Cheap answer to Cat: put place-bound findings on the river as markers.
 
 ### Rabbit — Resources & Stakeholders
-- The guide's claims were checked against the drawing by an outside tester. Every person is reachable by keyboard.
-- Owner still to do: hosting decision, and one look at a photo on a real connection.
+- The phone gets the full thing. Real photos load.
+- "Open in Iris" links point at the owner's test host. Owner's call.
 
 ### Wolf — Cohesion & Balance
-- Interesting is a 4 because most people outside the Barlow trunk are a name and a compiled-tree citation. The page says so (14% cite a record).
+- Every line gets attention through its people. The landscape phone is the one weak surface, not worth holding for.
 
 ## Consensus
 
-All five requested changes are done and independently confirmed. The Council adopts the independent scores: Interesting 4, Novel 4, Surprising 4, Delightful 4, Engaging 5, Interactive 4, Dynamic 5. Total 30 of 35. The remaining gap on Interesting and Surprising is the data, not the build. Nothing in the build stands between this and done.
+Scores: Interesting 5, Novel 5, Surprising 4, Delightful 5, Engaging 5, Interactive 5, Dynamic 5. Total 34 of 35, against 31 for the concept. Done against the brief: all five interactions, all four rules. Against the bar: useful, delightful and novel without reservation; fully working, confirmed twice from outside; very polished, narrowly.
+
+Owner's decisions, not the build's: whether to publish given the tree's shape shows; whether recently deceased, undated people should appear; whether public links to Iris should point at the test host.
 
 ## Recommended Next Steps
 
-1. Name the first few people on findings that light many.
-2. Keep all three reports.
-3. Owner: check a photo on a real connection, then decide on hosting.
-4. Split `src/main.ts` before adding another feature.
+1. Put place-bound findings on the river as markers.
+2. Keep all four reports.
+3. Split `src/main.ts` before the next feature.

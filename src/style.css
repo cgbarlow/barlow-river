@@ -132,6 +132,15 @@ body.kbd #river:focus { outline: 2px solid var(--amber); outline-offset: -2px; }
 .oxbow-mark:hover .oxlabel text { fill: #FFB4A8; }
 .severed { fill: none; stroke: #FF8A7A; stroke-width: 1.3; stroke-dasharray: 2 4; vector-effect: non-scaling-stroke; opacity: .8; }
 .severed-x { stroke: #FF8A7A; stroke-width: 2; stroke-linecap: round; fill: none; }
+.finding { cursor: pointer; transition: opacity .5s; }
+.finding.future { opacity: 0; pointer-events: none; }
+.fstem { stroke: var(--amber); stroke-width: 1; opacity: .7; }
+.fstar { fill: var(--amber); stroke: var(--bg); stroke-width: 1.2; paint-order: stroke; }
+.finding:hover .fstar { fill: #fff; }
+.ftext { font: italic 400 12.5px var(--serif); fill: var(--amber); paint-order: stroke; stroke: var(--bg); stroke-width: 3.5px; stroke-linejoin: round; display: none; }
+.zoom-mid .ftext, .finding:hover .ftext { display: block; }
+.zoom-far .finding { display: none; }
+.world.focus .finding { opacity: .35; }
 .proofhead { pointer-events: none; transition: opacity .5s; }
 .flagpole { stroke: var(--ink-2); stroke-width: 1; }
 .flagtext { font: 600 11px var(--sans); fill: var(--ink); paint-order: stroke; stroke: var(--bg); stroke-width: 3.5px; stroke-linejoin: round; }

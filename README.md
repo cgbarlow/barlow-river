@@ -27,7 +27,7 @@ Then open the address it prints. `npm run build` writes a static site to `dist/`
    - **What rests on a link.** Every link to parents says how many ancestors depend on it. For a doubted link: "If this link is wrong, 2 people upstream, back to 1612, are not this family's."
 3. **Switch the lens.** By surname, by place, or by certainty (keys 1, 2, 3).
 4. **Open the case file.** Nine evidence cards, ruled out, in doubt or proven. Tapping one moves the river there and lights the people and the water it bears on. "Walk the evidence" steps through them upriver.
-5. **Read the findings.** Counted from the tree by rule. What it shows: the river reaches New Zealand in 1855, one couple had 14 children, 14% of people cite a record. And what is worth a second look: a parent who would have been 15, a name given twice in six families, people marked living in a generation born before 1921.
+5. **Read the findings.** Counted from the tree by rule, and the ones that belong to a place are starred on the river itself. What it shows: the river reaches New Zealand in 1855, one couple had 14 children, 14% of people cite a record. And what is worth a second look: a parent who would have been 15, a name given twice in six families, people marked living in a generation born before 1921.
 6. **Add a piece of evidence.** A draft card, saved in your browser only. It produces a change request to apply in Iris. The site never writes to the tree.
 
 Also: search by name (`/`), zoom and pan, deep links (the address bar carries the year, person, lens and card), and a short guide behind the `?` button.

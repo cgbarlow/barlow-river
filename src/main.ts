@@ -102,6 +102,7 @@ async function boot() {
     onHeadwater: () => { if (!state.composing) openCard('origin'); },
     onOxbow: (s) => { if (state.composing) return; const card = cardForStream(s); if (card) { state.card = null; openCard(card.id); } else focusIds(s.members); },
     onStep: stepPerson,
+    onFinding: (id) => { if (state.composing) return; stopWalk(); state.lead = null; state.tab = 'leads'; openLead(id); openSheet(true); document.querySelector('.card.on')?.scrollIntoView({ block: 'nearest' }); },
     onConfluence: (fid) => { if (state.composing) return; stopWalk(); openRecord({ kind: 'family', id: fid }); },
   });
 
@@ -118,6 +119,12 @@ async function boot() {
   }
   const head = proofHeadPerson();
   if (head) river.markProofHead(head.id, `The line holds to here\n${head.name}, ${head.b?.est ? 'c. ' : ''}${head.b?.y}`);
+
+  // findings that belong to one place are marked on the river itself
+  const MARKS: Record<string, string> = { 'fact:first-nz': 'First born in New Zealand', 'fact:earliest': 'Oldest dated record', 'fact:largest': 'The biggest family', 'fact:longest': 'The longest life' };
+  for (const f of data.facts) if (MARKS[f.id]) river.markFinding(f.people[0], f.id, MARKS[f.id]);
+  const odd = data.leads.find((l) => l.kind === 'young-parent');
+  if (odd) river.markFinding(odd.people[0], odd.id, 'A parent at ' + (odd.title.match(/\d+$/)?.[0] ?? 'an impossible age') + '?');
 
   bindChrome();
   buildSpark();
@@ -981,6 +988,7 @@ function showHelp() {
     <p><b>Diamonds are the living.</b> ${c.living} of the ${c.people} people in the tree are alive. They have no name, date or place here.</p>
     <p><b>Broken water is doubt.</b> Solid water is a link nobody questions. Whether it cites a source is what the certainty lens shows. Dashed water is a link the tree itself calls a hypothesis. Dotted water is disputed. Finely scored water is a doubt that does not break the line. The flag marks how far up the Barlow stream the evidence runs without a break.</p>
     <p><b>The lake is a dead end.</b> A family once thought to be ancestors, cut off when a will ruled them out. The three dotted springs at the far left are guesses at where the name came from.</p>
+    <p><b>Stars are findings.</b> A star above a light marks something the tree shows when you count: the first of the family born in New Zealand, the biggest family, the oldest record. Tap one to read it.</p>
     <p><b>Some dates are guesses.</b> ${data.people.filter((p) => !p.living && p.d?.est).length} people have no recorded death. Their light goes out seventy years after birth. Their record says “not recorded”.</p>
     <h3>Things to try</h3>
     <p>Tap any light for the person’s record, then “Follow the water”. “Related to…” tells you how any two people are connected. Switch the lens to see where people lived, or how well each link is sourced. Open a card in the case file. Zoom in to see names.</p>

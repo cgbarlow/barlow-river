@@ -43,6 +43,7 @@ export interface RiverEvents {
   onHeadwater: () => void;
   onOxbow: (s: Stream) => void;
   onConfluence: (famId: string) => void;
+  onFinding: (leadId: string) => void;
   /** keyboard: step to the next or previous person */
   onStep: (dir: number) => void;
 }
@@ -300,6 +301,22 @@ export class River {
     this.streamLabels.push({ el: lg, x: cx, y: cy + (above ? -hw - 8 : hw + 16), w: label.length * 6.4, minor: true, kind: 'ox' });
   }
 
+  /** A small marker above a person for a finding that belongs to one place on the river. */
+  markFinding(personId: string, leadId: string, label: string) {
+    const sp = this.L.spots.get(personId);
+    if (!sp) return;
+    const g = el('g', { class: 'finding', transform: `translate(${f1(sp.x)} ${f1(sp.y)})`, 'data-find': leadId });
+    this.world.insertBefore(g, this.world.querySelector('.people'));
+    const inner = el('g', { class: 'ls' }, g);
+    el('path', { d: 'M0 -7V-19', class: 'fstem' }, inner);
+    el('circle', { cx: 0, cy: -24, r: 11, class: 'hit' }, inner);
+    el('path', { d: 'M0 -31L2.1 -26.4L7 -25.6L3.4 -22.2L4.4 -17.4L0 -19.8L-4.4 -17.4L-3.4 -22.2L-7 -25.6L-2.1 -26.4Z', class: 'fstar' }, inner);
+    const t = el('text', { class: 'ftext', x: 10, y: -21 }, inner);
+    t.textContent = label;
+    g.addEventListener('click', (e) => { e.stopPropagation(); this.ev.onFinding(leadId); });
+    this.labelEls.push({ el: g, year: sp.year });
+  }
+
   /** A flag on the trunk where unbroken evidence ends. */
   markProofHead(id: string, text: string) {
     const sp = this.L.spots.get(id);
@@ -489,7 +506,7 @@ export class River {
     const v = this.fitView();
     this.fitK = v.k;
     this.follow = this.narrow;
-    if (animate) this.flyTo(v.k, v.tx, v.ty); else { this.k = v.k; this.tx = v.tx; this.ty = v.ty; this.apply(); }
+    if (animate) this.flyTo(v.k, v.tx, v.ty); else { cancelAnimationFrame(this.anim); this.k = v.k; this.tx = v.tx; this.ty = v.ty; this.apply(); }
   }
   get isFit() { return Math.abs(this.k - this.fitK) < 0.002 || this.autoCam; }
   zoomBy(f: number, cx = (this.w - this.inset.right) / 2, cy = (this.h - this.inset.bottom) / 2) {
@@ -735,7 +752,9 @@ export class River {
         const conf = nearConf(p, 8);
         this.ev.onHover(null, 0, 0);
         const who = pick(p, g, e.pointerType === 'mouse' ? 14 : 20);
-        if (conf.fam && conf.dist < dot.dist) this.ev.onConfluence(conf.fam);
+        const mark = hit?.closest?.('.finding') as SVGGElement | null;
+        if (mark) this.ev.onFinding(mark.dataset.find!);
+        else if (conf.fam && conf.dist < dot.dist) this.ev.onConfluence(conf.fam);
         else if (who) this.ev.onSelect(who);
         else {
           const other = hit?.closest?.('.conf') ?? hit?.closest?.('.oxbow-mark') ?? hit?.closest?.('.slabel') ?? hit?.closest?.('.headwaters') ?? hit?.closest?.('.stream');

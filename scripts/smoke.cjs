@@ -16,6 +16,7 @@ async function serve() {
 const results = [];
 const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 'ok  ' : 'FAIL'} ${name}${extra ? '  ' + extra : ''}`); };
 
+process.on('exit', () => server?.kill());
 (async () => {
   await serve();
   const browser = await chromium.launch();
@@ -103,6 +104,17 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 
   check('two people can be related in words', /Peter Barlow \(1776.1862\) is the (nephew|son) of Peter Barlow \(1745\)/.test(kin), kin);
   check('the relationship is in the url', /k=I11,I900125/.test(await page.evaluate(() => new Promise((r) => setTimeout(() => r(decodeURIComponent(location.hash)), 400)))));
   await page.locator('#record [data-act="back"]').click();
+
+  // findings marked on the river
+  await page.evaluate(() => { window.__river.setYear(2026); window.__river.river.fit(false); });
+  await page.waitForTimeout(700);
+  const nMarks = await page.locator('.finding').count();
+  const mb = await page.locator('.finding[data-find="fact:first-nz"] .fstar').boundingBox();
+  await page.mouse.click(mb.x + mb.width / 2, mb.y + mb.height / 2);
+  await page.waitForTimeout(500);
+  check('findings are starred on the river and open when tapped', nMarks >= 4 && (await page.evaluate(() => window.__river.state.lead)) === 'fact:first-nz', `${nMarks} stars`);
+  await page.keyboard.press('Escape');
+  await page.locator('.tabs [data-tab="case"]').click();
 
   // keyboard route to the lights
   await page.locator('#river').focus();
