@@ -4,6 +4,7 @@ import { ancestorLabel, buildLayout, LINES, type Layout, type Stream } from './m
 import { LINE_COLOUR, REGION_COLOUR, River, TIER_COLOUR, TIER_LABEL, type Lens } from './river.ts';
 import { BEATS, CARDS, CASE, SOFT_BREAKS, STATUS_LABEL, TESTS, type EvidenceCard, type Status } from './casefile.ts';
 import { changeRequest, loadDrafts, saveDrafts, type Draft } from './evidence.ts';
+import { chain, kinship, lifeLines, namesakes, restsOn } from './model/kin.ts';
 
 const $ = <T extends HTMLElement = HTMLElement>(sel: string) => document.querySelector(sel) as T;
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
@@ -26,6 +27,9 @@ const state = {
   card: null as string | null,
   lead: null as string | null,
   line: null as string | null,
+  /** first person picked for "how are they related" */
+  relating: null as string | null,
+  kin: null as [string, string] | null,
   composing: null as Draft | null,
   record: null as { kind: 'person' | 'family' | 'compose' | 'rule'; id?: string } | null,
 };
@@ -127,9 +131,9 @@ async function boot() {
   else {
     setYear(state.year);
     if (!had) { $('#hint').hidden = false; setTimeout(() => { $('#hint').hidden = true; }, 6000); }
-    const sel = state.selected, card = state.card, lead = state.lead, line = state.line;
+    const sel = state.selected, card = state.card, lead = state.lead, line = state.line, kin = state.kin;
     state.lead = null; state.line = null;
-    setTimeout(() => { if (sel) select(sel); else if (card) { state.card = null; openCard(card, true, true); } else if (lead) openLead(lead); else if (line) selectLine(line); }, 60);
+    setTimeout(() => { if (kin) showKin(kin[0], kin[1]); else if (sel) select(sel); else if (card) { state.card = null; openCard(card, true, true); } else if (lead) openLead(lead); else if (line) selectLine(line); }, 60);
   }
   (window as unknown as Record<string, unknown>).__river = { river, state, L, data, select, setYear, play, stop, openCard };
 }
@@ -269,7 +273,9 @@ function focusIds(ids: string[] | null, frame = true) {
 }
 function select(id: string | null, reveal = true) {
   if (state.composing && id) { pickForDraft(id); return; }
+  if (state.relating && id && id !== state.relating) { showKin(state.relating, id); return; }
   if (id) stopWalk();
+  if (id) state.kin = null;
   const hadCard = Boolean(state.card || state.lead);
   state.selected = id;
   river.setSelected(id);
@@ -478,6 +484,8 @@ function openRecord(r: NonNullable<typeof state.record>) {
 }
 function closeRecord() {
   state.record = null;
+  state.kin = null;
+  if (state.relating) { state.relating = null; document.body.classList.remove('picking'); }
   $('#record').hidden = true;
   $('#panel-body').inert = false;
   (document.querySelector('.tabs') as HTMLElement).inert = false;
@@ -517,6 +525,12 @@ function personHtml(p: Person): string {
   if (p.married?.length) kv.push(`<dt>Married name</dt><dd>${esc(p.married.join(', '))}</dd>`);
   if (p.variants?.length) kv.push(`<dt>Also written</dt><dd>${esc(p.variants.join('; '))}</dd>`);
   if (p.region) kv.push(`<dt>Place</dt><dd>${esc(p.region)}${p.regionInferred ? '<small>Inferred from close relatives</small>' : ''}</dd>`);
+  const tree = { P, F };
+  const lines = lifeLines(tree, p);
+  const same = namesakes(tree, p);
+  const sameName = `${(p.given ?? p.name ?? '').replace(/\(.*?\)/g, '').trim().split(' ')[0]} ${p.surname ?? ''}`.trim();
+  const up = par ? restsOn(tree, p.id) : { ids: [] as string[], earliest: undefined };
+  const shaky = tier === 'doubt' || tier === 'disputed';
   const events = (p.events ?? []).filter((e) => !(e.tag === 'OCCU' && e.value === p.occupation)).sort((a, b) => (a.y ?? 9999) - (b.y ?? 9999));
   return `<button class="back" data-act="back">← Back</button>
   <div class="rec">
@@ -524,11 +538,13 @@ function personHtml(p: Person): string {
       ${p.photo ? `<img src="${esc(p.photo)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;avatar&quot;>${esc(initial)}</div>'">` : `<div class="avatar">${esc(initial)}</div>`}
       <div><h2>${esc(p.name)}</h2><div class="life">${esc(lifeText(p))}</div></div>
     </div>
-    <div class="badges">${relationHtml(p)}</div>
+    <div class="badges">${relationHtml(p)}${same.length > 1 ? `<button class="badge link" data-act="names">One of ${same.length} called ${esc(sameName)}</button>` : ''}</div>
     ${p.desc ? `<p>${esc(p.desc)}</p>` : ''}
+    ${lines.length ? `<p class="lifelines">${lines.map(esc).join(' ')}</p>` : ''}
     <div class="actions">
       ${L.route(p.id).length > 1 ? '<button class="btn solid" data-act="follow">Follow the water</button>' : '<span class="badge">This water does not reach the river</span>'}
       <button class="btn quiet" data-act="goyear" data-y="${p.b?.y}">Go to ${p.b?.y}</button>
+      <button class="btn quiet" data-act="relate">Related to…</button>
     </div>
     <h3>Record</h3>
     <dl class="kv">${kv.join('')}</dl>
@@ -537,6 +553,7 @@ function personHtml(p: Person): string {
       ${par ? `<div class="row"><span>Parents</span>${chips(par.partners) || '<span>not recorded</span>'}</div>
         <div class="row"><span>Link</span><span class="chip t-${tier ?? 'none'}">${TIER_LABEL[tier ?? 'none']}</span>${p.tierWhy ? `<span style="flex-basis:100%;padding-left:68px;color:var(--ink-2)">“${esc(p.tierWhy)}”</span>` : ''}</div>`
       : `<div class="row"><span>Parents</span><span>Not known. This is where a stream rises.</span></div>`}
+      ${up.ids.length ? `<div class="rests${shaky ? ' shaky' : ''}">${shaky ? `If this link is wrong, ${up.ids.length === 1 ? 'one person' : `${up.ids.length} people`} upstream${up.earliest ? `, back to ${up.earliest},` : ''} ${up.ids.length === 1 ? 'is' : 'are'} not this family’s.` : `${up.ids.length === 1 ? 'One ancestor rests' : `${up.ids.length} ancestors rest`} on this link${up.earliest ? `, back to ${up.earliest}` : ''}.`} <button class="inline" data-act="upstream">Show them</button></div>` : ''}
       ${fams.map((f) => {
         const others = f.partners.filter((x) => x !== p.id);
         return `<div class="row"><span>Partner</span>${chips(others) || '<span>not recorded</span>'}${f.m ? `<span>m. ${esc(f.m.text)}${f.m.place ? ', ' + esc(f.m.place.split(',')[0]) : ''}</span>` : ''}</div>
@@ -846,7 +863,7 @@ function bindChrome() {
     if (unpick && state.composing) { pickForDraft(unpick.dataset.unpick!); return; }
     const act = t.closest<HTMLElement>('[data-act]')?.dataset.act;
     if (!act) return;
-    if (act === 'back') { stopWalk(); const kind = state.record?.kind; closeRecord(); if (kind === 'person') select(null); else focusIds(null, false); if (kind === 'person' || kind === 'family') openSheet(false); }
+    if (act === 'back') { stopWalk(); const kind = state.record?.kind; if (state.kin) { state.kin = null; writeHash(); } closeRecord(); if (kind === 'person') select(null); else focusIds(null, false); if (kind === 'person' || kind === 'family') openSheet(false); }
     else if (act === 'follow' && state.selected) { river.fit(); setTimeout(() => river.followWater(state.selected!), reduceMotion ? 0 : 500); if (state.year < data.meta.thisYear) play(); openSheet(false); }
     else if (act === 'goyear') { stop(); setYear(Number(t.closest<HTMLElement>('[data-y]')!.dataset.y)); openSheet(false); }
     else if (act === 'compose') { stopWalk(); startCompose(t.closest<HTMLElement>('[data-about]')?.dataset.about); }
@@ -854,6 +871,10 @@ function bindChrome() {
     else if (act === 'walk') { if (walking) stopWalk(); else walkEvidence(); }
     else if (act === 'rule') { state.tab = 'case'; if (state.record) closeRecord(); renderTab(); openSheet(true); document.querySelector('.rule')?.scrollIntoView({ block: 'center' }); }
     else if (act === 'help') { stopWalk(); showHelp(); }
+    else if (act === 'relate' && state.selected) { state.relating = state.selected; document.body.classList.add('picking'); toast('Now tap a second person, or search for one'); openSheet(false); }
+    else if (act === 'swap' && state.kin) showKin(state.kin[1], state.kin[0]);
+    else if (act === 'names' && state.selected) { const ps = namesakes({ P, F }, P.get(state.selected)!); river.setSelected(null); focusIds(ps.map((q) => q.id)); toast(`${ps.length} people share the name`); openSheet(false); }
+    else if (act === 'upstream' && state.selected) { const ids = [state.selected, ...restsOn({ P, F }, state.selected).ids]; focusIds(ids); openSheet(false); }
     else if (act === 'surprise') { const pool = [...data.facts, ...data.leads].filter((l) => l.id !== state.lead); state.lead = null; openLead(pool[Math.floor(Math.random() * pool.length)].id); document.querySelector('.card.on')?.scrollIntoView({ block: 'nearest' }); }
   });
   $('#record').addEventListener('input', () => { if (state.composing) { readCompose(); keepCompose(); } });
@@ -882,6 +903,46 @@ function bindChrome() {
   addEventListener('resize', () => { syncInset(); syncLegendPad(); });
   bindSearch();
 }
+/** How two people are related, in words, with the lines between them lit. */
+function showKin(a: string, b: string) {
+  const pa = P.get(a), pb = P.get(b);
+  if (!pa || !pb) return;
+  if (pa.living || pb.living) { toast('Living people are kept private. Pick someone else'); return; }
+  state.relating = null;
+  document.body.classList.remove('picking');
+  stop(); stopWalk();
+  const k = kinship({ P, F }, a, b);
+  state.selected = null; river.setSelected(null);
+  state.card = null; state.lead = null; state.line = null;
+  state.kin = [a, b];
+  state.record = { kind: 'rule' };
+  const el = $('#record');
+  el.hidden = false;
+  const shared = k.common.filter((id) => id !== a && id !== b);
+  const hops = !k.term && !k.byMarriage ? chain({ P, F }, a, b) : null;
+  if (hops) k.path = [a, ...hops.map((h) => h.id)];
+  const sentence = k.term ? `${esc(pa.name)} is the <b>${esc(k.term)}</b> of ${esc(pb.name)}.`
+    : k.byMarriage ? `${esc(pa.name)} is ${/^(husband|wife|partner)$/.test(k.byMarriage) ? `the <b>${k.byMarriage}</b> of` : esc(k.byMarriage)} ${esc(pb.name)}.`
+    : hops ? `Not related by blood. The tree connects them in <b>${hops.length} steps</b>.` : 'No link between them is recorded in the tree.';
+  el.innerHTML = `<button class="back" data-act="back">← Back</button>
+  <div class="rec">
+    <div class="kicker">How they are related</div>
+    <h2>${esc(pa.name)} and ${esc(pb.name)}</h2>
+    <div class="life">${esc(shortLife(pa))} · ${esc(shortLife(pb))}</div>
+    <p class="kinline">${sentence}</p>
+    ${shared.length ? `<h3>${k.term ? 'They share' : 'The link runs through'}</h3><div class="fam"><div class="row">${chips(shared)}</div></div>` : ''}
+    ${hops ? `<h3>Step by step</h3><ol class="hops"><li>${chip(a)}</li>${hops.map((h) => `<li><span>${h.how}</span>${chip(h.id)}</li>`).join('')}</ol>` : `<h3>The two</h3><div class="fam"><div class="row">${chips([a, b])}</div></div>`}
+    ${k.path.length > 2 && !hops ? `<p class="fine">${k.path.length} people are lit on the river: the two lines down from the ancestors they share.</p>` : ''}
+    <div class="actions"><button class="btn quiet" data-act="swap">Swap</button></div>
+  </div>`;
+  el.scrollTop = 0;
+  openSheet(true);
+  $('#panel-body').inert = true;
+  const maxY = Math.max(L.spots.get(a)!.year, L.spots.get(b)!.year);
+  if (state.year < maxY) setYear(maxY);
+  focusIds(k.path);
+  writeHash();
+}
 function showHelp() {
   if (state.composing) return;
   if (state.selected) select(null);
@@ -901,7 +962,7 @@ function showHelp() {
     <p><b>The lake is a dead end.</b> A family once thought to be ancestors, cut off when a will ruled them out. The three dotted springs at the far left are guesses at where the name came from.</p>
     <p><b>Some dates are guesses.</b> ${data.people.filter((p) => !p.living && p.d?.est).length} people have no recorded death. Their light goes out seventy years after birth. Their record says “not recorded”.</p>
     <h3>Things to try</h3>
-    <p>Tap any light for the person’s record, then “Follow the water”. Switch the lens to see where people lived, or how well each link is sourced. Open a card in the case file. Zoom in to see names.</p>
+    <p>Tap any light for the person’s record, then “Follow the water”. “Related to…” tells you how any two people are connected. Switch the lens to see where people lived, or how well each link is sourced. Open a card in the case file. Zoom in to see names.</p>
     <h3>Keys</h3>
     <dl class="kv"><dt>Space</dt><dd>Play or pause</dd><dt>← →</dt><dd>One year. With Shift, ten</dd><dt>1 2 3</dt><dd>Surname, place, certainty</dd><dt>↑ ↓</dt><dd>With the river focused, step through people in birth order</dd><dt>/</dt><dd>Find a person</dd><dt>+ − 0</dt><dd>Zoom in, out, whole river</dd><dt>Esc</dt><dd>Close, clear</dd></dl>
     <p class="fine">Best in a browser from 2023 or later.</p>
@@ -929,15 +990,15 @@ function setLens(lens: Lens) {
 function applyHash() {
   stop(); stopWalk();
   if (state.record) closeRecord();
-  state.year = data.meta.thisYear; state.lens = 'surname'; state.card = null; state.lead = null; state.line = null; state.selected = null;
+  state.year = data.meta.thisYear; state.lens = 'surname'; state.card = null; state.lead = null; state.line = null; state.selected = null; state.kin = null;
   readHash();
-  const sel = state.selected, card = state.card, lead = state.lead, line = state.line;
+  const sel = state.selected, card = state.card, lead = state.lead, line = state.line, kin = state.kin;
   state.card = null; state.lead = null; state.line = null;
   setLens(state.lens);
   river.setSelected(null); focusIds(null, false);
   setYear(state.year);
   renderTab();
-  if (sel) select(sel); else if (card) openCard(card, true, true); else if (lead) openLead(lead); else if (line) selectLine(line); else river.fit();
+  if (kin) showKin(kin[0], kin[1]); else if (sel) select(sel); else if (card) openCard(card, true, true); else if (lead) openLead(lead); else if (line) selectLine(line); else river.fit();
 }
 let hashTimer = 0;
 function writeHash() {
@@ -949,6 +1010,7 @@ function writeHash() {
     if (state.lens !== 'surname') q.set('lens', state.lens);
     if (state.card && !state.card.startsWith('draft-')) q.set('c', state.card);
     if (state.lead) q.set('f', state.lead);
+    if (state.kin) q.set('k', state.kin.join(','));
     if (state.line) q.set('line', state.line);
     const s = q.toString();
     history.replaceState(null, '', s ? '#' + s : location.pathname + location.search);
@@ -965,6 +1027,8 @@ function readHash(): boolean {
   state.selected = p && P.has(p) && !P.get(p)!.living ? p : null;
   const c = q.get('c');
   state.card = c && CARDS.some((x) => x.id === c) ? c : null;
+  const kk = (q.get('k') ?? '').split(',');
+  state.kin = kk.length === 2 && kk.every((id) => P.has(id) && !P.get(id)!.living) ? [kk[0], kk[1]] : null;
   const f = q.get('f');
   state.lead = f && [...data.facts, ...data.leads].some((x) => x.id === f) ? f : null;
   const ln = q.get('line');

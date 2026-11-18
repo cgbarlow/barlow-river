@@ -21,7 +21,10 @@ Then open the address it prints. `npm run build` writes a static site to `dist/`
 ## What you can do
 
 1. **Scrub the year.** Drag the year on the river or the track below it, or press play (space bar). People light up when born and go dark when they die. The river ahead of the year is shown faintly.
-2. **Tap a person.** Their record opens: dates, places, photo, sources, research notes, family. Their ancestors and descendants light up. "Follow the water" sends a pulse from them downstream to the present.
+2. **Tap a person.** Their record opens: dates, places, photo, sources, research notes, family, and their life in a few sentences worked out from the people around them ("The 2nd of 7 children. Married at 25. Outlived Elizabeth Short by 18 years."). Their ancestors and descendants light up. "Follow the water" sends a pulse from them downstream to the present.
+   - **Related to…** Pick any second person and it says how the two are connected: "3rd cousin once removed", or step by step through marriages when there is no shared blood.
+   - **Namesakes.** There are twelve Peter Barlows. One tap lights them all.
+   - **What rests on a link.** Every link to parents says how many ancestors depend on it. For a doubted link: "If this link is wrong, 2 people upstream, back to 1612, are not this family's."
 3. **Switch the lens.** By surname, by place, or by certainty (keys 1, 2, 3).
 4. **Open the case file.** Nine evidence cards, ruled out, in doubt or proven. Tapping one moves the river there and lights the people and the water it bears on. "Walk the evidence" steps through them upriver.
 5. **Read the findings.** Counted from the tree by rule. What it shows: the river reaches New Zealand in 1855, one couple had 14 children, 14% of people cite a record. And what is worth a second look: a parent who would have been 15, a name given twice in six families, people marked living in a generation born before 1921.
@@ -82,6 +85,7 @@ The case file cards in `src/casefile.ts` are written by hand from the Iris docum
 | `BRIEF.md` | The original build brief |
 | `pipeline/` | Iris export to `public/data/river.json`: dates, places, certainty, privacy, leads |
 | `src/model/layout.ts` | The river layout: streams, confluences, widths, positions |
+| `src/model/kin.ts` | How two people are related, a life in sentences, namesakes, what rests on a link |
 | `src/river.ts` | The SVG drawing and the camera |
 | `src/main.ts` | The page: timeline, panels, search, deep links |
 | `src/casefile.ts` | The open case: evidence cards, tests, story captions |
@@ -94,8 +98,12 @@ The case file cards in `src/casefile.ts` are written by hand from the Iris docum
 | `.campaign/` | The three Council reviews of this build: the plan, the first build, the iterated build |
 | `mockup/` | The original static mockup |
 
+## Publishing
+
+Nothing is published. `.github/workflows/publish.yml` builds the site and puts it on GitHub Pages, but only when someone presses "Run workflow" on the Actions tab (Pages must be switched on for the repository first, with GitHub Actions as the source). Read the Privacy section before pressing it.
+
 ## Not done
 
 - Writing evidence back to Iris directly. The draft and change request are as far as it goes, on purpose.
-- Photos load from Cloudinary and are only shown for the nine deceased people who have one.
+- Photos load from Cloudinary and are only shown for the nine deceased people who have one. `npm run verify` checks a real one loads when the image host can be reached.
 - The place lens groups free-text places into ten regions. About a third of people have a recorded place. The rest take the place of a close relative and are drawn hollow.

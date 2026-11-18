@@ -84,6 +84,24 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 
     await page.keyboard.press('Escape');
   }
 
+  // a life in sentences, namesakes, what rests on a link, and how two people are related
+  await page.evaluate(() => window.__river.select('I900005'));
+  await page.waitForSelector('#record .lifelines');
+  check('a record tells the life in sentences', /children/.test(await page.locator('#record .lifelines').textContent()), (await page.locator('#record .lifelines').textContent()).slice(0, 80));
+  check('a doubted link says what rests on it', /If this link is wrong/.test(await page.locator('#record .rests').textContent()));
+  await page.locator('#record [data-act="upstream"]').click();
+  check('and can show them', (await page.locator('.p.lit').count()) >= 4);
+  await page.locator('#record [data-act="names"]').click();
+  check('namesakes light together', (await page.locator('.p.lit').count()) >= 5);
+  await page.evaluate(() => window.__river.select('I11'));
+  await page.locator('#record [data-act="relate"]').click();
+  await page.evaluate(() => window.__river.select('I900125'));
+  await page.waitForSelector('#record .kinline');
+  const kin = await page.locator('#record .kinline').textContent();
+  check('two people can be related in words', /Peter Barlow is the .*(nephew|son) of Peter Barlow/.test(kin), kin);
+  check('the relationship is in the url', /k=I11,I900125/.test(await page.evaluate(() => new Promise((r) => setTimeout(() => r(decodeURIComponent(location.hash)), 400)))));
+  await page.locator('#record [data-act="back"]').click();
+
   // keyboard route to the lights
   await page.locator('#river').focus();
   await page.keyboard.press('ArrowDown');
@@ -165,7 +183,9 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 
   await page.close();
 
   // photos: the sandbox blocks the image host, so serve a stand-in and check both paths
-  page = await open('#p=I11');
+  page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await page.route('**/res.cloudinary.com/**', (r) => r.abort());
+  await page.goto(url + '#p=I11'); await page.waitForSelector('#record h2'); await page.waitForTimeout(500);
   check('a missing photo falls back to an initial', (await page.locator('#record .avatar').count()) === 1);
   await page.close();
   page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
@@ -174,7 +194,15 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 
   await page.route('**/res.cloudinary.com/**', (r) => { asked = r.request().url(); r.fulfill({ status: 200, contentType: 'image/png', body: png }); });
   await page.goto(url + '#p=I11'); await page.waitForSelector('#record img');
   await page.waitForTimeout(400);
-  check('a photo is shown when the image host answers', (await page.locator('#record img').count()) === 1 && /c_thumb,g_face/.test(asked), asked.slice(0, 70));
+  check('a photo is shown when the image host answers (stand-in)', (await page.locator('#record img').count()) === 1 && /c_thumb,g_face/.test(asked), asked.slice(0, 70));
+  await page.close();
+
+  // the real image host, when this machine can reach it
+  page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await page.goto(url + '#p=I11'); await page.waitForSelector('#app:not(.loading)'); await page.waitForTimeout(2500);
+  const real = await page.evaluate(() => { const i = document.querySelector('#record img'); return i ? i.naturalWidth : 0; });
+  if (real) check('a real photo loads from the image host', real >= 64, `${real}px wide`);
+  else console.log('skip real photo: the image host is not reachable from here');
   await page.close();
 
   page = await open('#f=fact:largest');
