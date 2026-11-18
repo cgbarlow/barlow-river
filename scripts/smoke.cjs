@@ -70,6 +70,20 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 
   await page.locator('#record [data-act="back"]').click();
   check('back closes the record', await page.locator('#record').isHidden());
 
+  // a light sitting on the year line can still be tapped
+  const onLine = await page.evaluate(() => {
+    const r = window.__river; r.setYear(1862);
+    const hit = [...r.L.spots.values()].filter((s) => s.year === 1862 && !r.data.people.find((p) => p.id === s.id).living)[0];
+    const svg = document.querySelector('#river').getBoundingClientRect();
+    return hit ? { id: hit.id, x: svg.left + hit.x * r.river.k + r.river.tx, y: svg.top + hit.y * r.river.k + r.river.ty } : null;
+  });
+  if (onLine) {
+    await page.mouse.click(onLine.x, onLine.y);
+    await page.waitForTimeout(200);
+    check('a person born in the current year can be tapped through the year line', (await page.evaluate(() => window.__river.state.selected)) === onLine.id && (await year(page)) === 1862);
+    await page.keyboard.press('Escape');
+  }
+
   // keyboard route to the lights
   await page.locator('#river').focus();
   await page.keyboard.press('ArrowDown');

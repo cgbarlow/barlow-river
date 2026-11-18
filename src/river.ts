@@ -56,6 +56,7 @@ export class River {
   private dots = new Map<string, DotRef>();
   private segEls: { el: SVGPathElement; stream: Stream; tier: Tier | 'known'; region?: string; a?: string; b?: string }[] = [];
   private labelEls: { el: SVGGElement; year: number }[] = [];
+  private confs: { x: number; y: number; fam: string; year: number }[] = [];
   private ribbons = new Map<Stream, Ribbon>();
   private routeEl: SVGPathElement;
   private pulseEl: SVGPathElement;
@@ -222,6 +223,7 @@ export class River {
       el('circle', { r: 9, class: 'hit' }, inner);
       el('circle', { r: 2.6, class: 'conf-dot' }, inner);
       g.addEventListener('click', (e) => { e.stopPropagation(); this.ev.onConfluence(s.joinFam!); });
+      this.confs.push({ x: L.X(cy), y: L.centre(s, cy), fam: s.joinFam, year: s.joinX });
       this.labelEls.push({ el: g, year: s.joinX });
     }
 
@@ -620,7 +622,7 @@ export class River {
   private placeCursor() {
     const x = this.L.X(this.year) * this.k + this.tx;
     if (!this.cursorG.firstChild) {
-      this.cursorG.innerHTML = `<line y1="0" class="cur-line"/><g class="cur-handle"><rect x="-27" y="58" width="54" height="24" rx="12"/><text y="75" text-anchor="middle"></text></g><rect class="cur-hit" x="-16" y="0" width="32" fill="transparent"/>`;
+      this.cursorG.innerHTML = `<line y1="0" class="cur-line"/><g class="cur-handle"><rect x="-27" y="58" width="54" height="24" rx="12"/><text y="75" text-anchor="middle"></text></g><rect class="cur-hit" x="-10" y="0" width="20" fill="transparent"/>`;
     }
     this.cursorG.setAttribute('transform', `translate(${f1(x)} 0)`);
     (this.cursorG.querySelector('.cur-line') as SVGLineElement).setAttribute('y2', String(this.h - 22));
@@ -639,6 +641,25 @@ export class River {
     let mode: 'none' | 'pan' | 'scrub' | 'pinch' = 'none';
     let moved = 0, start = { x: 0, y: 0 }, pinch0 = 0, target: Element | null = null;
     const local = (e: MouseEvent) => { const r = svg.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+    /** the nearest visible light to a screen point, the named before the unnamed */
+    const nearDot = (p: { x: number; y: number }, max: number) => {
+      let near: string | null = null, best = max;
+      for (const [id, d] of this.dots) {
+        if (d.state === 'unborn') continue;
+        const dist = Math.hypot(d.x * this.k + this.tx - p.x, d.y * this.k + this.ty - p.y) + (d.p.living ? 3 : 0);
+        if (dist < best) { best = dist; near = id; }
+      }
+      return { id: near, dist: best };
+    };
+    const nearConf = (p: { x: number; y: number }, max: number) => {
+      let fam: string | null = null, best = max;
+      for (const c of this.confs) {
+        if (c.year > this.year) continue;
+        const dist = Math.hypot(c.x * this.k + this.tx - p.x, c.y * this.k + this.ty - p.y);
+        if (dist < best) { best = dist; fam = c.fam; }
+      }
+      return { fam, dist: best };
+    };
     const scrubTo = (x: number, final: boolean) => {
       const y = Math.round(Math.max(this.minYear, Math.min(this.data.meta.thisYear, this.L.invX((x - this.tx) / this.k))));
       this.ev.onYear(y, final);
@@ -652,7 +673,8 @@ export class River {
       moved = 0; start = p;
       if (!(e.target as Element).closest('.cursor')) this.autoCam = false;
       if (pointers.size === 2) { const [a, b] = [...pointers.values()]; pinch0 = Math.hypot(a.x - b.x, a.y - b.y); mode = 'pinch'; return; }
-      mode = target.closest('.cursor') ? 'scrub' : 'pan';
+      // the year line is a handle, but a light sitting on it is still a light
+      mode = target.closest('.cur-handle') || (target.closest('.cursor') && !nearDot(p, 12).id) ? 'scrub' : 'pan';
       if (mode === 'scrub') svg.classList.add('scrubbing');
     });
     svg.addEventListener('pointermove', (e) => {
@@ -685,16 +707,14 @@ export class River {
         // a tap. Pointer capture swallows click, so dispatch by hand.
         const hit = document.elementFromPoint(e.clientX, e.clientY) ?? target;
         const g = hit?.closest?.('.p') as SVGGElement | null;
-        const conf = hit?.closest?.('.conf');
-        // small lights are hard to hit: a near miss still counts, the named before the unnamed
-        let near: string | null = null, best = 15;
-        if (!g && !conf) for (const [id, d] of this.dots) {
-          if (d.state === 'unborn') continue;
-          const dist = Math.hypot(d.x * this.k + this.tx - p.x, d.y * this.k + this.ty - p.y) + (d.p.living ? 3 : 0);
-          if (dist < best) { best = dist; near = id; }
-        }
-        if (g) this.ev.onSelect(g.dataset.id!);
-        else if (near) this.ev.onSelect(near);
+        // small lights are hard to hit: a near miss still counts
+        const dot = nearDot(p, e.pointerType === 'mouse' ? 14 : 20);
+        const conf = nearConf(p, 8);
+        this.ev.onHover(null, 0, 0);
+        if (conf.fam && conf.dist < dot.dist) this.ev.onConfluence(conf.fam);
+        else if (g && dot.dist > 9) this.ev.onSelect(g.dataset.id!);
+        else if (dot.id) this.ev.onSelect(dot.id);
+        else if (g) this.ev.onSelect(g.dataset.id!);
         else {
           const other = hit?.closest?.('.conf') ?? hit?.closest?.('.oxbow-mark') ?? hit?.closest?.('.slabel') ?? hit?.closest?.('.headwaters') ?? hit?.closest?.('.stream');
           this.ev.onHover(null, 0, 0);
