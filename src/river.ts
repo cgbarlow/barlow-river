@@ -52,7 +52,7 @@ export class River {
   private cursorG: SVGGElement;
   private clipRect: SVGRectElement;
   private dots = new Map<string, DotRef>();
-  private segEls: { el: SVGPathElement; stream: Stream; tier: Tier | 'known'; region?: string }[] = [];
+  private segEls: { el: SVGPathElement; stream: Stream; tier: Tier | 'known'; region?: string; a?: string; b?: string }[] = [];
   private labelEls: { el: SVGGElement; year: number }[] = [];
   private ribbons = new Map<Stream, Ribbon>();
   private routeEl: SVGPathElement;
@@ -87,8 +87,8 @@ export class River {
     svg.innerHTML = '';
     const defs = el('defs', {}, svg);
     defs.innerHTML = `
-      <pattern id="gap-doubt" patternUnits="userSpaceOnUse" width="13" height="8"><rect x="8" width="5" height="8" fill="var(--bg)"/></pattern>
-      <pattern id="gap-disputed" patternUnits="userSpaceOnUse" width="7" height="8"><rect x="2.4" width="4.6" height="8" fill="var(--bg)"/></pattern>
+      <pattern id="gap-doubt" patternUnits="userSpaceOnUse" width="11" height="8"><rect x="7" width="4" height="8" fill="var(--bg)"/></pattern>
+      <pattern id="gap-disputed" patternUnits="userSpaceOnUse" width="6" height="8"><rect x="1.8" width="4.2" height="8" fill="var(--bg)"/></pattern>
       <linearGradient id="delta-fade" x1="0" x2="1"><stop offset="0" stop-color="#F2B544" stop-opacity=".85"/><stop offset="1" stop-color="#F2B544" stop-opacity="0"/></linearGradient>
       <linearGradient id="head-fade" x1="1" x2="0"><stop offset="0" stop-color="#F2B544" stop-opacity=".7"/><stop offset="1" stop-color="#F2B544" stop-opacity="0"/></linearGradient>
       <filter id="glow" x="-200%" y="-200%" width="500%" height="500%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
@@ -181,7 +181,7 @@ export class River {
         const chainP = s.chain.map((id) => this.P.get(id)!).filter((p) => !p.living && p.region);
         const region = [...chainP].reverse().find((p) => p.b!.y <= seg.x1 + 1)?.region ?? chainP[0]?.region ?? s.region;
         const path = el('path', { d, class: 'seg' }, g);
-        this.segEls.push({ el: path, stream: s, tier: seg.tier, region });
+        this.segEls.push({ el: path, stream: s, tier: seg.tier, region, a: seg.a, b: seg.b });
         if (seg.tier === 'doubt' || seg.tier === 'disputed') el('path', { d, class: 'gap', fill: `url(#gap-${seg.tier})` }, g);
       }
       if (!s.minor && s.kind !== 'oxbow') el('path', { d: this.line(r.mid), class: 'current' }, g);
@@ -352,6 +352,8 @@ export class River {
     this.lit = set;
     this.world.classList.toggle('focus', Boolean(set));
     for (const [id, d] of this.dots) d.g.classList.toggle('lit', Boolean(set?.has(id)));
+    // the water between two lit people on the same stream is lit too
+    for (const s of this.segEls) s.el.classList.toggle('lit', Boolean(set && s.a && s.b && set.has(s.a) && set.has(s.b)));
     this.queueLabels();
   }
   setSelected(id: string | null) {
@@ -548,7 +550,7 @@ export class River {
   private placeCursor() {
     const x = this.L.X(this.year) * this.k + this.tx;
     if (!this.cursorG.firstChild) {
-      this.cursorG.innerHTML = `<line y1="0" class="cur-line"/><g class="cur-handle"><rect x="-27" y="4" width="54" height="24" rx="12"/><text y="21" text-anchor="middle"></text></g><rect class="cur-hit" x="-16" y="0" width="32" fill="transparent"/>`;
+      this.cursorG.innerHTML = `<line y1="0" class="cur-line"/><g class="cur-handle"><rect x="-27" y="58" width="54" height="24" rx="12"/><text y="75" text-anchor="middle"></text></g><rect class="cur-hit" x="-16" y="0" width="32" fill="transparent"/>`;
     }
     this.cursorG.setAttribute('transform', `translate(${f1(x)} 0)`);
     (this.cursorG.querySelector('.cur-line') as SVGLineElement).setAttribute('y2', String(this.h - 22));

@@ -14,7 +14,7 @@ const BEND_YEARS = 13;
 export const LINES = ['Barlow', 'Finch', 'Carter', 'Watkins', 'Chmielewski', 'Czeladka', 'Klos'] as const;
 export type LineName = (typeof LINES)[number];
 
-export interface Segment { x0: number; x1: number; tier: Tier | 'known' }
+export interface Segment { x0: number; x1: number; tier: Tier | 'known'; /** the people at the upstream and downstream end */ a?: string; b?: string }
 export interface Stream {
   id: number;
   chain: string[];
@@ -364,15 +364,15 @@ export function buildLayout(data: RiverData, softBreaks: Set<string> = new Set()
   for (const s of streams) {
     const segs: Segment[] = [];
     const first = P.get(s.chain[0])!;
-    segs.push({ x0: s.startX, x1: yearOf(s.chain[0]), tier: first.living ? 'known' : first.sourced ?? 'none' });
+    segs.push({ x0: s.startX, x1: yearOf(s.chain[0]), tier: first.living ? 'known' : first.sourced ?? 'none', b: s.chain[0] });
     for (let i = 1; i < s.chain.length; i++) {
       const c = P.get(s.chain[i])!;
       const tier: Segment['tier'] = c.living ? 'known' : c.tier ?? 'none';
-      segs.push({ x0: yearOf(s.chain[i - 1]), x1: yearOf(s.chain[i]), tier });
+      segs.push({ x0: yearOf(s.chain[i - 1]), x1: yearOf(s.chain[i]), tier, a: s.chain[i - 1], b: s.chain[i] });
     }
     const lastP = P.get(s.chain[s.chain.length - 1])!;
     const tailTier: Segment['tier'] = lastP.living ? 'known' : s.chain.length > 1 ? segs[segs.length - 1].tier : segs[0].tier;
-    segs.push({ x0: yearOf(s.chain[s.chain.length - 1]), x1: s.joinX, tier: tailTier === 'doubt' || tailTier === 'disputed' ? (lastP.sourced ?? 'none') : tailTier });
+    segs.push({ x0: yearOf(s.chain[s.chain.length - 1]), x1: s.joinX, tier: tailTier === 'doubt' || tailTier === 'disputed' ? (lastP.sourced ?? 'none') : tailTier, a: s.chain[s.chain.length - 1] });
     s.segments = segs.filter((g) => g.x1 > g.x0);
   }
   let proofHead: string | undefined;

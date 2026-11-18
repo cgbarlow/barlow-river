@@ -15,7 +15,7 @@ All data lives in Iris (`https://iris-uat.chrisbarlow.nz`), reached through the 
 
 Origin: a MyHeritage GEDCOM export (Barlow Family Tree, exported 23 September 2026), with later research added by hand.
 
-Size: 561 elements, 13 diagrams. 214 people, 60 families, 3 original sources plus later ones.
+Size as exported on 18 November 2026: 561 elements, 13 diagrams. 449 people (109 flagged living), 101 families, 7 sources. The set description still says 214 people and 60 families; the tree has grown since through the Carter ancestry and Barlow research.
 
 ## The model
 
@@ -66,7 +66,26 @@ Per the set description, records can also carry:
 - `data.photos`: every GEDCOM photo with its MyHeritage provenance.
 - `data.redactions`: what was removed. Email addresses of possibly-living people are redacted.
 
-Not confirmed: the field names for birth, death and place. The element `description` carries them as text on the records seen, for example "Born 21 Jul 1910. Died 1991." Read a few 19th and 20th-century records in full before designing the timeline.
+## What the build confirmed
+
+The brief listed five things not yet known. Answers, from the full export:
+
+| Question | Answer |
+|---|---|
+| Do records carry dates as fields? | Yes. `data.birth.date` and `data.death.date` are GEDCOM-style strings: `4 APR 1736`, `1871`, `ABT JUN 1979`, `21 MAR 1649/50`. 338 of 449 people have a birth year. Some have only `christening`, a `CHR` or `BAPM` event, or `burial`. The rest are estimated from parents, partners and children and drawn with a dashed ring. |
+| Can places be grouped? | Yes, by keyword. `data.birth.place` and event places are free text ("St Augustine, Norwich, Norfolk, England", "Pirongia, Auckland, N.Z."). `pipeline/places.ts` sorts them into ten regions. About a third of people have a place. |
+| Who is living? | `is_deceased` is on every Person except three. Two of those (Hugh Barlow c.1613 and Ranulph Barlow) are settled by their dates. The third has no date and is treated as living. |
+| Where do the lines join? | Computed. The river is the ancestry of the youngest generation, and each join is a Family element. Six of the seven named lines are direct ancestors. Watkins is not: it joins through a marriage into a side branch. Only 40 of 101 families have a marriage date, so most joins are placed from the first child's birth. |
+| How is certainty derived? | Three inputs, in order: a label on the child edge in the Full Family Tree diagram (`disputed`, `probable`, `mother unconfirmed`); `data.research.confidence` on the person or family; then citations. A citation to anything other than a compiled tree counts as a record. `data.source = "FamilySearch Family Tree"` with nothing else counts as compiled only. |
+
+Other things worth knowing:
+
+- People are keyed three ways. MyHeritage imports have `gedcom_id`. FamilySearch imports have `familysearch_id`. Two hand-made records (Hugh and Ranulph Barlow) have neither, and no `classifier`; they are found through diagram node ids (`P_I900106`).
+- Families list partners and children in three shapes: objects with `gedcom_id`, plain FamilySearch id strings, and `husband_gedcom_id` / `wife_gedcom_id` / `children_gedcom_ids`.
+- The GEDCOM puts a wife in the HUSB slot in at least one family. The build trusts `sex` over the slot.
+- Diagram node colour is sex: pink for F, blue for M. Nothing else.
+- The export has no relationships list. Everything needed is inside the Person and Family elements and the diagram edges.
+- The Iris host cannot be reached from a browser or a cloud build. The site is built from an export file. See the README for the refresh steps.
 
 ## Diagrams in the set
 

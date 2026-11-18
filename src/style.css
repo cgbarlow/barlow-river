@@ -67,6 +67,7 @@ h1 { margin: 2px 0 0; font-family: var(--serif); font-weight: 600; font-size: 36
 .world.focus .seg, .world.focus .stream.trunk .seg { opacity: .26; }
 .world.focus .stream.minor .seg { opacity: .17; }
 .world.focus .current { opacity: .3; }
+.world.focus .seg.lit, .world.focus .stream.trunk .seg.lit, .world.focus .stream.minor .seg.lit { opacity: .95; }
 
 .headwater { fill: none; stroke: url(#head-fade); stroke-width: 5; stroke-dasharray: 1.5 7; stroke-linecap: round; }
 .headwaters { cursor: pointer; }

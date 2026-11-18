@@ -381,6 +381,12 @@ function lineInfo(name: string) {
   const join = main.filter((s) => s.into).sort((a, b) => b.joinX - a.joinX)[0];
   return { main, ids, dead, head, places, join, minors: all.filter((s) => s.minor && s.name && s.members.length > 1) };
 }
+/** When a stream joins. Marriages of living people are never dated, even by estimate. */
+function joinWhen(s: Stream): string {
+  const f = s.joinFam ? F.get(s.joinFam) : undefined;
+  if (!f || f.partners.some((id) => P.get(id)!.living)) return 'within living memory';
+  return f.m ? `in ${f.m.y}` : `around ${Math.round(s.joinX)}`;
+}
 function linesHtml(): string {
   return `
     <div class="kicker">The seven lines</div>
@@ -394,7 +400,7 @@ function linesHtml(): string {
         <span class="t">${name}</span>
         <span class="m">${i.ids.length} people${i.ids.length - i.dead.length ? `, ${i.ids.length - i.dead.length} living` : ''}. ${i.head ? `Earliest: ${esc(i.head.name)}, ${esc(bornText(i.head))}.` : ''}
         ${i.places.length ? esc(i.places.join(', ')) + '.' : ''}
-        ${name === 'Barlow' ? 'The trunk.' : into && i.join ? `Joins ${esc(into.line === name ? 'the main stream' : 'the ' + into.line + ' stream')} around ${Math.round(i.join.joinX)}.` : ''}
+        ${name === 'Barlow' ? 'The trunk.' : into && i.join ? `Joins ${esc(into.line === name ? 'the main stream' : 'the ' + into.line + ' stream')} ${joinWhen(i.join)}.` : ''}
         ${i.minors.length ? `<br>Fed by ${esc(i.minors.slice(0, 7).map((s) => s.name).join(', '))}${i.minors.length > 7 ? ' and others' : ''}.` : ''}</span>
       </span></button>`;
     }).join('')}</div>
@@ -485,16 +491,18 @@ function personHtml(p: Person): string {
   </div>`;
 }
 function familyHtml(f: Family): string {
-  const [a, b] = f.partners;
   const s = L.streams.find((x) => x.joinFam === f.id);
-  const title = f.partners.map(nameOf).join(' and ');
+  const people = f.partners.map((id) => P.get(id)!);
+  const anyLiving = people.some((p) => p.living);
+  const named = people.filter((p) => !p.living).map((p) => p.name!);
+  const title = named.length === 2 ? named.join(' and ') : named.length === 1 ? `${named[0]} and a living partner` : 'A living couple';
   return `<button class="back" data-act="back">← Back</button>
   <div class="rec">
     <div class="kicker">Where two streams join</div>
-    <h2>${esc(title.charAt(0).toUpperCase() + title.slice(1))}</h2>
-    <div class="life">${f.m ? `Married ${esc(f.m.text)}${f.m.place ? ', ' + esc(f.m.place) : ''}` : `Marriage not recorded. Placed around ${f.estY}, from the first child.`}</div>
+    <h2>${esc(title)}</h2>
+    <div class="life">${anyLiving ? 'Within living memory. Details are kept private.' : f.m ? `Married ${esc(f.m.text)}${f.m.place ? ', ' + esc(f.m.place) : ''}` : `Marriage not recorded. Placed around ${f.estY}, from the first child.`}</div>
     ${s && s.into ? `<p>The ${esc(s.name || s.line)} stream joins the ${esc(s.into.name || s.into.line)} stream here.</p>` : ''}
-    <h3>The couple</h3><div class="fam"><div class="row">${chips([a, b].filter(Boolean))}</div></div>
+    ${named.length ? `<h3>The couple</h3><div class="fam"><div class="row">${chips(f.partners)}</div></div>` : ''}
     ${f.children.length ? `<h3>Children</h3><div class="fam"><div class="row">${chips(f.children)}</div></div>` : ''}
     ${f.note ? `<h3>Research notes</h3><p>${esc(f.note)}</p>` : ''}
   </div>`;
