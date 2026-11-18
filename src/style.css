@@ -50,7 +50,8 @@ h1 { margin: 2px 0 0; font-family: var(--serif); font-weight: 600; font-size: 36
 .stage { grid-area: stage; position: relative; min-height: 0; overflow: hidden; }
 #river { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; user-select: none; cursor: grab; }
 #river.panning { cursor: grabbing; }
-#river:focus-visible { outline: 2px solid var(--amber); outline-offset: -2px; }
+#river:focus, #river:focus-visible { outline: none; }
+body.kbd #river:focus { outline: 2px solid var(--amber); outline-offset: -2px; }
 .grid line { stroke: #1B2C46; stroke-width: 1; }
 .grid line.major { stroke: #24385A; }
 .grid text { font: 400 11px var(--mono); fill: #6E8099; }
@@ -90,6 +91,8 @@ h1 { margin: 2px 0 0; font-family: var(--serif); font-weight: 600; font-size: 36
 .p.anc .dot { stroke-width: 1.5; }
 .p.anc.dead .dot { fill: color-mix(in srgb, var(--c) 55%, var(--bg)); }
 .p.alive .dot { filter: drop-shadow(0 0 2.5px color-mix(in srgb, var(--c) 60%, #fff)); }
+.p.est.dead .dot { stroke: color-mix(in srgb, var(--c) 55%, var(--bg)); fill-opacity: .3; }
+.p.est.alive .dot { fill: color-mix(in srgb, var(--c) 75%, var(--bg)); filter: none; }
 .p.est .dot { stroke: color-mix(in srgb, var(--c) 30%, #fff); stroke-width: 1; stroke-dasharray: 1.7 1.5; paint-order: normal; fill-opacity: .55; }
 .p.hollow .dot { fill-opacity: .25; stroke: color-mix(in srgb, var(--c) 60%, #fff); stroke-width: 1; paint-order: normal; }
 .p.living .dot { fill: #fff; stroke: var(--bg); stroke-width: .8; }
@@ -106,7 +109,9 @@ h1 { margin: 2px 0 0; font-family: var(--serif); font-weight: 600; font-size: 36
 .sel-b { fill: none; stroke: #fff; stroke-width: 1; opacity: .5; animation: breathe 2.2s ease-in-out infinite; }
 @keyframes breathe { 50% { r: 16px; opacity: 0; } }
 .route { stroke: #fff; stroke-width: 1.4; opacity: .5; stroke-dasharray: 1 5; stroke-linecap: round; vector-effect: non-scaling-stroke; pointer-events: none; }
-.pulse { stroke: #fff; stroke-width: 5; stroke-linecap: round; vector-effect: non-scaling-stroke; filter: url(#glow); pointer-events: none; display: none; }
+/* no SVG filter here: a filter on a perfectly straight path has an empty box and paints nothing */
+.pulse { stroke: #fff; stroke-width: 6; stroke-linecap: round; vector-effect: non-scaling-stroke; pointer-events: none; display: none; }
+.pulse-halo { stroke: #fff; stroke-opacity: .28; stroke-width: 16; stroke-linecap: round; vector-effect: non-scaling-stroke; pointer-events: none; display: none; fill: none; }
 
 .conf { cursor: pointer; }
 .conf-dot { fill: var(--bg); stroke: var(--ink-2); stroke-width: 1.2; opacity: .85; }
@@ -138,7 +143,7 @@ h1 { margin: 2px 0 0; font-family: var(--serif); font-weight: 600; font-size: 36
 .cur-handle text { font: 500 13px var(--mono); fill: var(--bg); }
 .at-present .cur-line { opacity: .25; }
 
-.caption { position: absolute; left: 32px; top: 8px; max-width: min(560px, calc(100% - 64px)); font: 400 17px/1.35 var(--serif); color: var(--ink); text-shadow: 0 1px 8px var(--bg), 0 0 2px var(--bg); pointer-events: none; opacity: 0; transform: translateY(4px); transition: opacity .5s, transform .5s; }
+.caption { background: rgba(15,27,45,.8); padding: 5px 12px 6px; border-radius: 10px; margin-left: -12px; position: absolute; left: 32px; top: 8px; max-width: min(560px, calc(100% - 64px)); font: 400 17px/1.35 var(--serif); color: var(--ink); text-shadow: 0 1px 8px var(--bg), 0 0 2px var(--bg); pointer-events: none; opacity: 0; transform: translateY(4px); transition: opacity .5s, transform .5s; }
 .caption.on { opacity: 1; transform: none; }
 .caption b { font-family: var(--mono); font-weight: 500; font-size: 13px; color: var(--amber); margin-right: 8px; }
 .legend { position: absolute; left: 24px; bottom: 30px; display: flex; flex-wrap: wrap; gap: 6px 14px; max-width: min(640px, calc(100% - 110px)); padding: 9px 12px; background: rgba(15,27,45,.82); backdrop-filter: blur(6px); border: 1px solid var(--line); border-radius: 10px; font-size: 12px; color: var(--ink-2); }
@@ -291,7 +296,7 @@ button.inline { background: none; border: 0; padding: 0; color: var(--amber); fo
 .picked button { background: #1D3050; border: 0; border-radius: 14px; padding: 5px 9px; font-size: 12px; }
 .picking .stage { box-shadow: inset 0 0 0 2px var(--amber); }
 pre.req { background: var(--bg); border-radius: 8px; padding: 12px; font: 400 11.5px/1.5 var(--mono); color: var(--ink-2); white-space: pre-wrap; max-height: 260px; overflow: auto; margin: 0; }
-.toast { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 20px; font-size: 13px; font-weight: 500; z-index: 60; animation: hint-in .3s both; }
+.toast { position: fixed; left: 50%; top: 104px; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 20px; font-size: 13px; font-weight: 500; z-index: 60; animation: hint-in .3s both; }
 
 /* ---------- small screens ---------- */
 @media (max-width: 900px) {
@@ -321,13 +326,14 @@ pre.req { background: var(--bg); border-radius: 8px; padding: 12px; font: 400 11
   .zoom { right: 10px; bottom: 26px; }
   .panel { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; height: min(58dvh, 560px); border-left: 0; border-top: 1px solid var(--line); border-radius: 16px 16px 0 0; transform: translateY(calc(100% - 54px - env(safe-area-inset-bottom))); transition: transform .34s cubic-bezier(.2,.8,.2,1); box-shadow: 0 -12px 40px rgba(0,0,0,.45); }
   .panel.open { transform: none; }
-  .grab { display: block; position: absolute; top: 0; left: 0; right: 0; height: 18px; background: none; border: 0; z-index: 6; }
+  .grab { display: block; position: absolute; top: 0; left: 0; right: 0; height: 18px; background: var(--panel); border: 0; border-radius: 16px 16px 0 0; z-index: 6; }
   .grab span { display: block; width: 38px; height: 4px; border-radius: 2px; background: #4A6186; margin: 6px auto 0; }
   .tabs { padding: 10px 12px 0; }
   .tabs button { flex: 1; padding: 8px 6px 10px; }
   .record { border-radius: 16px 16px 0 0; padding-top: 22px; }
   .panel-body, .record { padding-left: 16px; padding-right: 16px; }
-  .toast { bottom: 130px; }
+  .toast { top: 150px; }
+  .year-read { width: 96px; }
 }
 @media (max-height: 520px) and (max-width: 900px) {
   .top { flex-wrap: nowrap; padding: 6px 12px; }
@@ -341,7 +347,7 @@ pre.req { background: var(--bg); border-radius: 8px; padding: 12px; font: 400 11
   .legend { bottom: 4px; }
   .zoom { bottom: 4px; }
   .caption { font-size: 13px; top: 2px; }
-  .panel { height: min(86dvh, 560px); }
+  .panel { height: min(72dvh, 560px); }
 }
 @media (prefers-reduced-motion: reduce) {
   .current, .sel-b { animation: none; }

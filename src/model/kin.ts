@@ -104,7 +104,8 @@ export function lifeLines(t: Tree, p: Person): string[] {
   const out: string[] = [];
   const b = rec(p, 'b'), d = rec(p, 'd');
   const pf = p.parents ? t.F.get(p.parents) : undefined;
-  if (pf && pf.children.length > 1) {
+  // birth order is only stated among siblings who have all died: it would otherwise place the living
+  if (pf && pf.children.length > 1 && pf.children.every((id) => !t.P.get(id)?.living)) {
     const i = pf.children.indexOf(p.id) + 1, n = pf.children.length;
     out.push(n === 2 ? `The ${i === 1 ? 'elder' : 'younger'} of two children on record.` : `The ${i === 1 ? 'eldest' : i === n ? 'youngest' : ord(i)} of ${n} children on record.`);
   }

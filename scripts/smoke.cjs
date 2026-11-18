@@ -63,7 +63,7 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 
   check('the url carries the selection', /p=I11/.test(await page.evaluate(() => new Promise((r) => setTimeout(() => r(location.hash), 400)))));
   await page.locator('#record [data-act="follow"]').click();
   await page.waitForTimeout(700);
-  check('follow the water draws a pulse', await page.evaluate(() => getComputedStyle(document.querySelector('.pulse')).display !== 'none'));
+  check('follow the water draws a pulse that can actually paint', await page.evaluate(() => { const el = document.querySelector('.pulse'); const cs = getComputedStyle(el); return cs.display !== 'none' && cs.filter === 'none' && el.getTotalLength() > 100 && el.getAnimations().length === 1; }));
   await page.keyboard.press(' ');
   await page.locator('#record [data-go]').first().click();
   check('family chips navigate', (await page.locator('#record h2').textContent()) !== '');
@@ -98,7 +98,7 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 
   await page.evaluate(() => window.__river.select('I900125'));
   await page.waitForSelector('#record .kinline');
   const kin = await page.locator('#record .kinline').textContent();
-  check('two people can be related in words', /Peter Barlow is the .*(nephew|son) of Peter Barlow/.test(kin), kin);
+  check('two people can be related in words', /Peter Barlow \(1776.1862\) is the (nephew|son) of Peter Barlow \(1745\)/.test(kin), kin);
   check('the relationship is in the url', /k=I11,I900125/.test(await page.evaluate(() => new Promise((r) => setTimeout(() => r(decodeURIComponent(location.hash)), 400)))));
   await page.locator('#record [data-act="back"]').click();
 

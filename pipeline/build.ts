@@ -236,6 +236,8 @@ export function buildRiver(exp: Any, opts: BuildOptions = {}): RiverData {
     if (olds && f.partners.length && Array.isArray(note) && note.length) f.note = note.filter((n: unknown) => typeof n === 'string').join(' ');
   }
 
+  // research notes sometimes refer to people by id: say who
+  for (const p of people) if (p.tierWhy) p.tierWhy = p.tierWhy.replace(/\bI\d{1,7}\b/g, (id) => { const q = P.get(id); return q && !q.living ? `${q.name}${q.b ? ` (${q.b.y})` : ''}` : 'a living relative'; });
   estimateYears(people, famById, P, thisYear);
   inferRegions(people, famById, P);
   scrubLivingNames(people, families, rawPeople, deceased);

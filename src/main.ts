@@ -49,7 +49,7 @@ function lifeText(p: Person): string {
   const d = p.d && !p.d.est ? (p.d.kind === 'bur' ? 'bur. ' : '') + p.d.text : '';
   return d ? `${b} – ${d}` : `${p.b?.est ? '' : 'b. '}${b}`;
 }
-const shortLife = (p: Person) => `${p.b?.est ? 'c.' : ''}${p.b?.y ?? '?'}${p.d && !p.d.est ? '–' + p.d.y : ''}`;
+const shortLife = (p: Person) => `${p.b?.est || p.b?.approx ? 'c.' : ''}${p.b?.y ?? '?'}${p.d && !p.d.est ? '–' + (p.d.approx ? 'c.' : '') + p.d.y : ''}`;
 function chip(id: string): string {
   const p = P.get(id);
   if (!p) return '';
@@ -218,7 +218,7 @@ function buildHappenings() {
     if (p.living || !p.b || p.b.est) continue;
     const sp = L.spots.get(p.id)!;
     const w = sp.stream === L.trunk && sp.anc ? 5 : sp.anc ? 3.5 : 1;
-    add(p.b.y, w, `${p.name} is ${p.b.kind === 'bap' ? 'baptised' : 'born'}${where(p.b.place)}.`);
+    add(p.b.y, w, p.b.approx ? `${p.name} is born about now${where(p.b.place)}.` : `${p.name} is ${p.b.kind === 'bap' ? 'baptised' : 'born'}${where(p.b.place)}.`);
   }
   for (const f of data.families) {
     if (!f.m || f.partners.length < 2) continue;
@@ -636,7 +636,7 @@ function composeHtml(): string {
     <label>Source<input name="source" placeholder="Norwich freemen rolls, Norfolk Record Office" value="${esc(d.source)}"></label>
     <label>Link to the source, if there is one<input name="url" type="url" placeholder="https://" value="${esc(d.url)}"></label>
     <label style="gap:7px">Who it bears on
-      <span class="picked">${d.people.length ? d.people.map((id) => `<button type="button" data-unpick="${esc(id)}">${esc(nameOf(id))} ×</button>`).join('') : 'Tap people on the river to attach them.'}</span>
+      <span class="picked">${d.people.length ? d.people.map((id) => `<button type="button" data-unpick="${esc(id)}">${esc(nameOf(id))} <small>${esc(P.get(id) ? shortLife(P.get(id)!) : '')}</small> ×</button>`).join('') : 'Tap people on the river to attach them.'}</span>
     </label>
     <label>What should change in the tree?
       <select name="link">
@@ -651,6 +651,7 @@ function saveDraft() {
   syncCompose();
   const d = state.composing!;
   if (!d.title.trim()) { toast('Give the evidence a title first'); return; }
+  if (d.link !== 'none' && !d.people.some((id) => P.get(id)?.parents)) { toast('Attach the child whose link to their parents this changes'); return; }
   drafts = [d, ...drafts.filter((x) => x.id !== d.id)];
   saveDrafts(drafts);
   state.composing = null; stash = null; keepCompose();
@@ -684,7 +685,7 @@ function openCard(id: string, frame = true, keepYear = false) {
   openSheet(true);
   if (state.card) {
     const ids = card.people.filter((x) => L.spots.has(x));
-    if (state.year < card.year && !keepYear) setYear(Math.min(data.meta.thisYear, card.year + 30));
+    if (!keepYear) setYear(Math.min(data.meta.thisYear, card.year + 30));
     focusIds(ids.length ? ids : null, frame);
     document.querySelector(`[data-card="${CSS.escape(id)}"]`)?.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
   } else focusIds(null, false);
@@ -711,7 +712,7 @@ function openLead(id: string) {
 }
 /** Step up the trunk from the head of proof through each break, one card at a time. */
 function walkEvidence() {
-  const order = ['weaver', 'which-peter', 'noah-john', 'noah', 'staffordshire', 'ranulph', 'origin'];
+  const order = ['weaver', 'three-peters', 'which-peter', 'noah-john', 'noah', 'oliva', 'staffordshire', 'ranulph', 'origin'];
   let i = 0;
   const next = () => {
     if (!walking) return;
@@ -753,13 +754,14 @@ function renderLegend() {
   html += `<span class="opt"><i class="dia"></i>living, private</span><span class="opt"><i class="ring"></i>date estimated</span><span class="opt"><i class="water" style="background:repeating-linear-gradient(90deg,#9FB0C6 0 5px,transparent 5px 9px)"></i>in doubt</span><span class="opt"><i class="water" style="background:repeating-linear-gradient(90deg,#9FB0C6 0 2px,transparent 2px 5px)"></i>disputed</span><span class="opt"><i class="water" style="background:repeating-linear-gradient(90deg,#9FB0C6 0 6px,transparent 6px 7px)"></i>which of two</span>`;
   $('#legend').innerHTML = html;
   requestAnimationFrame(syncLegendPad);
-  if (!legendBound) { legendBound = true; if (isSmall()) $('#legend').classList.add('collapsed'); $('#legend').addEventListener('click', (e) => { if (isSmall() && !(e.target as HTMLElement).closest('button')) $('#legend').classList.toggle('collapsed'); }); }
+  if (!legendBound) { legendBound = true; if (isSmall()) { $('#legend').classList.add('collapsed'); $('#legend').setAttribute('role', 'button'); $('#legend').tabIndex = 0; $('#legend').setAttribute('aria-label', 'Key to the colours and symbols'); $('#legend').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); $('#legend').classList.toggle('collapsed'); } }); } $('#legend').addEventListener('click', (e) => { if (isSmall() && !(e.target as HTMLElement).closest('button')) $('#legend').classList.toggle('collapsed'); }); }
 }
 
 // ---------------------------------------------------------------- search
 function bindSearch() {
   const input = $<HTMLInputElement>('#search'), list = $('#results');
-  const index = data.people.filter((p) => !p.living).map((p) => ({ p, key: fold([p.name, ...(p.married ?? []), ...(p.variants ?? [])].join(' ')) }));
+  // names, and also years and places, so "barlow 1776" or "norwich" find people
+  const index = data.people.filter((p) => !p.living).map((p) => ({ p, key: fold([p.name, ...(p.married ?? []), ...(p.variants ?? []), p.b && !p.b.est ? p.b.y : '', p.d && !p.d.est ? p.d.y : '', p.b?.place ?? '', p.d?.place ?? '', p.regionInferred ? '' : p.region ?? '', p.occupation ?? ''].join(' ')) }));
   let hits: Person[] = [], cur = 0;
   const draw = () => {
     list.hidden = !input.value.trim();
@@ -788,7 +790,7 @@ function bindSearch() {
 }
 
 // ---------------------------------------------------------------- chrome
-function openSheet(open: boolean) { if (isSmall()) { $('#panel').classList.toggle('open', open); syncInset(); } }
+function openSheet(open: boolean) { if (isSmall()) { $('#panel').classList.toggle('open', open); if (!open) $('#record').scrollTop = 0; syncInset(); } }
 function syncInset() {
   const small = isSmall();
   const open = $('#panel').classList.contains('open');
@@ -863,7 +865,7 @@ function bindChrome() {
     if (unpick && state.composing) { pickForDraft(unpick.dataset.unpick!); return; }
     const act = t.closest<HTMLElement>('[data-act]')?.dataset.act;
     if (!act) return;
-    if (act === 'back') { stopWalk(); const kind = state.record?.kind; if (state.kin) { state.kin = null; writeHash(); } closeRecord(); if (kind === 'person') select(null); else focusIds(null, false); if (kind === 'person' || kind === 'family') openSheet(false); }
+    if (act === 'back') { stopWalk(); const kind = state.record?.kind; if (state.kin) { state.kin = null; writeHash(); } closeRecord(); if (kind === 'person') select(null); else focusIds(null, false); if (kind === 'person' || kind === 'family') { openSheet(false); river.resumeFollow(); } }
     else if (act === 'follow' && state.selected) { river.fit(); setTimeout(() => river.followWater(state.selected!), reduceMotion ? 0 : 500); if (state.year < data.meta.thisYear) play(); openSheet(false); }
     else if (act === 'goyear') { stop(); setYear(Number(t.closest<HTMLElement>('[data-y]')!.dataset.y)); openSheet(false); }
     else if (act === 'compose') { stopWalk(); startCompose(t.closest<HTMLElement>('[data-about]')?.dataset.about); }
@@ -879,8 +881,10 @@ function bindChrome() {
   });
   $('#record').addEventListener('input', () => { if (state.composing) { readCompose(); keepCompose(); } });
   $('#record').addEventListener('change', (e) => { if (state.composing && (e.target as HTMLElement).matches('select')) syncCompose(); });
+  document.addEventListener('pointerdown', () => document.body.classList.remove('kbd'), true);
   document.addEventListener('keydown', (e) => {
     const t = e.target as HTMLElement;
+    if (e.key === 'Tab') document.body.classList.add('kbd');
     if ((e.key === 'Enter' || e.key === ' ') && t.matches?.('.card')) { t.click(); e.preventDefault(); return; }
     if (t.matches?.('input, textarea, select')) return;
     if ((e.key === ' ' || e.key === 'Enter') && t.closest?.('button, a, [role="button"]')) return;
@@ -921,8 +925,10 @@ function showKin(a: string, b: string) {
   const shared = k.common.filter((id) => id !== a && id !== b);
   const hops = !k.term && !k.byMarriage ? chain({ P, F }, a, b) : null;
   if (hops) k.path = [a, ...hops.map((h) => h.id)];
-  const sentence = k.term ? `${esc(pa.name)} is the <b>${esc(k.term)}</b> of ${esc(pb.name)}.`
-    : k.byMarriage ? `${esc(pa.name)} is ${/^(husband|wife|partner)$/.test(k.byMarriage) ? `the <b>${k.byMarriage}</b> of` : esc(k.byMarriage)} ${esc(pb.name)}.`
+  document.querySelector('.toast')?.remove();
+  const na = `${esc(pa.name)} <small>(${esc(shortLife(pa))})</small>`, nb = `${esc(pb.name)} <small>(${esc(shortLife(pb))})</small>`;
+  const sentence = k.term ? `${na} is the <b>${esc(k.term)}</b> of ${nb}.`
+    : k.byMarriage ? `${na} is ${/^(husband|wife|partner)$/.test(k.byMarriage) ? `the <b>${k.byMarriage}</b> of` : esc(k.byMarriage)} ${nb}.`
     : hops ? `Not related by blood. The tree connects them in <b>${hops.length} steps</b>.` : 'No link between them is recorded in the tree.';
   el.innerHTML = `<button class="back" data-act="back">← Back</button>
   <div class="rec">

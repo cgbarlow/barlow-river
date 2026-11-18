@@ -60,6 +60,7 @@ export class River {
   private ribbons = new Map<Stream, Ribbon>();
   private routeEl: SVGPathElement;
   private pulseEl: SVGPathElement;
+  private haloEl: SVGPathElement;
   private selRing: SVGGElement;
   private nameG!: SVGGElement;
   private lit: Set<string> | null = null;
@@ -111,6 +112,7 @@ export class River {
     this.cursorG = el('g', { class: 'cursor' });
     this.routeEl = el('path', { class: 'route', fill: 'none' });
     this.pulseEl = el('path', { class: 'pulse', fill: 'none', pathLength: 1 });
+    this.haloEl = el('path', { class: 'pulse-halo', pathLength: 1 });
     this.selRing = el('g', { class: 'selring' });
 
     this.buildRibbons();
@@ -242,6 +244,7 @@ export class River {
       }
       this.dots.set(p.id, { p, g, dot, state: '', b: sp.year, d: p.living ? Infinity : Math.max(p.d!.y, sp.year), x: sp.x, y: sp.y, anc: sp.anc });
     }
+    W.appendChild(this.haloEl);
     W.appendChild(this.pulseEl);
     W.appendChild(this.selRing);
     this.selRing.innerHTML = '<g class="pi"><circle r="8" class="sel-a"/><circle r="12" class="sel-b"/></g>';
@@ -405,11 +408,14 @@ export class River {
     this.pulseEl.setAttribute('d', this.line(pts));
     const len = pts[pts.length - 1][0] - pts[0][0];
     const dur = Math.max(1400, Math.min(5200, len * 3.2));
+    this.haloEl.setAttribute('d', this.line(pts));
+    const frames = [{ strokeDasharray: '0.07 1', strokeDashoffset: '0.07' }, { strokeDasharray: '0.07 1', strokeDashoffset: '-1' }];
+    const opts = { duration: dur, easing: 'cubic-bezier(.4,.1,.6,1)' };
     this.pulseEl.style.display = 'block';
-    const a = this.pulseEl.animate(
-      [{ strokeDasharray: '0.07 1', strokeDashoffset: '0.07', opacity: 1 }, { strokeDasharray: '0.07 1', strokeDashoffset: '-1', opacity: 1 }],
-      { duration: dur, easing: 'cubic-bezier(.4,.1,.6,1)' });
-    a.onfinish = () => { this.pulseEl.style.display = 'none'; };
+    this.haloEl.style.display = 'block';
+    this.haloEl.animate(frames, opts);
+    const a = this.pulseEl.animate(frames, opts);
+    a.onfinish = () => { this.pulseEl.style.display = 'none'; this.haloEl.style.display = 'none'; };
   }
 
   // ---------- camera ----------
@@ -445,7 +451,13 @@ export class River {
   }
   private get narrow() { return this.w < 700 || this.h < 330; }
   /** Let the camera travel with the year again (narrow screens). */
-  resumeFollow() { if (this.narrow) { this.follow = true; this.tx = this.followTx(this.k); this.clampPan(); this.apply(); } }
+  resumeFollow() {
+    if (!this.narrow) return;
+    // back to the travelling view: whole height of the river, camera on the year
+    const v = this.fitView();
+    this.follow = true; this.fitK = v.k; this.k = v.k; this.ty = v.ty; this.tx = this.followTx(v.k);
+    this.apply();
+  }
   private clampPan() {
     const b = this.L.bounds, m = 90;
     this.tx = Math.max(m - b.x1 * this.k, Math.min(this.w - m - b.x0 * this.k, this.tx));
@@ -660,6 +672,12 @@ export class River {
       }
       return { fam, dist: best };
     };
+    /** which light a point means: the same answer for hover and for tap */
+    const pick = (p: { x: number; y: number }, g: SVGGElement | null, max: number): string | null => {
+      const dot = nearDot(p, max);
+      if (g && dot.dist > 9) return g.dataset.id!;
+      return dot.id ?? g?.dataset.id ?? null;
+    };
     const scrubTo = (x: number, final: boolean) => {
       const y = Math.round(Math.max(this.minYear, Math.min(this.data.meta.thisYear, this.L.invX((x - this.tx) / this.k))));
       this.ev.onYear(y, final);
@@ -682,7 +700,7 @@ export class River {
       const prev = pointers.get(e.pointerId);
       if (!prev) {
         const g = (e.target as Element).closest?.('.p') as SVGGElement | null;
-        this.ev.onHover(g?.dataset.id ?? null, e.clientX, e.clientY);
+        this.ev.onHover((e.target as Element).closest?.('.cur-handle') ? null : pick(p, g, 12), e.clientX, e.clientY);
         return;
       }
       pointers.set(e.pointerId, p);
@@ -711,10 +729,9 @@ export class River {
         const dot = nearDot(p, e.pointerType === 'mouse' ? 14 : 20);
         const conf = nearConf(p, 8);
         this.ev.onHover(null, 0, 0);
+        const who = pick(p, g, e.pointerType === 'mouse' ? 14 : 20);
         if (conf.fam && conf.dist < dot.dist) this.ev.onConfluence(conf.fam);
-        else if (g && dot.dist > 9) this.ev.onSelect(g.dataset.id!);
-        else if (dot.id) this.ev.onSelect(dot.id);
-        else if (g) this.ev.onSelect(g.dataset.id!);
+        else if (who) this.ev.onSelect(who);
         else {
           const other = hit?.closest?.('.conf') ?? hit?.closest?.('.oxbow-mark') ?? hit?.closest?.('.slabel') ?? hit?.closest?.('.headwaters') ?? hit?.closest?.('.stream');
           this.ev.onHover(null, 0, 0);
