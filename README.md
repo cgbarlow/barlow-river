@@ -20,7 +20,7 @@ Then open the address it prints. `npm run build` writes a static site to `dist/`
 
 ## What you can do
 
-1. **Scrub the year.** Drag the year on the river or the track below it, or press play (space bar). People light up when born and go dark when they die. The river ahead of the year is shown faintly.
+1. **Scrub the year.** Drag the year on the river or the track below it, or press play (space bar). People light up when born and go dark when they die. The river ahead of the year is shown faintly, people included, and tapping one takes you to their year.
 2. **Tap a person.** Their record opens: dates, places, photo, sources, research notes, family, and their life in a few sentences worked out from the people around them ("The 2nd of 7 children. Married at 25. Outlived Elizabeth Short by 18 years."). Their ancestors and descendants light up. "Follow the water" sends a pulse from them downstream to the present.
    - **Related to…** Pick any second person and it says how the two are connected: "3rd cousin once removed", or step by step through marriages when there is no shared blood.
    - **Namesakes.** There are twelve Peter Barlows. One tap lights them all.
@@ -100,7 +100,7 @@ The case file cards in `src/casefile.ts` are written by hand from the Iris docum
 
 ## Publishing
 
-Nothing is published. `.github/workflows/publish.yml` builds the site and puts it on GitHub Pages, but only when someone presses "Run workflow" on the Actions tab (Pages must be switched on for the repository first, with GitHub Actions as the source). Read the Privacy section before pressing it.
+Nothing is published. The built site has been tested served from a `/barlow-river/` sub-path, the way GitHub Pages serves it, and passes every browser check there. `.github/workflows/publish.yml` builds the site and puts it on GitHub Pages, but only when someone presses "Run workflow" on the Actions tab (Pages must be switched on for the repository first, with GitHub Actions as the source). Read the Privacy section before pressing it.
 
 ## Not done
 

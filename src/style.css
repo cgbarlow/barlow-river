@@ -86,7 +86,9 @@ body.kbd #river:focus { outline: 2px solid var(--amber); outline-offset: -2px; }
 .p { cursor: pointer; }
 .hit { fill: transparent; stroke: none; }
 .dot { fill: color-mix(in srgb, var(--c) 34%, var(--bg)); stroke: var(--bg); stroke-width: .9; paint-order: stroke; transition: fill .45s, opacity .45s; }
-.p.unborn { display: none; }
+/* people not yet born are part of the faint river ahead: there, and tappable */
+.p.unborn .dot { fill: color-mix(in srgb, var(--c) 16%, var(--bg)); stroke: none; filter: none; opacity: .8; }
+.p.unborn.living .dot { fill: #3A4A63; }
 .p.alive .dot { fill: color-mix(in srgb, var(--c) 42%, #fff); }
 .p.anc .dot { stroke-width: 1.5; }
 .p.anc.dead .dot { fill: color-mix(in srgb, var(--c) 55%, var(--bg)); }
@@ -308,7 +310,7 @@ pre.req { background: var(--bg); border-radius: 8px; padding: 12px; font: 400 11
 .toast { position: fixed; left: 50%; top: 104px; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 20px; font-size: 13px; font-weight: 500; z-index: 60; animation: hint-in .3s both; }
 
 /* ---------- small screens ---------- */
-@media (max-width: 900px) {
+@media (max-width: 900px) and (max-aspect-ratio: 13/10) {
   #app { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'top' 'stage' 'time'; }
   .top { padding: 12px 14px 8px; gap: 8px; align-items: center; }
   h1 { font-size: 24px; }
@@ -344,19 +346,35 @@ pre.req { background: var(--bg); border-radius: 8px; padding: 12px; font: 400 11
   .toast { top: 150px; }
   .year-read { width: 96px; }
 }
-@media (max-height: 520px) and (max-width: 900px) {
-  .top { flex-wrap: nowrap; padding: 6px 12px; }
+/* a phone on its side: river and panel side by side, as on a desk, with everything smaller */
+@media (max-height: 520px) and (min-aspect-ratio: 13/10) {
+  :root { --panel-w: min(42vw, 340px); }
+  .top { flex-wrap: nowrap; padding: 6px 10px 4px 14px; align-items: center; }
   .eyebrow { display: none; }
-  h1 { font-size: 18px; white-space: nowrap; }
-  .tools { width: auto; flex: 1; }
-  .lens button { min-height: 36px; }
-  .search { min-height: 44px; }
-  .time { padding-top: 4px; padding-bottom: calc(56px + env(safe-area-inset-bottom)); }
-  .play { width: 44px; height: 44px; }
-  .legend { bottom: 4px; }
-  .zoom { bottom: 4px; }
-  .caption { font-size: 13px; top: 2px; }
-  .panel { height: min(72dvh, 560px); }
+  h1 { font-size: 18px; white-space: nowrap; margin: 0; }
+  .tools { flex-wrap: nowrap; gap: 6px; }
+  .lens button { min-height: 34px; padding: 0 9px; font-size: 12px; }
+  .search { min-height: 40px; padding: 0 10px; }
+  .search input { width: 0; min-width: 0; padding: 0; min-height: 36px; }
+  .search:focus-within input { width: 130px; }
+  .time { padding: 4px 10px 6px 14px; gap: 10px; }
+  .play { width: 40px; height: 40px; }
+  #year { font-size: 18px; }
+  .year-read { width: 84px; }
+  .track { height: 40px; }
+  #spark { height: 20px; }
+  .track::after, .track-fill { top: 25px; }
+  .track-handle { top: 16px; }
+  .track-ticks { top: 29px; }
+  .legend { display: none; }
+  .caption { font-size: 13px; left: 14px; top: 2px; }
+  .zoom { right: 8px; bottom: 26px; }
+  .zoom button { width: 38px; height: 34px; }
+  .tabs { padding: 4px 10px 0; }
+  .tabs button { min-height: 36px; padding: 6px 8px 8px; }
+  .panel-body, .record { padding: 12px 14px 20px; }
+  .panel h2 { font-size: 19px; }
+  .hint { bottom: 40px; font-size: 12.5px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .current, .sel-b { animation: none; }

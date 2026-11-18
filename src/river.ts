@@ -67,7 +67,7 @@ export class River {
   private lit: Set<string> | null = null;
   private selected: string | null = null;
   private labelTimer = 0;
-  private streamLabels: { el: SVGGElement; x: number; y: number; w: number; minor: boolean; kind?: 'flag' | 'ox' }[] = [];
+  private streamLabels: { el: SVGGElement; x: number; y: number; w: number; minor: boolean; kind?: 'flag' | 'ox' | 'star'; year?: number }[] = [];
   private P: Map<string, Person>;
   k = 1; tx = 0; ty = 0;
   private fitK = 1;
@@ -315,6 +315,7 @@ export class River {
     t.textContent = label;
     g.addEventListener('click', (e) => { e.stopPropagation(); this.ev.onFinding(leadId); });
     this.labelEls.push({ el: g, year: sp.year });
+    this.streamLabels.push({ el: g, x: sp.x, y: sp.y, w: label.length * 6.3 + 12, minor: false, kind: 'star', year: sp.year });
   }
 
   /** A flag on the trunk where unbroken evidence ends. */
@@ -592,6 +593,7 @@ export class River {
     for (const s of fixed) {
       if ((s.minor && !s.kind && !midZoom) || (s.kind && far)) { s.el.style.visibility = ''; continue; }
       const x = s.x * k + this.tx, y = s.y * k + this.ty;
+      if (s.kind === 'star') { if ((s.year ?? 0) <= this.year) boxes.push([x - 9 * ls, y - 33 * ls, x + (midZoom ? s.w : 9) * ls, y - 13 * ls]); continue; }
       const b: Box = s.kind === 'flag' ? [x - 2, y - 50 * ls, x + s.w * 1.15 * ls, y - 8 * ls]
         : s.kind === 'ox' ? [x - (s.w * ls) / 2, y - 12 * ls, x + (s.w * ls) / 2, y + 4]
         : [x - 2, y - (s.minor ? 12 : 30) * ls, x + s.w * ls, y + 4];
@@ -679,8 +681,7 @@ export class River {
     const nearDot = (p: { x: number; y: number }, max: number) => {
       let near: string | null = null, best = max;
       for (const [id, d] of this.dots) {
-        if (d.state === 'unborn') continue;
-        const dist = Math.hypot(d.x * this.k + this.tx - p.x, d.y * this.k + this.ty - p.y) + (d.p.living ? 3 : 0);
+        const dist = Math.hypot(d.x * this.k + this.tx - p.x, d.y * this.k + this.ty - p.y) + (d.p.living ? 3 : 0) + (d.state === 'unborn' ? 2 : 0);
         if (dist < best) { best = dist; near = id; }
       }
       return { id: near, dist: best };

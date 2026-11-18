@@ -10,7 +10,7 @@ const $ = <T extends HTMLElement = HTMLElement>(sel: string) => document.querySe
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ł/g, 'l').replace(/Ł/g, 'L').toLowerCase();
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const isSmall = () => matchMedia('(max-width: 900px)').matches;
+const isSmall = () => matchMedia('(max-width: 900px) and (max-aspect-ratio: 13/10)').matches;
 
 let data: RiverData;
 let L: Layout;
