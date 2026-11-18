@@ -85,6 +85,8 @@ export class River {
   minYear = 1500;
   /** screen px to keep clear at the bottom of the fit view (the legend) */
   padBottom = 104;
+  /** screen px at the top left taken by the year caption; labels keep out of it */
+  topClear = 0;
 
   private data: RiverData;
   readonly L: Layout;
@@ -547,6 +549,8 @@ export class River {
     if (!this.autoCam) this.nameG.style.opacity = '0';
     this.queueLabels();
   }
+  /** Ask for the name labels to be laid out again (the caption came or went). */
+  relabel() { this.queueLabels(); }
   private queueLabels() {
     // while the camera is travelling by itself, refresh names steadily instead of waiting for it to stop
     if (this.autoCam) { if (!this.labelTimer) this.labelTimer = window.setTimeout(() => { this.labelTimer = 0; this.layoutNames(); }, 260); return; }
@@ -565,12 +569,13 @@ export class River {
     const hits = (b: Box) => boxes.some((o) => b[0] < o[2] && o[0] < b[2] && b[1] < o[3] && o[1] < b[3]);
     const midZoom = this.svg.classList.contains('zoom-mid');
     const ls = Math.pow(Math.max(0.3, Math.min(2.2, k)), 0.45);
+    if (this.topClear) boxes.push([0, 0, Math.min(640, W - 60), this.topClear]);
     const far = this.svg.classList.contains('zoom-far');
     const fixed = [...this.streamLabels].sort((a, b) => Number(a.minor) - Number(b.minor) || Number(b.kind === 'flag') - Number(a.kind === 'flag'));
     for (const s of fixed) {
       if ((s.minor && !s.kind && !midZoom) || (s.kind && far)) { s.el.style.visibility = ''; continue; }
       const x = s.x * k + this.tx, y = s.y * k + this.ty;
-      const b: Box = s.kind === 'flag' ? [x, y - 46 * ls, x + s.w * ls, y - 16 * ls]
+      const b: Box = s.kind === 'flag' ? [x - 2, y - 50 * ls, x + s.w * 1.15 * ls, y - 8 * ls]
         : s.kind === 'ox' ? [x - (s.w * ls) / 2, y - 12 * ls, x + (s.w * ls) / 2, y + 4]
         : [x - 2, y - (s.minor ? 12 : 30) * ls, x + s.w * ls, y + 4];
       const clash = (s.minor || s.kind === 'ox') && hits(b);

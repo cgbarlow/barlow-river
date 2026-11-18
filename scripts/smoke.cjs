@@ -64,7 +64,9 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 
   await page.locator('#record [data-act="follow"]').click();
   await page.waitForTimeout(700);
   check('follow the water draws a pulse that can actually paint', await page.evaluate(() => { const el = document.querySelector('.pulse'); const cs = getComputedStyle(el); return cs.display !== 'none' && cs.filter === 'none' && el.getTotalLength() > 100 && el.getAnimations().length === 1; }));
+  check('space pauses after follow the water', await page.evaluate(() => window.__river.state.playing) === true);
   await page.keyboard.press(' ');
+  check('and it does pause', await page.evaluate(() => window.__river.state.playing) === false);
   await page.locator('#record [data-go]').first().click();
   check('family chips navigate', (await page.locator('#record h2').textContent()) !== '');
   await page.locator('#record [data-act="back"]').click();

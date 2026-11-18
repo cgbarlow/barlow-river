@@ -326,7 +326,7 @@ pre.req { background: var(--bg); border-radius: 8px; padding: 12px; font: 400 11
   .zoom { right: 10px; bottom: 26px; }
   .panel { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; height: min(58dvh, 560px); border-left: 0; border-top: 1px solid var(--line); border-radius: 16px 16px 0 0; transform: translateY(calc(100% - 54px - env(safe-area-inset-bottom))); transition: transform .34s cubic-bezier(.2,.8,.2,1); box-shadow: 0 -12px 40px rgba(0,0,0,.45); }
   .panel.open { transform: none; }
-  .grab { display: block; position: absolute; top: 0; left: 0; right: 0; height: 18px; background: var(--panel); border: 0; border-radius: 16px 16px 0 0; z-index: 6; }
+  .grab { touch-action: none; display: block; position: absolute; top: 0; left: 0; right: 0; height: 18px; background: var(--panel); border: 0; border-radius: 16px 16px 0 0; z-index: 6; }
   .grab span { display: block; width: 38px; height: 4px; border-radius: 2px; background: #4A6186; margin: 6px auto 0; }
   .tabs { padding: 10px 12px 0; }
   .tabs button { flex: 1; padding: 8px 6px 10px; }

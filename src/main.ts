@@ -233,6 +233,12 @@ function buildHappenings() {
   happenings = map;
 }
 function caption(fromPlay: boolean) {
+  captionInner(fromPlay);
+  const on = $('#caption').classList.contains('on');
+  const clear = on ? $('#caption').offsetHeight + 14 : 0;
+  if (clear !== river.topClear) { river.topClear = clear; river.relabel(); }
+}
+function captionInner(fromPlay: boolean) {
   if (!happenings) buildHappenings();
   const el = $('#caption');
   const y = state.year;
@@ -818,7 +824,16 @@ function bindChrome() {
     renderTab();
     openSheet(!same);
   }));
-  $('#grab').addEventListener('click', () => openSheet(!$('#panel').classList.contains('open')));
+  // the sheet handle: tap to toggle, or drag it up and down
+  const grab = $('#grab');
+  let grabY: number | null = null;
+  grab.addEventListener('pointerdown', (e) => { grabY = e.clientY; grab.setPointerCapture(e.pointerId); });
+  grab.addEventListener('pointerup', (e) => {
+    if (grabY === null) return;
+    const dy = e.clientY - grabY; grabY = null;
+    openSheet(Math.abs(dy) < 12 ? !$('#panel').classList.contains('open') : dy < 0);
+  });
+  grab.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); openSheet(!$('#panel').classList.contains('open')); } });
   $('#play').addEventListener('click', () => { stopWalk(); state.playing ? stop() : play(); });
   $('#zin').addEventListener('click', () => river.zoomBy(1.5));
   $('#zout').addEventListener('click', () => river.zoomBy(1 / 1.5));
@@ -866,7 +881,7 @@ function bindChrome() {
     const act = t.closest<HTMLElement>('[data-act]')?.dataset.act;
     if (!act) return;
     if (act === 'back') { stopWalk(); const kind = state.record?.kind; if (state.kin) { state.kin = null; writeHash(); } closeRecord(); if (kind === 'person') select(null); else focusIds(null, false); if (kind === 'person' || kind === 'family') { openSheet(false); river.resumeFollow(); } }
-    else if (act === 'follow' && state.selected) { river.fit(); setTimeout(() => river.followWater(state.selected!), reduceMotion ? 0 : 500); if (state.year < data.meta.thisYear) play(); openSheet(false); }
+    else if (act === 'follow' && state.selected) { (document.activeElement as HTMLElement | null)?.blur(); river.fit(); setTimeout(() => river.followWater(state.selected!), reduceMotion ? 0 : 500); if (state.year < data.meta.thisYear) play(); openSheet(false); }
     else if (act === 'goyear') { stop(); setYear(Number(t.closest<HTMLElement>('[data-y]')!.dataset.y)); openSheet(false); }
     else if (act === 'compose') { stopWalk(); startCompose(t.closest<HTMLElement>('[data-about]')?.dataset.about); }
     else if (act === 'savedraft') saveDraft();
