@@ -39,7 +39,7 @@ export interface RiverEvents {
   onSelect: (id: string | null) => void;
   onYear: (year: number, final: boolean) => void;
   onHover: (id: string | null, x: number, y: number) => void;
-  onStream: (s: Stream) => void;
+  onStream: (s: Stream, frame?: boolean) => void;
   onHeadwater: () => void;
   onOxbow: (s: Stream) => void;
   onConfluence: (famId: string) => void;
@@ -62,7 +62,7 @@ export class River {
   private lit: Set<string> | null = null;
   private selected: string | null = null;
   private labelTimer = 0;
-  private streamLabels: { el: SVGGElement; x: number; y: number; w: number; minor: boolean }[] = [];
+  private streamLabels: { el: SVGGElement; x: number; y: number; w: number; minor: boolean; kind?: 'flag' | 'ox' }[] = [];
   private P: Map<string, Person>;
   k = 1; tx = 0; ty = 0;
   private fitK = 1;
@@ -74,6 +74,10 @@ export class River {
   inset = { right: 0, bottom: 0 };
   /** on narrow screens the camera shows a window of years and travels with the scrubber */
   follow = false;
+  /** earliest year the scrubber may reach */
+  minYear = 1500;
+  /** screen px to keep clear at the bottom of the fit view (the legend) */
+  padBottom = 104;
 
   private data: RiverData;
   readonly L: Layout;
@@ -206,7 +210,8 @@ export class River {
     const conf = el('g', { class: 'confluences' }, W);
     for (const s of L.streams) {
       if (!s.into || s.cut || !s.joinFam) continue;
-      const g = el('g', { class: 'conf', transform: `translate(${f1(L.X(s.joinX))} ${f1(L.centre(s.into, s.joinX))})`, 'data-year': s.joinX }, conf);
+      const cy = s.joinX - Math.max(1.5, s.bend * 0.45);
+      const g = el('g', { class: 'conf', transform: `translate(${f1(L.X(cy))} ${f1(L.centre(s, cy))})`, 'data-year': s.joinX }, conf);
       const inner = el('g', { class: 'pi' }, g);
       el('circle', { r: 9, class: 'hit' }, inner);
       el('circle', { r: 2.6, class: 'conf-dot' }, inner);
@@ -216,7 +221,7 @@ export class River {
 
     // people
     const dotsG = el('g', { class: 'people' }, W);
-    const sorted = [...this.data.people].sort((a, b) => Number(L.spots.get(a.id)!.anc) - Number(L.spots.get(b.id)!.anc));
+    const sorted = [...this.data.people].sort((a, b) => Number(b.living) - Number(a.living) || Number(L.spots.get(a.id)!.anc) - Number(L.spots.get(b.id)!.anc));
     for (const p of sorted) {
       const sp = L.spots.get(p.id)!;
       const g = el('g', { class: 'p' + (sp.anc ? ' anc' : '') + (p.living ? ' living' : '') + (!p.living && p.b?.est ? ' est' : ''), transform: `translate(${f1(sp.x)} ${f1(sp.y)})`, 'data-id': p.id }, dotsG);
@@ -248,7 +253,7 @@ export class River {
       const t = el('text', { fill: LINE_COLOUR[s.line] }, inner);
       t.textContent = s.name;
       if (!s.minor && s.region) { const sub = el('text', { class: 'sub', dy: '-1.5em' }, inner); sub.textContent = s.region.replace('Elsewhere in ', ''); t.setAttribute('dy', '0'); }
-      g.addEventListener('click', (e) => { e.stopPropagation(); this.ev.onStream(s); });
+      g.addEventListener('click', (e) => { e.stopPropagation(); this.ev.onStream(s, true); });
       this.labelEls.push({ el: g, year: s.startX });
       this.streamLabels.push({ el: g, x: L.X(s.startX) + 2, y: L.centre(s, at) - hw - 5, w: s.name.length * (s.minor ? 6.2 : 9.5), minor: s.minor });
       void r;
@@ -279,6 +284,7 @@ export class River {
     t.textContent = label;
     g.addEventListener('click', (e) => { e.stopPropagation(); this.ev.onOxbow(s); });
     this.labelEls.push({ el: lg, year: s.startX });
+    this.streamLabels.push({ el: lg, x: cx, y: cy + (above ? -hw - 8 : hw + 16), w: label.length * 6.4, minor: true, kind: 'ox' });
   }
 
   /** A flag on the trunk where unbroken evidence ends. */
@@ -293,6 +299,7 @@ export class River {
     const [a, b] = text.split('\n');
     t.innerHTML = `<tspan x="5">${a}</tspan>` + (b ? `<tspan x="5" dy="1.2em" class="b">${b}</tspan>` : '');
     this.labelEls.push({ el: g, year: sp.year });
+    this.streamLabels.push({ el: g, x: sp.x, y: sp.y, w: Math.max(a.length, (b ?? '').length) * 6.2 + 8, minor: false, kind: 'flag' });
   }
 
   colourOf(p: Person): string {
@@ -371,7 +378,7 @@ export class River {
   /** Send a pulse of light downstream from a person to the mouth. */
   followWater(id: string) {
     const pts = this.L.route(id);
-    if (pts.length < 2) return;
+    if (pts.length < 2 || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     this.pulseEl.setAttribute('d', this.line(pts));
     const len = pts[pts.length - 1][0] - pts[0][0];
     const dur = Math.max(1400, Math.min(5200, len * 3.2));
@@ -391,7 +398,14 @@ export class River {
     this.svg.setAttribute('viewBox', `0 0 ${this.w} ${this.h}`);
     if (wasFit) this.fit(false); else this.apply();
   }
-  private get narrow() { return this.w < 700; }
+  private get narrow() { return this.w < 700 || this.h < 330; }
+  /** Let the camera travel with the year again (narrow screens). */
+  resumeFollow() { if (this.narrow) { this.follow = true; this.tx = this.followTx(this.k); this.clampPan(); this.apply(); } }
+  private clampPan() {
+    const b = this.L.bounds, m = 90;
+    this.tx = Math.max(m - b.x1 * this.k, Math.min(this.w - m - b.x0 * this.k, this.tx));
+    this.ty = Math.max(m - b.y1 * this.k, Math.min(this.h - m - b.y0 * this.k, this.ty));
+  }
   private followTx(k: number) {
     const b = this.L.bounds, w = this.w;
     const want = w * 0.72 - this.L.X(this.year) * k;
@@ -402,10 +416,13 @@ export class River {
     const w = this.w - this.inset.right, h = this.h - this.inset.bottom;
     if (this.narrow) {
       const padT = 30, padB = 40;
-      const k = Math.min(0.62, (this.h - padT - padB) / (b.y1 - b.y0));
-      return { k, tx: this.followTx(k), ty: padT + (this.h - padT - padB - (b.y1 - b.y0) * k) / 2 - b.y0 * k };
+      const fitH = (this.h - padT - padB) / (b.y1 - b.y0);
+      const k = Math.max(0.3, Math.min(0.62, fitH));
+      // when the stage is too short for the whole river, keep the trunk in the middle
+      const ty = fitH >= 0.3 ? padT + (this.h - padT - padB - (b.y1 - b.y0) * k) / 2 - b.y0 * k : this.h / 2 - this.L.trunk.y * k;
+      return { k, tx: this.followTx(k), ty };
     }
-    const padX = Math.min(20, w * 0.03), padT = 22, padB = w < 700 ? 64 : 104;
+    const padX = Math.min(20, w * 0.03), padT = 22, padB = this.padBottom;
     const k = Math.min((w - padX * 2) / (b.x1 - b.x0), (h - padT - padB) / (b.y1 - b.y0));
     return { k, tx: (w - (b.x1 - b.x0) * k) / 2 - b.x0 * k, ty: padT + (h - padT - padB - (b.y1 - b.y0) * k) / 2 - b.y0 * k };
   }
@@ -488,10 +505,17 @@ export class River {
     const hits = (b: Box) => boxes.some((o) => b[0] < o[2] && o[0] < b[2] && b[1] < o[3] && o[1] < b[3]);
     const midZoom = this.svg.classList.contains('zoom-mid');
     const ls = Math.pow(Math.max(0.3, Math.min(2.2, k)), 0.45);
-    for (const s of this.streamLabels) {
-      if (s.minor && !midZoom) continue;
+    const far = this.svg.classList.contains('zoom-far');
+    const fixed = [...this.streamLabels].sort((a, b) => Number(a.minor) - Number(b.minor) || Number(b.kind === 'flag') - Number(a.kind === 'flag'));
+    for (const s of fixed) {
+      if ((s.minor && !s.kind && !midZoom) || (s.kind && far)) { s.el.style.visibility = ''; continue; }
       const x = s.x * k + this.tx, y = s.y * k + this.ty;
-      boxes.push([x - 2, y - (s.minor ? 12 : 30) * ls, x + s.w * ls, y + 4]);
+      const b: Box = s.kind === 'flag' ? [x, y - 46 * ls, x + s.w * ls, y - 16 * ls]
+        : s.kind === 'ox' ? [x - (s.w * ls) / 2, y - 12 * ls, x + (s.w * ls) / 2, y + 4]
+        : [x - 2, y - (s.minor ? 12 : 30) * ls, x + s.w * ls, y + 4];
+      const clash = (s.minor || s.kind === 'ox') && hits(b);
+      s.el.style.visibility = clash ? 'hidden' : '';
+      if (!clash) boxes.push(b);
     }
     const cands: { d: DotRef; pr: number }[] = [];
     for (const [id, d] of this.dots) {
@@ -566,7 +590,7 @@ export class River {
     let moved = 0, start = { x: 0, y: 0 }, pinch0 = 0, target: Element | null = null;
     const local = (e: MouseEvent) => { const r = svg.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
     const scrubTo = (x: number, final: boolean) => {
-      const y = Math.round(Math.max(this.L.Y0 + 20, Math.min(this.data.meta.thisYear, this.L.invX((x - this.tx) / this.k))));
+      const y = Math.round(Math.max(this.minYear, Math.min(this.data.meta.thisYear, this.L.invX((x - this.tx) / this.k))));
       this.ev.onYear(y, final);
     };
     svg.addEventListener('pointerdown', (e) => {
@@ -598,7 +622,7 @@ export class River {
         this.tx = cx - (cx - this.tx) * r; this.ty = cy - (cy - this.ty) * r; this.k = k; pinch0 = dist;
         this.apply();
       } else if (mode === 'scrub') scrubTo(p.x, false);
-      else if (mode === 'pan' && moved > 4) { this.follow = false; this.tx += p.x - prev.x; this.ty += p.y - prev.y; svg.classList.add('panning'); this.apply(); }
+      else if (mode === 'pan' && moved > 4) { this.follow = false; this.tx += p.x - prev.x; this.ty += p.y - prev.y; this.clampPan(); svg.classList.add('panning'); this.ev.onHover(null, 0, 0); this.apply(); }
     });
     const up = (e: PointerEvent) => {
       if (!pointers.has(e.pointerId)) return;
@@ -612,7 +636,8 @@ export class River {
         const g = hit?.closest?.('.p') as SVGGElement | null;
         if (g) this.ev.onSelect(g.dataset.id!);
         else {
-          const other = hit?.closest?.('.conf, .slabel, .oxbow-mark, .headwaters, .stream');
+          const other = hit?.closest?.('.conf') ?? hit?.closest?.('.oxbow-mark') ?? hit?.closest?.('.slabel') ?? hit?.closest?.('.headwaters') ?? hit?.closest?.('.stream');
+          this.ev.onHover(null, 0, 0);
           if (other) other.dispatchEvent(new MouseEvent('click', { bubbles: false }));
           else this.ev.onSelect(null);
         }
@@ -635,6 +660,6 @@ export class River {
       this.tx = p.x - (p.x - this.tx) * r; this.ty = p.y - (p.y - this.ty) * r; this.k = k;
       this.apply();
     }, { passive: false });
-    svg.addEventListener('dblclick', (e) => { const p = local(e); this.zoomBy(1.8, p.x, p.y); });
+    svg.addEventListener('dblclick', (e) => { if ((e.target as Element).closest('.p, .conf, .cursor')) return; const p = local(e); this.zoomBy(1.8, p.x, p.y); });
   }
 }

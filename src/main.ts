@@ -93,11 +93,13 @@ async function boot() {
     onSelect: (id) => (state.composing && id ? pickForDraft(id) : select(id)),
     onYear: (y) => { stop(); setYear(y); },
     onHover: hover,
-    onStream: (s) => showStream(s),
-    onHeadwater: () => openCard('origin'),
-    onOxbow: (s) => { const card = cardForStream(s); if (card) openCard(card.id); else focusIds(s.members); },
-    onConfluence: (fid) => openRecord({ kind: 'family', id: fid }),
+    onStream: (s, frame) => showStream(s, frame),
+    onHeadwater: () => { if (!state.composing) openCard('origin'); },
+    onOxbow: (s) => { if (state.composing) return; const card = cardForStream(s); if (card) { state.card = null; openCard(card.id); } else focusIds(s.members); },
+    onConfluence: (fid) => { if (state.composing) return; stopWalk(); openRecord({ kind: 'family', id: fid }); },
   });
+
+  river.minYear = trackMin;
 
   // cut-off water and the flag where unbroken evidence ends
   for (const s of L.streams.filter((x) => x.cut)) {
@@ -109,7 +111,7 @@ async function boot() {
     river.markOxbow(s, label, towards);
   }
   const head = proofHeadPerson();
-  if (head) river.markProofHead(head.id, `Unbroken from here\n${head.name}, ${head.b?.est ? 'c. ' : ''}${head.b?.y}`);
+  if (head) river.markProofHead(head.id, `The line holds to here\n${head.name}, ${head.b?.est ? 'c. ' : ''}${head.b?.y}`);
 
   bindChrome();
   buildSpark();
@@ -119,7 +121,13 @@ async function boot() {
 
   const had = readHash();
   river.setLens(state.lens);
-  if (!had && !reduceMotion) intro(); else { setYear(state.year); if (state.selected) select(state.selected, false); else if (state.card) openCard(state.card, false); }
+  if (!had && !reduceMotion) intro();
+  else {
+    setYear(state.year);
+    if (!had) { $('#hint').hidden = false; setTimeout(() => { $('#hint').hidden = true; }, 6000); }
+    const sel = state.selected, card = state.card;
+    setTimeout(() => { if (sel) select(sel); else if (card) { state.card = null; openCard(card, true, true); } }, 60);
+  }
   (window as unknown as Record<string, unknown>).__river = { river, state, L, data, select, setYear, play, stop, openCard };
 }
 
@@ -152,9 +160,11 @@ function setYear(y: number, fromPlay = false) {
   caption(fromPlay);
   writeHash();
 }
-function play() {
+function play(keepHint = false) {
   if (state.playing) return;
-  $('#hint').hidden = true;
+  stopWalk();
+  river.resumeFollow();
+  if (!keepHint) $('#hint').hidden = true;
   if (state.year >= data.meta.thisYear) setYear(trackMin + 20);
   state.playing = true;
   document.body.classList.add('playing');
@@ -165,7 +175,7 @@ function play() {
     const births = birthsNear(playYear);
     const speed = playYear < 1690 ? 20 : Math.max(6.5, 13 - births * 0.9);
     playYear += dt * speed;
-    if (Math.round(playYear) !== state.year) setYear(playYear, true);
+    if (Math.round(playYear) !== state.year) setYear(playYear, !reduceMotion);
     if (playYear >= data.meta.thisYear) { stop(); return; }
     raf = requestAnimationFrame(tick);
   };
@@ -182,11 +192,11 @@ let birthBins: number[] = [];
 const birthsNear = (y: number) => birthBins[Math.max(0, Math.floor((y - trackMin) / 5))] ?? 0;
 
 function intro() {
-  setYear(trackMin + 20);
+  setYear(trackMin + 10);
   const hint = $('#hint');
   hint.hidden = false;
-  setTimeout(() => { hint.hidden = true; }, 5200);
-  setTimeout(() => { if (state.year < trackMin + 24 && !state.selected) play(); }, 900);
+  setTimeout(() => { hint.hidden = true; }, 6000);
+  setTimeout(() => { if (state.year < trackMin + 14 && !state.selected && !state.record) play(true); }, 900);
 }
 
 // what happened in a year, in a sentence
@@ -252,6 +262,9 @@ function focusIds(ids: string[] | null, frame = true) {
   if (ids && frame) river.frameIds(ids, ids.length <= 3 ? 1.8 : 2.4);
 }
 function select(id: string | null, reveal = true) {
+  if (state.composing && id) { pickForDraft(id); return; }
+  if (id) stopWalk();
+  const hadCard = Boolean(state.card || state.lead);
   state.selected = id;
   river.setSelected(id);
   if (!id) {
@@ -264,6 +277,7 @@ function select(id: string | null, reveal = true) {
   $('#hint').hidden = true;
   const p = P.get(id)!;
   state.card = null; state.lead = null;
+  if (hadCard) renderTab();
   const lit = new Set<string>([id, ...ancestorsOf(id), ...descendantsOf(id)]);
   for (const fid of p.fams) for (const q of F.get(fid)!.partners) lit.add(q);
   river.setFocus(lit);
@@ -284,14 +298,17 @@ function hover(id: string | null, x: number, y: number) {
   tip.style.left = Math.min(innerWidth - r.width - 8, x + 14) + 'px';
   tip.style.top = Math.max(8, y - r.height - 12) + 'px';
 }
-function showStream(s: Stream) {
+function showStream(s: Stream, frame = false) {
+  if (state.composing) return;
+  stopWalk();
   select(null);
+  const hadCard = Boolean(state.card || state.lead);
   state.card = null; state.lead = null;
-  const ids = streamTree(s).flatMap((x) => x.members);
-  focusIds(ids);
+  if (hadCard) renderTab();
+  const ids = s.minor ? streamTree(s).flatMap((x) => x.members) : lineInfo(s.line).ids;
+  focusIds(ids, frame);
   const first = s.chain.map((id) => P.get(id)!).find((p) => !p.living);
   toast(`${s.name || 'This'} stream: ${ids.length} people${first ? `, from ${first.name}` : ''}`);
-  if (!s.minor) { state.tab = 'lines'; renderTab(); }
 }
 
 // ---------------------------------------------------------------- panel: tabs
@@ -327,8 +344,8 @@ function caseHtml(): string {
     <div class="kicker">Open case</div>
     <h2>${esc(CASE.question)}</h2>
     <p class="lede">${esc(CASE.summary)}</p>
-    <div class="proofline">Following the Barlow stream upriver, the evidence holds for <b>${gens} generations</b>, back to <b>${esc(head?.name)}</b>${head?.b ? ` (${esc(bornText(head))})` : ''}. Above that there ${hard.length === 1 ? 'is <b>1 break</b>' : `are <b>${hard.length} breaks</b>`} before ${esc(oldest?.name)}, ${esc(oldest?.b?.text)}. Broken water is drawn dashed or dotted.
-      <div class="actions" style="margin-top:10px"><button class="btn" data-act="walk">Walk the evidence</button></div></div>
+    <div class="proofline">Following the Barlow stream upriver, the evidence holds for <b>${gens} generations</b>, back to <b>${esc(head?.name)}</b>${head?.b ? ` (${esc(bornText(head))})` : ''}. Above that there ${hard.length === 1 ? 'is <b>1 break</b>' : `are <b>${hard.length} breaks</b>`} before ${esc(oldest?.name)}, ${esc(oldest?.b?.text)}. Broken water is drawn dashed or dotted.${SOFT_BREAKS.length ? ' One dashed stretch lies below the flag: there the doubt is which of two brothers is the ancestor, and either answer keeps the line.' : ''}
+      <div class="actions" style="margin-top:10px"><button class="btn" data-act="walk">${walking ? 'Stop the walk' : 'Walk the evidence'}</button></div></div>
     <div class="cards">${allCards().map(cardHtml).join('')}</div>
     <h3>How to test it</h3>
     <ul class="tests">${TESTS.map((t) => `<li class="${t.done ? 'done' : ''}"><span>${esc(t.text)}</span></li>`).join('')}</ul>
@@ -419,6 +436,9 @@ function openRecord(r: NonNullable<typeof state.record>) {
   // restart the slide-in
   el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
   openSheet(true);
+  $('#panel-body').inert = true;
+  (document.querySelector('.tabs') as HTMLElement).inert = !isSmall();
+  if (document.activeElement && document.activeElement !== document.body && !el.contains(document.activeElement) && !(document.activeElement as HTMLElement).matches('#search')) (el.querySelector('.back') as HTMLElement | null)?.focus({ preventScroll: true });
   if (r.kind === 'family') {
     const f = F.get(r.id!)!;
     focusIds([...f.partners, ...f.children]);
@@ -427,8 +447,19 @@ function openRecord(r: NonNullable<typeof state.record>) {
 function closeRecord() {
   state.record = null;
   $('#record').hidden = true;
-  if (state.composing) { state.composing = null; document.body.classList.remove('picking'); }
+  $('#panel-body').inert = false;
+  (document.querySelector('.tabs') as HTMLElement).inert = false;
+  if (state.composing) {
+    // keep what was typed so an accidental exit does not lose it
+    readCompose();
+    const d = state.composing;
+    if (d.title.trim() || d.body.trim() || d.source.trim()) { stash = d; toast('Draft kept. Open “Add a piece of evidence” to carry on.'); }
+    state.composing = null;
+    document.body.classList.remove('picking');
+    river.setFocus(null);
+  }
 }
+let stash: Draft | null = null;
 function relationHtml(p: Person): string {
   const sp = L.spots.get(p.id)!;
   const colour = LINE_COLOUR[sp.stream.line];
@@ -464,7 +495,7 @@ function personHtml(p: Person): string {
     <div class="badges">${relationHtml(p)}</div>
     ${p.desc ? `<p>${esc(p.desc)}</p>` : ''}
     <div class="actions">
-      <button class="btn solid" data-act="follow">Follow the water</button>
+      ${L.route(p.id).length > 1 ? '<button class="btn solid" data-act="follow">Follow the water</button>' : '<span class="badge">This water does not reach the river</span>'}
       <button class="btn quiet" data-act="goyear" data-y="${p.b?.y}">Go to ${p.b?.y}</button>
     </div>
     <h3>Record</h3>
@@ -501,7 +532,7 @@ function familyHtml(f: Family): string {
     <div class="kicker">Where two streams join</div>
     <h2>${esc(title)}</h2>
     <div class="life">${anyLiving ? 'Within living memory. Details are kept private.' : f.m ? `Married ${esc(f.m.text)}${f.m.place ? ', ' + esc(f.m.place) : ''}` : `Marriage not recorded. Placed around ${f.estY}, from the first child.`}</div>
-    ${s && s.into ? `<p>The ${esc(s.name || s.line)} stream joins the ${esc(s.into.name || s.into.line)} stream here.</p>` : ''}
+    ${s && s.into ? `<p>${(s.name || s.line) === (s.into.name || s.into.line) ? `A second ${esc(s.name || s.line)} stream joins the first here.` : `The ${esc(s.name || s.line)} stream joins the ${esc(s.into.name || s.into.line)} stream here.`}</p>` : ''}
     ${named.length ? `<h3>The couple</h3><div class="fam"><div class="row">${chips(f.partners)}</div></div>` : ''}
     ${f.children.length ? `<h3>Children</h3><div class="fam"><div class="row">${chips(f.children)}</div></div>` : ''}
     ${f.note ? `<h3>Research notes</h3><p>${esc(f.note)}</p>` : ''}
@@ -510,7 +541,11 @@ function familyHtml(f: Family): string {
 
 // ---------------------------------------------------------------- evidence composer
 function startCompose(about?: string) {
-  state.composing = { id: 'draft-' + Date.now().toString(36), status: 'doubt', title: '', body: '', source: '', url: '', people: about ? [about] : [], link: 'none', year: about ? L.spots.get(about)!.year : state.year };
+  state.composing = stash ?? { id: 'draft-' + Date.now().toString(36), status: 'doubt', title: '', body: '', source: '', url: '', people: [], link: 'none', year: about ? L.spots.get(about)!.year : state.year };
+  stash = null;
+  if (about && !state.composing.people.includes(about)) state.composing.people.push(about);
+  state.selected = null; river.setSelected(null);
+  river.setFocus(state.composing.people.length ? state.composing.people : null);
   document.body.classList.add('picking');
   openRecord({ kind: 'compose' });
 }
@@ -520,11 +555,16 @@ function pickForDraft(id: string) {
   d.people = d.people.includes(id) ? d.people.filter((x) => x !== id) : [...d.people, id];
   syncCompose();
 }
-function syncCompose() {
+function readCompose() {
   const d = state.composing!;
   const form = $('#record');
   const read = (n: string) => (form.querySelector(`[name="${n}"]`) as HTMLInputElement | null)?.value ?? '';
   if (form.querySelector('[name="title"]')) { d.title = read('title'); d.body = read('body'); d.source = read('source'); d.url = read('url'); d.link = read('link') as Draft['link']; }
+}
+function syncCompose() {
+  const d = state.composing!;
+  const form = $('#record');
+  readCompose();
   form.innerHTML = composeHtml();
   river.setFocus(d.people.length ? d.people : null);
 }
@@ -560,7 +600,7 @@ function saveDraft() {
   if (!d.title.trim()) { toast('Give the evidence a title first'); return; }
   drafts = [d, ...drafts.filter((x) => x.id !== d.id)];
   saveDrafts(drafts);
-  state.composing = null;
+  state.composing = null; stash = null;
   document.body.classList.remove('picking');
   closeRecord();
   state.tab = 'case';
@@ -578,9 +618,9 @@ function draftRequest(id: string): string {
 }
 
 // ---------------------------------------------------------------- cards
-function openCard(id: string, frame = true) {
+function openCard(id: string, frame = true, keepYear = false) {
   const card = allCards().find((c) => c.id === id);
-  if (!card) return;
+  if (!card || state.composing) return;
   stop();
   if (state.record) closeRecord();
   state.selected = null; river.setSelected(null);
@@ -591,7 +631,7 @@ function openCard(id: string, frame = true) {
   openSheet(true);
   if (state.card) {
     const ids = card.people.filter((x) => L.spots.has(x));
-    if (state.year < card.year) setYear(Math.min(data.meta.thisYear, card.year + 30));
+    if (state.year < card.year && !keepYear) setYear(Math.min(data.meta.thisYear, card.year + 30));
     focusIds(ids.length ? ids : null, frame);
     document.querySelector(`[data-card="${CSS.escape(id)}"]`)?.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
   } else focusIds(null, false);
@@ -619,19 +659,33 @@ function walkEvidence() {
   const order = ['weaver', 'which-peter', 'noah-john', 'noah', 'staffordshire', 'ranulph', 'origin'];
   let i = 0;
   const next = () => {
-    if (i >= order.length || !walking) { walking = false; return; }
+    if (!walking) return;
+    if (i >= order.length) { walking = false; if (state.tab === 'case' && !state.record) { const top = $('#panel-body').scrollTop; renderTab(); $('#panel-body').scrollTop = top; } return; }
     state.card = null;
-    openCard(order[i++]);
-    walkTimer = window.setTimeout(next, 5200);
+    walking = false; openCard(order[i++]); walking = true;
+    if (i === 1) { const top = $('#panel-body').scrollTop; renderTab(); $('#panel-body').scrollTop = top; document.querySelector('.card.on')?.scrollIntoView({ block: 'nearest' }); }
+    walkTimer = window.setTimeout(next, 5600);
   };
   walking = true;
   next();
 }
 let walking = false, walkTimer = 0;
-const stopWalk = () => { walking = false; clearTimeout(walkTimer); };
+function stopWalk() {
+  if (!walking) return;
+  walking = false; clearTimeout(walkTimer);
+  const b = document.querySelector('[data-act="walk"]'); if (b) b.textContent = 'Walk the evidence';
+}
 
 // ---------------------------------------------------------------- legend
 let legendBound = false;
+function syncLegendPad() {
+  if (!river) return;
+  const pad = isSmall() ? 64 : $('#legend').offsetHeight + 46;
+  if (Math.abs(pad - river.padBottom) < 2) return;
+  const wasFit = river.isFit;
+  river.padBottom = pad;
+  if (wasFit) river.fit(false);
+}
 function renderLegend() {
   const sw = (c: string, t: string, attr = '') => `<span ${attr}><i style="background:${c}"></i>${esc(t)}</span>`;
   let html = '';
@@ -639,9 +693,11 @@ function renderLegend() {
   else if (state.lens === 'place') {
     const used = new Set(data.people.map((p) => p.region).filter(Boolean));
     html = Object.entries(REGION_COLOUR).filter(([r]) => used.has(r)).map(([r, c]) => sw(c, r)).join('') + `<span class="opt"><i class="ring"></i>place inferred</span>`;
-  } else html = (['record', 'compiled', 'none', 'doubt', 'disputed'] as const).map((t) => sw(TIER_COLOUR[t], TIER_LABEL[t])).join('') + `<button data-act="rule">How is this worked out?</button>`;
+    if (data.people.some((p) => !p.living && !p.region)) html += sw('#5B6B83', 'Not known');
+  } else html = (['record', 'compiled', 'none', 'doubt', 'disputed', 'known'] as const).map((t) => sw(TIER_COLOUR[t], TIER_LABEL[t])).join('') + `<button data-act="rule">How is this worked out?</button>`;
   html += `<span class="opt"><i class="dia"></i>living, private</span><span class="opt"><i class="ring"></i>date estimated</span><span class="opt"><i class="water" style="background:repeating-linear-gradient(90deg,#9FB0C6 0 5px,transparent 5px 9px)"></i>link in doubt</span>`;
   $('#legend').innerHTML = html;
+  requestAnimationFrame(syncLegendPad);
   if (!legendBound) { legendBound = true; if (isSmall()) $('#legend').classList.add('collapsed'); $('#legend').addEventListener('click', (e) => { if (isSmall() && !(e.target as HTMLElement).closest('button')) $('#legend').classList.toggle('collapsed'); }); }
 }
 
@@ -654,7 +710,7 @@ function bindSearch() {
     list.hidden = !input.value.trim();
     input.setAttribute('aria-expanded', String(!list.hidden));
     list.innerHTML = hits.length
-      ? hits.map((p, i) => `<li role="option" data-id="${esc(p.id)}" aria-selected="${i === cur}"><span>${esc(p.name)}</span><small>${esc(shortLife(p))}</small></li>`).join('')
+      ? hits.map((p, i) => `<li role="option" id="opt-${i}" data-id="${esc(p.id)}" aria-selected="${i === cur}"><span>${esc(p.name)}</span><small>${esc(shortLife(p))}</small></li>`).join('')
       : `<li class="none">No one of that name among the ${data.meta.counts.deceased} people shown. Living people cannot be searched.</li>`;
   };
   input.addEventListener('input', () => {
@@ -663,9 +719,10 @@ function bindSearch() {
     cur = 0; draw();
   });
   const choose = (id: string) => { input.value = ''; list.hidden = true; input.blur(); select(id); };
+  const showCur = () => { const li = list.querySelector('[aria-selected="true"]') as HTMLElement | null; li?.scrollIntoView({ block: 'nearest' }); if (li) input.setAttribute('aria-activedescendant', li.id); else input.removeAttribute('aria-activedescendant'); };
   input.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowDown') { cur = Math.min(hits.length - 1, cur + 1); draw(); e.preventDefault(); }
-    else if (e.key === 'ArrowUp') { cur = Math.max(0, cur - 1); draw(); e.preventDefault(); }
+    if (e.key === 'ArrowDown') { cur = Math.min(hits.length - 1, cur + 1); draw(); showCur(); e.preventDefault(); }
+    else if (e.key === 'ArrowUp') { cur = Math.max(0, cur - 1); draw(); showCur(); e.preventDefault(); }
     else if (e.key === 'Enter' && hits[cur]) choose(hits[cur].id);
     else if (e.key === 'Escape') { input.value = ''; list.hidden = true; input.blur(); }
     e.stopPropagation();
@@ -685,7 +742,17 @@ function syncInset() {
   river.inset.bottom = small && open ? Math.max(0, stage.bottom - (innerHeight - panel.height)) : 0;
 }
 function bindChrome() {
-  document.querySelectorAll<HTMLElement>('.lens button').forEach((b) => b.addEventListener('click', () => setLens(b.dataset.lens as Lens)));
+  const lensBtns = [...document.querySelectorAll<HTMLElement>('.lens button')];
+  lensBtns.forEach((b, i) => {
+    b.addEventListener('click', () => setLens(b.dataset.lens as Lens));
+    b.addEventListener('keydown', (e) => {
+      const d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+      if (!d) return;
+      e.preventDefault(); e.stopPropagation();
+      const n = lensBtns[(i + d + lensBtns.length) % lensBtns.length];
+      n.focus(); setLens(n.dataset.lens as Lens);
+    });
+  });
   document.querySelectorAll<HTMLElement>('.tabs button').forEach((b) => b.addEventListener('click', () => {
     stopWalk();
     const same = state.tab === b.dataset.tab && $('#panel').classList.contains('open');
@@ -704,7 +771,7 @@ function bindChrome() {
   const track = $('#track');
   const at = (e: PointerEvent) => { const r = track.getBoundingClientRect(); return trackMin + Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * (data.meta.thisYear - trackMin); };
   let dragging = false;
-  track.addEventListener('pointerdown', (e) => { dragging = true; track.setPointerCapture(e.pointerId); stop(); stopWalk(); $('#hint').hidden = true; setYear(at(e)); });
+  track.addEventListener('pointerdown', (e) => { dragging = true; track.setPointerCapture(e.pointerId); stop(); stopWalk(); $('#hint').hidden = true; river.resumeFollow(); setYear(at(e)); });
   track.addEventListener('pointermove', (e) => { if (dragging) setYear(at(e)); });
   track.addEventListener('pointerup', () => { dragging = false; });
   track.addEventListener('pointercancel', () => { dragging = false; });
@@ -712,8 +779,10 @@ function bindChrome() {
     const step = e.shiftKey ? 10 : 1;
     if (e.key === 'ArrowLeft') { stop(); setYear(state.year - step); e.preventDefault(); e.stopPropagation(); }
     if (e.key === 'ArrowRight') { stop(); setYear(state.year + step); e.preventDefault(); e.stopPropagation(); }
-    if (e.key === 'Home') { stop(); setYear(trackMin); e.preventDefault(); }
-    if (e.key === 'End') { stop(); setYear(data.meta.thisYear); e.preventDefault(); }
+    if (e.key === 'ArrowDown') { stop(); setYear(state.year - step); e.preventDefault(); e.stopPropagation(); }
+    if (e.key === 'ArrowUp') { stop(); setYear(state.year + step); e.preventDefault(); e.stopPropagation(); }
+    if (e.key === 'PageDown') { stop(); setYear(state.year - 25); e.preventDefault(); }
+    if (e.key === 'PageUp') { stop(); setYear(state.year + 25); e.preventDefault(); }
   });
 
   // delegated clicks in the panel and legend
@@ -730,7 +799,7 @@ function bindChrome() {
     const lead = t.closest<HTMLElement>('[data-lead]');
     if (lead) { openLead(lead.dataset.lead!); return; }
     const line = t.closest<HTMLElement>('[data-line]');
-    if (line) { const i = lineInfo(line.dataset.line!); select(null); focusIds(i.ids); openSheet(false); return; }
+    if (line) { const i = lineInfo(line.dataset.line!); const on = line.classList.contains('on'); select(null); document.querySelectorAll('.linecard.on').forEach((x) => x.classList.remove('on')); if (on) focusIds(null, false); else { line.classList.add('on'); focusIds(i.ids); openSheet(false); } return; }
     const status = t.closest<HTMLElement>('[data-status]');
     if (status && state.composing) { syncCompose(); state.composing.status = status.dataset.status as Status; syncCompose(); return; }
     const unpick = t.closest<HTMLElement>('[data-unpick]');
@@ -742,7 +811,7 @@ function bindChrome() {
     else if (act === 'goyear') { stop(); setYear(Number(t.closest<HTMLElement>('[data-y]')!.dataset.y)); openSheet(false); }
     else if (act === 'compose') { stopWalk(); startCompose(t.closest<HTMLElement>('[data-about]')?.dataset.about); }
     else if (act === 'savedraft') saveDraft();
-    else if (act === 'walk') { stopWalk(); walkEvidence(); }
+    else if (act === 'walk') { if (walking) stopWalk(); else walkEvidence(); }
     else if (act === 'rule') { state.tab = 'case'; if (state.record) closeRecord(); renderTab(); openSheet(true); document.querySelector('.rule')?.scrollIntoView({ block: 'center' }); }
     else if (act === 'surprise') { const pool = data.leads.filter((l) => l.id !== state.lead); state.lead = null; openLead(pool[Math.floor(Math.random() * pool.length)].id); document.querySelector('.card.on')?.scrollIntoView({ block: 'nearest' }); }
   });
@@ -751,11 +820,14 @@ function bindChrome() {
     const t = e.target as HTMLElement;
     if ((e.key === 'Enter' || e.key === ' ') && t.matches?.('.card')) { t.click(); e.preventDefault(); return; }
     if (t.matches?.('input, textarea, select')) return;
+    if ((e.key === ' ' || e.key === 'Enter') && t.closest?.('button, a, [role="button"]')) return;
+    if (e.key === 'Home') { stop(); setYear(trackMin); e.preventDefault(); return; }
+    if (e.key === 'End') { stop(); setYear(data.meta.thisYear); e.preventDefault(); return; }
     if (e.key === ' ') { state.playing ? stop() : play(); e.preventDefault(); }
     else if (e.key === 'ArrowLeft') { stop(); setYear(state.year - (e.shiftKey ? 10 : 1)); }
     else if (e.key === 'ArrowRight') { stop(); setYear(state.year + (e.shiftKey ? 10 : 1)); }
     else if (e.key === '/') { $('#search').focus(); e.preventDefault(); }
-    else if (e.key === 'Escape') { stopWalk(); if (state.record) { closeRecord(); select(null); } else if (state.card || state.lead) { state.card = null; state.lead = null; focusIds(null, false); renderTab(); } else { focusIds(null, false); river.fit(); } }
+    else if (e.key === 'Escape') { stopWalk(); if (state.record) { closeRecord(); select(null); } else if (state.card || state.lead) { state.card = null; state.lead = null; focusIds(null, false); renderTab(); writeHash(); } else { focusIds(null, false); document.querySelectorAll('.linecard.on').forEach((x) => x.classList.remove('on')); river.fit(); } }
     else if (e.key === '+' || e.key === '=') river.zoomBy(1.5);
     else if (e.key === '-') river.zoomBy(1 / 1.5);
     else if (e.key === '0') river.fit();
@@ -763,8 +835,8 @@ function bindChrome() {
     else if (e.key === '2') setLens('place');
     else if (e.key === '3') setLens('certainty');
   });
-  addEventListener('hashchange', () => { if (readHash()) { river.setLens(state.lens); setYear(state.year); if (state.selected) select(state.selected); } });
-  addEventListener('resize', () => syncInset());
+  addEventListener('hashchange', applyHash);
+  addEventListener('resize', () => { syncInset(); syncLegendPad(); });
   bindSearch();
 }
 function showRequest(text: string) {
@@ -782,6 +854,20 @@ function setLens(lens: Lens) {
 }
 
 // ---------------------------------------------------------------- url
+/** The address bar was edited by hand, or back/forward was used. */
+function applyHash() {
+  stop(); stopWalk();
+  if (state.record) closeRecord();
+  state.year = data.meta.thisYear; state.lens = 'surname'; state.card = null; state.lead = null; state.selected = null;
+  readHash();
+  const sel = state.selected, card = state.card;
+  state.card = null;
+  setLens(state.lens);
+  river.setSelected(null); focusIds(null, false);
+  setYear(state.year);
+  renderTab();
+  if (sel) select(sel); else if (card) openCard(card, true, true);
+}
 let hashTimer = 0;
 function writeHash() {
   clearTimeout(hashTimer);

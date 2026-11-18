@@ -73,6 +73,8 @@ export function buildRiver(exp: Any, opts: BuildOptions = {}): RiverData {
       if (child && String(ed.source).startsWith('F_')) edgeLabel.set(child, label);
     }
   }
+  const sourceTitle = new Map<string, string>();
+  for (const s of rawSources) if (s.data.gedcom_id) sourceTitle.set(String(s.data.gedcom_id), String(s.data.title || s.name));
   const byName = new Map<string, string>();
   for (const e of rawPeople) if (!e.data.gedcom_id && !e.data.familysearch_id) byName.set(e.name, e.id);
 
@@ -183,7 +185,7 @@ export function buildRiver(exp: Any, opts: BuildOptions = {}): RiverData {
 
     // sourcing
     const cites: Citation[] = (D.citations ?? []).map((c: Any) => (typeof c === 'string' ? { source: c } : c)).filter((c: Any) => c?.source)
-      .map((c: Any) => ({ source: String(c.source), ...(c.detail ? { detail: String(c.detail) } : {}), ...(c.url && /^https?:\/\//.test(c.url) ? { url: c.url } : {}) }));
+      .map((c: Any) => ({ source: sourceTitle.get(String(c.source)) ?? String(c.source), ...(c.detail ? { detail: String(c.detail) } : {}), ...(c.url && /^https?:\/\//.test(c.url) ? { url: c.url } : {}) }));
     const conf: string = D.research?.confidence ?? '';
     const hasRecord = cites.some((c) => !COMPILED.test(c.source)) || /^documented/i.test(conf);
     const hasCompiled = cites.length > 0 || Boolean(D.source);
@@ -267,7 +269,8 @@ function estimateYears(people: Person[], F: Map<string, Family>, P: Map<string, 
   const yr = (p: Person): number | undefined => (p.living ? p.estY : p.b?.y);
   const set = (p: Person, y: number) => {
     y = Math.round(Math.min(y, thisYear - 1));
-    if (p.living) p.estY = y;
+    // the living are placed to the nearest decade only, so a position is never a birth year
+    if (p.living) p.estY = Math.min(Math.floor(y / 10) * 10 + 5, thisYear - 1);
     else p.b = { y, text: 'c. ' + y, est: true };
   };
   for (let pass = 0; pass < 40; pass++) {

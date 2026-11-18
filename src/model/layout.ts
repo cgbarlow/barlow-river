@@ -76,7 +76,9 @@ export function buildLayout(data: RiverData, softBreaks: Set<string> = new Set()
   const P = new Map(data.people.map((p) => [p.id, p]));
   const F = new Map(data.families.map((f) => [f.id, f]));
   const thisYear = data.meta.thisYear;
-  const yearOf = (id: string) => { const p = P.get(id)!; return p.living ? p.estY! : p.b!.y; };
+  const hash = (id: string) => { let h = 2166136261; for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619); return h >>> 0; };
+  // The living are stored to the nearest decade. Spread them across it so they do not stack in columns.
+  const yearOf = (id: string) => { const p = P.get(id)!; return p.living ? Math.min(thisYear - 0.5, p.estY! + ((hash(id) % 90) - 45) / 10) : p.b!.y; };
   const endOf = (id: string) => { const p = P.get(id)!; return p.living ? thisYear + 1 : Math.max(p.d!.y, p.b!.y); };
 
   // ---- the mouth: the sibship with the most ancestors ----
@@ -217,7 +219,7 @@ export function buildLayout(data: RiverData, softBreaks: Set<string> = new Set()
   }
   for (const p of data.people) {
     let s = spotStream.get(p.id)!;
-    const b = yearOf(p.id), d = Math.min(endOf(p.id), Y1 + 1);
+    const b = Math.floor(yearOf(p.id)), d = Math.min(endOf(p.id), Y1 + 1);
     for (let t = b; t <= d; t++) {
       while (s.into && !s.cut && t > s.joinX) s = s.into;
       count.get(s)![t - Y0] += 1;
@@ -242,7 +244,6 @@ export function buildLayout(data: RiverData, softBreaks: Set<string> = new Set()
   // ---- place people across the width of their channel ----
   const offs = new Map<string, number>();
   const invX = (x: number) => { const w = (WARP_YEAR - Y0) * PXY * WARP; return x <= w ? Y0 + x / (PXY * WARP) : WARP_YEAR + (x - w) / PXY; };
-  const hash = (id: string) => { let h = 2166136261; for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619); return h >>> 0; };
   for (const s of streams) {
     const placed: { x: number; o: number }[] = [];
     const order = [...s.members].sort((a, b) => Number(s.chain.includes(b)) - Number(s.chain.includes(a)) || yearOf(a) - yearOf(b) || (a < b ? -1 : 1));
@@ -269,7 +270,7 @@ export function buildLayout(data: RiverData, softBreaks: Set<string> = new Set()
       placed.push({ x, o });
       // the water widens to hold whoever is in it
       const need = Math.abs(o) + 5.5;
-      const yi = yearOf(id) - Y0;
+      const yi = Math.round(yearOf(id)) - Y0;
       for (let k = -6; k <= 6; k++) {
         const j = yi + k;
         if (j < 0 || j >= N) continue;
@@ -341,9 +342,10 @@ export function buildLayout(data: RiverData, softBreaks: Set<string> = new Set()
     const top = [...tally].sort((a, b) => b[1] - a[1])[0]?.[0];
     const line = lineOfSurname(top) ?? dead.map((p) => lineOfSurname(p.surname)).find(Boolean);
     const youngest = dead[dead.length - 1];
-    s.name = line ?? top ?? youngest?.given?.split(' ')[0] ?? youngest?.name ?? '';
+    const plain = (youngest?.given ?? youngest?.name ?? '').replace(/\(.*?\)/g, '').trim().split(' ')[0];
+    s.name = line ?? top ?? plain;
     if (line && (s.chain.length > 1 || s.members.length > 3)) { s.line = line; s.minor = false; }
-    else if (line) { s.line = line; s.minor = true; s.name = youngest?.given?.split(' ')[0] ?? s.name; } else { s.line = s.into ? s.into.line : 'Barlow'; s.minor = true; }
+    else if (line) { s.line = line; s.minor = true; s.name = plain || s.name; } else { s.line = s.into ? s.into.line : 'Barlow'; s.minor = true; }
     const regs = new Map<string, number>();
     for (const id of s.members) { const r = P.get(id)!.region; if (r) regs.set(r, (regs.get(r) ?? 0) + (P.get(id)!.regionInferred ? 0.3 : 1)); }
     s.region = [...regs].sort((a, b) => b[1] - a[1])[0]?.[0];
