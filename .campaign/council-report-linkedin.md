@@ -38,3 +38,16 @@ Lead with the instruction, give three counted findings, hold both views on exper
 1. Verify the Mollick reference.
 2. Decide the public link for the River.
 3. Re-read against the two articles that could not be fetched.
+
+## Second sitting: the middle passage
+
+Asked by the owner to rework the passage that ties the family to the organisation as code.
+
+- **Bear:** it carries the point of the post and arrives as a definition. Name the idea once, at the end.
+- **Cat:** "Here's what stuck with me" is a signpost. "A form that people and agents can both work from" is jargon. The grandfather is introduced twice.
+- **Owl:** two paragraphs, one job each, one short sentence for the turn.
+- **Puppy:** the talk has better lines: "most of the time it's not written down, and a lot of the time it's a myth", and the show of hands with three answers.
+- **Rabbit:** the person everyone goes and asks is a picture every office worker knows.
+- **Wolf:** keep the agents in view: writing it down matters now because something other than a person can read it.
+
+Consensus: show the person who knows, do not define the idea. Three reworks are in `docs/posts/linkedin-the-river.md`; the Council prefers A.

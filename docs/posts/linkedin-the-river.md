@@ -22,6 +22,26 @@ The River: [link]
 The organisation as code: https://agentics.org.nz/blog/the-organisation-as-code-recording/
 The hack day: https://lnkd.in/eGU3mUv8
 
+## The middle passage: three reworks
+
+The Council's view (`.campaign/council-report-linkedin.md`): show the person who knows, do not define the idea. Use the talk's own lines. Recommended: A.
+
+**A. Closest to the talk**
+
+None of it works unless somebody wrote it down. Every family has a person who knows. Ours was my grandfather, and he had the decency to put it on paper.
+
+Every organisation has that person too. Ask three people how something actually gets done and you'll get three answers. Most of it was never written down, and a fair bit of it is myth. Write it down properly and your agents can get to work on it. I've been calling that the organisation as code.
+
+**B. Driest**
+
+The agents got the credit. My grandfather did the work. He's the one who wrote it all down.
+
+Most organisations have someone like him, except theirs hasn't written anything down and is on leave next week. That's the gap I've been poking at this year: the organisation as code. Get what the place knows out of people's heads and into something an agent can read.
+
+**C. One paragraph**
+
+The catch is that it only worked because my grandfather wrote it all down. Every family has a person who knows, and so does every organisation. The difference is that ours picked up a pen. That's what I mean by the organisation as code: write down how the place really works, and suddenly "do something awesome with this" is a fair thing to ask.
+
 ## Other storylines the data would carry
 
 1. **The crossing.** Fourteen people in the tree are recorded on both sides of the world. All fourteen went out to New Zealand. Not one is recorded coming back.
