@@ -33,9 +33,9 @@ export type RouteKind = 'direct' | 'cape' | 'horn' | 'panama';
  */
 export const ROUTE_LABEL: Record<RouteKind, string> = {
   direct: '',
-  cape: 'Drawn along the usual route out at the time, round the Cape of Good Hope. The tree does not record the ship or the route.',
-  horn: 'Drawn along the usual route home at the time, round Cape Horn. The tree does not record the ship or the route.',
-  panama: 'Drawn through the Panama Canal, the usual route once it had opened. The tree does not record the ship or the route.',
+  cape: 'Drawn along the usual route out at the time, round the Cape of Good Hope. The line follows that custom: no record gives the course sailed.',
+  horn: 'Drawn along the usual route home at the time, round Cape Horn. The line follows that custom: no record gives the course sailed.',
+  panama: 'Drawn through the Panama Canal, the usual route once it had opened. The line follows that custom: no record gives the course sailed.',
 };
 
 const CHANNEL: LonLat[] = [[1.5, 51.05], [-5.5, 49.3]];

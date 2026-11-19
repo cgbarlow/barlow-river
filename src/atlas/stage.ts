@@ -136,12 +136,12 @@ export class Stage {
   private autoGoal(sc: Scene, follow: LonLat | null): Goal | null {
     if (this.kind !== 'globe') return null;
     // with a phone's sheet open the globe is small: stand closer, so the person followed is not lost in a crowd
-    if (follow) return { lon: follow[0], lat: follow[1], k: sc.ship ? 1.7 : 4 * Math.max(1, (Math.min(this.W, this.H) * 0.44) / this.R) * (this.inset.bottom > 120 ? 1.6 : 1) };
+    if (follow) return { lon: follow[0], lat: follow[1], k: sc.ship ? 1.7 : Math.max(4 * Math.max(1, (Math.min(this.W, this.H) * 0.44) / this.R) * (this.inset.bottom > 120 ? 1.6 : 1), Math.min(this.followK, 14)) };
     const ride = this.plan.ride;
     if (ride && sc.ship && sc.year >= ride[0] && sc.year < ride[1]) return { lon: sc.ship[0], lat: sc.ship[1], k: 1.7 };
     const nz = sc.year >= this.plan.turn;
     // when the last named light has gone out, stand back and show the whole of this side of the Earth
-    if (!sc.lights.length && sc.embers.length) return nz ? { lon: 150, lat: -20, k: 1.25 } : { lon: 5, lat: 45, k: 1.6 };
+    if (!sc.lights.length && (sc.embers.length || sc.rests.length)) return nz ? { lon: 150, lat: -20, k: 1.25 } : { lon: 5, lat: 45, k: 1.6 };
     const mine = sc.lights.filter((l) => !l.moving && l.ll[0] > -30 && (l.ll[0] > 100) === nz);
     // with only a handful of lights left, hold a steady view: chasing them makes the zoom pump
     if (mine.length < 12 && (nz || this.kFloor >= 6)) { if (!nz) this.kFloor = 6; return nz ? { lon: 174.2, lat: -40.6, k: 5.4 } : { lon: -0.6, lat: 52.6, k: 6 }; }
@@ -168,7 +168,9 @@ export class Stage {
     this.auto = false;
     this.goal = this.around(lls, null, 9);
   }
-  resume() { this.auto = true; this.goal = null; }
+  /** how close the view was when a person was picked: following them never stands further back than that */
+  private followK = 0;
+  resume() { this.auto = true; this.goal = null; this.followK = this.cam.k; }
   zoomBy(f: number) {
     this.takeOver(); this.ev.onHover(null, null, 0, 0);
     if (this.kind === 'globe') this.cam.k = Math.max(0.9, Math.min(60, this.cam.k * f));
@@ -312,6 +314,13 @@ export class Stage {
       if (slot > 0) { const o = spiral(slot, gap); q[0] += o[0]; q[1] += o[1]; }
       return q;
     };
+    // where a light was last drawn: a small open ring, fainter than an ember
+    c.lineWidth = 0.8;
+    for (const r of sc.rests) {
+      const q = at(r.ll, r.slot); if (!q) continue;
+      c.globalAlpha = (r.bright ? 0.6 : 0.3) * r.alpha * (r.hollow ? 0.75 : 1); c.strokeStyle = this.colourOf(r.actor); c.beginPath(); c.arc(q[0], q[1], r.bright ? 2.1 : 1.7, 0, 7); c.stroke();
+    }
+    c.globalAlpha = 1;
     for (const e of sc.embers) {
       const q = at(e.ll, e.slot); if (!q) continue;
       if (e.bright) { c.globalAlpha = 0.5 * e.alpha; c.drawImage(glow(this.colourOf(e.actor), true), q[0] - 9, q[1] - 9, 18, 18); }

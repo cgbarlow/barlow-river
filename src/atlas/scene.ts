@@ -30,7 +30,9 @@ export interface Light { actor: Actor; ll: LonLat; slot: number; alpha: number; 
 export interface Trace { actor: Actor; leg: RoutedLeg; upto?: number; style: 'done' | 'sail' | 'fade' | 'doubt' | 'ahead'; alpha: number }
 export interface Ember { actor: Actor; ll: LonLat; slot: number; alpha: number; site: string; bright?: boolean }
 export interface Ripple { ll: LonLat; slot: number; age: number; kind: 'birth' | 'death'; actor: Actor }
-export interface Scene { year: number; lights: Light[]; traces: Trace[]; embers: Ember[]; ripples: Ripple[]; alive: number; ship: LonLat | null }
+/** what is left where a light was last drawn, when no record says where the person died: not an ember, which marks a recorded death place */
+export interface Rest { actor: Actor; ll: LonLat; slot: number; alpha: number; site: string; hollow: boolean; bright?: boolean }
+export interface Scene { year: number; lights: Light[]; traces: Trace[]; embers: Ember[]; rests: Rest[]; ripples: Ripple[]; alive: number; ship: LonLat | null }
 
 export class World {
   places = new Map<string, AtlasPlace>();
@@ -111,7 +113,7 @@ export class World {
 
   /** `finale` is the present day: nobody named is alive, so what the map remembers is turned up */
   scene(year: number, focus: Set<string> | null, selected: string | null, finale = false): Scene {
-    const lights: Light[] = [], traces: Trace[] = [], embers: Ember[] = [], ripples: Ripple[] = [];
+    const lights: Light[] = [], traces: Trace[] = [], embers: Ember[] = [], rests: Rest[] = [], ripples: Ripple[] = [];
     let alive = 0, ship: LonLat | null = null;
     for (const a of this.actors) {
       const sel = a.id === selected;
@@ -132,6 +134,11 @@ export class World {
       const s = a.stays[idx], here = this.ll(s.p), site = this.siteId(s.p);
       if (dead) {
         if (a.ember) embers.push({ actor: a, ll: here, slot: a.slots[idx], alpha: dim, site, bright: finale });
+        else if (a.on < a.d) {
+          // no recorded death place: a fainter mark stays where the light was last drawn
+          const w = whereAt(a.stays, a.d - 0.01)!, at = a.stays[w.i];
+          rests.push({ actor: a, ll: this.ll(at.p), slot: a.slots[w.i], alpha: dim, site: this.siteId(at.p), hollow: a.hollow || at.stops.every((x) => x.kind === 'borrowed'), bright: finale });
+        }
         if (year < a.d + 3) ripples.push({ ll: here, slot: a.slots[idx], age: (year - a.d) / 3, kind: 'death', actor: a });
         continue;
       }
@@ -156,7 +163,7 @@ export class World {
         if (l.km > 3 && !l.within) traces.push({ actor: a, leg: l, style: l.doubt ? 'doubt' : 'fade', alpha: (sel ? 0.9 : 0.5) * dim });
       }
     }
-    return { year, lights, traces, embers, ripples, alive, ship };
+    return { year, lights, traces, embers, rests, ripples, alive, ship };
   }
 }
 

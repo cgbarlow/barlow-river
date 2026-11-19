@@ -121,10 +121,21 @@ export function lifeLines(t: Tree, p: Person): string[] {
   const out: string[] = [];
   const b = rec(p, 'b'), d = rec(p, 'd');
   const pf = p.parents ? t.F.get(p.parents) : undefined;
-  // birth order is only stated among siblings who have all died: it would otherwise place the living
+  // birth order is only stated among siblings who have all died: it would otherwise place the living.
+  // It is read from the dates, not from the order the tree lists the children in, and only when the dates settle it.
   if (pf && pf.children.length > 1 && pf.children.every((id) => !t.P.get(id)?.living)) {
-    const i = pf.children.indexOf(p.id) + 1, n = pf.children.length;
-    out.push(n === 2 ? `The ${i === 1 ? 'elder' : 'younger'} of two children on record.` : `The ${i === 1 ? 'eldest' : i === n ? 'youngest' : ord(i)} of ${n} children on record.`);
+    const sibs = pf.children.map((id) => t.P.get(id)!), n = sibs.length;
+    const key = (q: Person) => { const r = rec(q, 'b'); if (!r || r.approx) return null; const w = when(r); return { y: r.y, mo: w.mo, day: w.day }; };
+    const keys = sibs.map(key), me = keys[sibs.indexOf(p)];
+    // before, after, or cannot tell
+    const cmp = (x: NonNullable<typeof me>, y: NonNullable<typeof me>): number | null => (x.y !== y.y ? x.y - y.y : x.mo < 0 || y.mo < 0 ? null : x.mo !== y.mo ? x.mo - y.mo : x.day && y.day && x.day !== y.day ? x.day - y.day : null);
+    if (me && keys.every(Boolean)) {
+      const rel = keys.map((k, j) => (sibs[j] === p ? 0 : cmp(k!, me)));
+      if (rel.every((r) => r !== null)) {
+        const i = rel.filter((r) => r! < 0).length + 1;
+        out.push(n === 2 ? `The ${i === 1 ? 'elder' : 'younger'} of two children on record.` : `The ${i === 1 ? 'eldest' : i === n ? 'youngest' : ord(i)} of ${n} children on record.`);
+      }
+    }
   }
   if (b && pf) {
     for (const id of pf.partners) {

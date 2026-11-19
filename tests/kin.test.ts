@@ -83,6 +83,21 @@ describe('ageBetween', () => {
   });
 });
 
+describe('birth order', () => {
+  const mkd = (id: string, text: string, living = false): Person => ({ id, living, fams: [], parents: 'FX', name: id, b: { y: Number(/\d{4}/.exec(text)![0]), text }, d: { y: 1990, text: '1990' } } as Person);
+  const tree = (kids: Person[]) => ({ P: new Map(kids.map((k) => [k.id, k])), F: new Map([['FX', { id: 'FX', partners: [], children: kids.map((k) => k.id) } as unknown as Family]]) });
+  it('is read from the dates, not from the order the children are listed in', () => {
+    const kids = [mkd('late', '21 Jul 1910'), mkd('first', '1902'), mkd('mid', '1905')];
+    const tr = tree(kids);
+    expect(lifeLines(tr, kids[0]).join(' ')).toMatch(/youngest of 3/);
+    expect(lifeLines(tr, kids[1]).join(' ')).toMatch(/eldest of 3/);
+  });
+  it('says nothing when two bare years tie', () => {
+    const kids = [mkd('a', '1902'), mkd('b', '1902')];
+    expect(lifeLines(tree(kids), kids[0]).join(' ')).not.toMatch(/elder|younger/);
+  });
+});
+
 describe('lifeLines', () => {
   it('tells a life from the family around it', () => {
     const a = lifeLines(t, P.get('A')!).join(' ');

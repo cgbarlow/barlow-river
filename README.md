@@ -45,16 +45,17 @@ A second mode, at `atlas.html`. The River shows time and doubt. The Atlas adds p
 3. **Tap a light.** The places the records put that person, in order, each with the evidence: born, baptised, census, married, the birth of a child, buried. Then each move, with the years it could have happened in. "Follow the journey" plays that one life.
 4. **Tap a place.** Who was born there, who died there, who is only recorded there, and from when to when.
 5. **See every country.** A row above the map names each country in the records and counts the lights lit there that year: England, New Zealand, Wales, Poland, Ireland, the United States, and anyone at sea. On the globe, a country out of view is named at the rim in the direction it lies. Tap either to go there and see who it was.
-6. **Switch the lens.** By surname, by birthplace, or by how well the place is known.
+6. **Switch the lens.** By surname, by the first place each person is drawn, or by how well the place is known.
 7. **Stars on the map.** A finding that belongs to a place is starred there from the year it happens. Tap it to read it.
-8. **Read the findings.** The first of the family in New Zealand, the life that ended farthest from where it began, a couple recorded on both sides of the world in one year, and the oldest move on the map, which is the one in doubt.
+8. **Read the findings.** The first of the family in New Zealand, the life that ended farthest from where it began, a couple recorded on both sides of the world in one year, and a move the tree itself doubts.
 
 What it will not pretend to know:
 
 - **A solid light has a record.** It is never drawn anywhere before a record puts the person there, and it dims the longer it is since the last one. A hollow light has no record: the person is drawn where a close relative with a record of their own was last recorded, never earlier than that relative's first record. A child drawn with a parent goes where that parent is next recorded, until sixteen; otherwise a hollow light never moves. A haze is a place known only to a county or country; a country is drawn just offshore, marked "somewhere in". Eighteen people have no place and nobody to borrow from. They are listed, not drawn.
 - **A loose year stays loose.** Where the record says "c. 1823", the page says "about 1823", gives no age, and never draws a voyage as sailing on it.
 - **When a move happened is almost never recorded.** Where the records pin it to within three years, the light travels. Otherwise it stays where it was last recorded and appears at the new place only in the year a record finds it there.
-- **Sea routes are custom, not record.** A voyage to New Zealand is drawn the way ships went at the time: out round the Cape of Good Hope, and through Panama once the canal had opened. The tree names no ship.
+- **Sea routes are custom, not record.** A voyage to New Zealand is drawn the way ships went at the time: out round the Cape of Good Hope, and through Panama once the canal had opened. The line is not the course of any one ship; where a note in the tree names a ship, it is in that person's record in the River.
+- **What stays after a light goes out.** Where a death or burial names a town or parish, an ember. Otherwise a fainter open ring where the light was last placed, which says only that the map last had the person there.
 - **Living people are not on the map.** No light, no place.
 
 How it is made: `pipeline/gazetteer.ts` places every place name in the tree by hand, so no family data is sent to a geocoding service. `pipeline/atlas.ts` builds `public/data/atlas.json` from the published `river.json`, never from the raw export, so the Atlas cannot publish anything the River does not. Anyone who died from 1950 on is shown to the town only. The basemap is Natural Earth, bundled (`scripts/build-land.ts` writes it, coarse for the world and detailed for Britain, Ireland and New Zealand); nothing is fetched from a map service.

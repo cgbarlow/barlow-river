@@ -1,58 +1,67 @@
-# Council report: the Atlas, round 8
+# Council report: the Atlas, round 9
 
-Subject: the full outside test of commit `e73c4e0` by a fresh tester, and what was done about it.
+Subject: the third full outside test in a row (commit `fb4b58a`, a fresh tester), the owner's question about what stays after a light goes out, and what was done.
 
 ## What the tester found
 
-Verdict on `e73c4e0`: **no**, on the word "fully". Nothing crashed, no console errors, 2 slow frames in 10,419.
+Verdict on `fb4b58a`: **no**. Five blocking points, all in the words.
 
-- The owner's three requests: all met. One camera crossing, at 1874, on the desktop play-through and on both phone play-throughs.
-- Rules A1 to A7, checked with the tester's own implementation of the rules: **no violations**.
-- Of the ten defects from round 7: six fixed, one fixed with a residue, three partly.
-- Sixteen new points. None is a light in the wrong place by the rules. Most are sentences that say more than the records: a finding title an older move disproves; a finding that made a doubt out of two dates nine months apart; a parish named for a year whose record names only the town; a milestone caption built on a hollow light; a child drawn in New York on her mother's birth record of 27 years before.
-- Scores: 27 of 35 overall, 28.5 as a build.
+- The owner's three requests: met. One camera crossing in 10,810 frames.
+- Rules A1 to A8, by the tester's own checker over every paused year and every play frame: **no violations**.
+- A9 (no milestone on a hollow light without saying so): two violations, and one "last" that was false.
+- Of the sixteen points from round 8: ten fixed, five partly, one fixed on the page but stale in the README.
+- Scores: 26.5 of 35 overall, 28 as a build.
+
+Blocking:
+1. "Elijah Haggar dies in 1947: the last light in Britain that a record of its own places there" was false against the map: another recorded light sits in England until 1954.
+2. "The tree names no ship" was false. The tree names two: the Atrato (1874, in a note) and the East Lothian (arrival of 2 July 1883, an event with no place field, which the pipeline dropped).
+3. The 1914 and 1902 captions counted hollow lights without saying so.
+4. A place named by a later record still attributed to an earlier year, in follow captions and four panels.
+5. Birth order read from the order the tree lists children in, not from their dates. Six panels false. Shared code, so in the River too.
+
+## What the owner asked
+
+> Do the lights go out completely after death or is there still a remnant that we can see? If there is still some kind of remnant, that's good that's what I want.
+
+Before this round only 47 people left an ember, because an ember means "died here" and needs a record. Everyone else vanished.
 
 ## The Council
 
-**Cat.** The rules passed, and the tester still found the page overreaching, so the rules were too narrow. A hollow light can obey every rule and still tell a story nobody recorded. Two changes to the rules themselves: a milestone is never built on a borrowed place; and when one parent is recorded either side of the birth, that parent lends, not whichever is listed first.
+**Cat.** Three rounds, three testers, and each found false sentences the last did not. The pattern is plain: every sentence written from a derived value and not from the record is a defect waiting. This round, go to the source each time: dates from the record's own date, places from the record's own place, "last" from what is drawn.
 
-**Owl.** N1 to N3 are one fault: text written from the stay, which keeps the closest place name ever recorded, and not from the record of that year. Fix it once, at the source, and test the three sentences.
+**Owl.** The 1883 arrival is in the tree with a date and a destination. Dropping it because the place sat in the wrong field was a pipeline fault. Read it.
 
-**Rabbit.** The page holds full dates and was not using them. The 1874 finding should quote 3 February and 9 November and stop inviting a check that needs no doing.
+**Rabbit.** For the owner's remnant: a second mark, visibly different, that says "last placed here". The ember keeps its meaning. Nobody is left with nothing.
 
-**Bear.** Say the seventy-year rule up front. 145 lights go out on an assumption. It was in each panel and nowhere a first-time reader would see it.
+**Bear.** Agreed, and count them at the end. "England 236 remembered" is the ending this map should have had.
 
-**Wolf.** The count of children in a panel counted living children. That is the River's rule, not the Atlas's, and it is broken in shared code. Fix it there. The River gets the fix too.
+**Wolf.** Birth order is the River's code. Fix it there, test it there.
 
-**Puppy.** Every pass has found the lights in the right places. What is left is wording, and wording can be finished.
+**Puppy.** Zero rule violations for the seventh pass running.
 
-**Simon.** Consensus: fix N1 to N15, widen the rules as Cat says, add checks, and test again from scratch. N16 is the records and stays as it is. The Council will not call this done on its own say-so.
+**Simon.** Consensus: fix all five blockers and the minors that are one line each; add the remnant; test again from scratch. If the next tester still says no, the Council will report that honestly and not round it up.
 
 ## What was done
 
 | # | Point | Fix |
 |---|---|---|
-| N1 | "The oldest move" was not the oldest | Retitled "A move the tree itself doubts". |
-| N2 | Doubt made out of dates nine months apart | The finding quotes both full dates and says they fit. |
-| N3 | A later record's place name given to an earlier year | Findings and follow captions name the place as that year's record names it. |
-| N4 | Milestone on a hollow light | "Last light in Britain" is now the last placed there by a record of its own. A parent recorded either side of the birth lends before one who is not. |
-| N5 | A generation-old record placing a child overseas | Same lender rule; and a borrowed start is dropped when it is over twenty years stale and in another country than the person's own first record. |
-| N6 | Seventy-year rule unstated | In the guide and in "What the map cannot know", with the counts. |
-| N7 | "5 with only an ember" | Four, and one recorded within a single year with neither. |
-| N8 | Focus and message leftovers | Esc from help returns to the ? button; the family message clears on a country or help; Esc in search keeps focus. |
-| N9 | Mid-width window | Chips shorten when they would overflow; no zoom buttons on two shores, which cannot zoom. |
-| N10 | Phone: tapping a light zoomed out | The camera stands closer when the sheet is open. |
-| N11 | "about" lost | Follow captions and place panels keep it. |
-| N12 | Lens and Key wording | "By first place"; "Move, known to within three years"; people placed only by their own death are grouped with the hollow. |
-| N13 | Kilometres between county centres | None given. |
-| N14 | Small | "None of X's close family"; the filter says when nothing matches; arrows move between tabs. |
-| N15 | Living children counted | No count of children unless every child has died. In the River too. |
-| D1 residue | "Outlived by" and "Lost a mother at" | Counted from full dates; bare years give "19 or 20". |
+| 1 | False "last light in Britain" | The caption is now computed from what is drawn: the last year any light is in Britain, whose it is, and whether it is hollow or what record places it. |
+| 2 | "Names no ship" | Removed everywhere. The 1883 arrival is read and places Peter William Barlow in Auckland from 1883. The 1874 finding points to the note that names the Atrato. |
+| 3 | Hollow lights counted silently | Both captions say so; the 1914 one also gives the peak by records alone. |
+| 4 | Later place on an earlier year | Moves and follow captions name each place as that year's record does. A death and burial in one year read "Died in A and was buried in B". |
+| 5 | Birth order | Read from dates; nothing is said when the dates cannot settle it. |
+| Owner | Remnant | An open ring stays where a light was last placed when no death place is recorded. In the Key as "Last placed here". Counted with the embers on the last frame. |
+| Minor | Follow ends on the wrong side; pause loses the follow | The camera stays where the light was; play resumes the follow. |
+| Minor | Tapping a light zoomed out | Following never stands further back than the view was. |
+| Minor | Certainty colour | Follows the Key's grouping. |
+| Minor | "94 years" silence | 93, from the full dates, which are quoted. |
+| Minor | "35 or 36" where both dates are full | Exact when the record has a full date. |
+| Minor | England panel count; "Louisa own"; Home and End; Both at mid widths; README | Fixed. |
 
-Not done: the 800x380 three-line caption over Cornwall, the opened Key over the map on a phone, the early zoom breath, stars over labels. Taste, or the cost of a very small screen.
+Each record now carries its full date where the tree has one. Stops still come only from the published, privacy-filtered file.
 
-90 unit tests, the River's 59 browser checks and the Atlas's 149 pass.
+92 unit tests, the River's 59 browser checks and the Atlas's 153 pass.
 
 ## Next
 
-A full outside test of this commit by a tester who has seen none of the earlier ones.
+A full outside test of this commit by a fresh tester.

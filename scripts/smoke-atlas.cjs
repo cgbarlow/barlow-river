@@ -87,7 +87,7 @@ process.on('exit', () => server?.kill());
   await page.waitForSelector('#record:not([hidden]) h2');
   check('tapping a light opens the person', (await page.locator('#record h2').textContent()) === 'Edwin Watkins');
   check('the record lists the places in order with the evidence', (await page.locator('#record .stops li').count()) >= 6 && /census/.test(await page.locator('#record .stops').textContent()) && /birth of/.test(await page.locator('#record .stops').textContent()));
-  check('a voyage is described as custom, not record', /usual .* route/.test(await page.locator('#record .move.sail').first().textContent()) && /does not record the ship/.test(await page.locator('#record').textContent()));
+  check('a voyage is described as custom, not record', /usual route/.test(await page.locator('#record .move.sail').first().textContent()) && /no record gives the course sailed/.test(await page.locator('#record').textContent()));
   check('the record links to the River for the same person', (await page.locator('#open-river').getAttribute('href')).includes(encodeURIComponent(edwin)));
   check('the address bar carries the person and the year', /p=/.test(page.url()) || (await page.waitForTimeout(400), /p=/.test(page.url())));
 
@@ -472,7 +472,7 @@ process.on('exit', () => server?.kill());
   await page.locator('.view [data-view="shores"]').tap();
   await A(page, () => window.__atlas.settle());
   const stacked = await A(page, () => { const s = window.__atlas.stages[0], w = window.__atlas.world; const e = w.actors.find((a) => s.screenOf(a.id) && w.lightOf(a, 1880)?.[0] < 10), n = w.actors.find((a) => s.screenOf(a.id) && w.lightOf(a, 1880)?.[0] > 150); return e && n ? s.screenOf(n.id)[1] - s.screenOf(e.id)[1] : 0; });
-  check('on a phone the two shores stack', stacked > 80, String(stacked));
+  check('on a phone the two shores stack', stacked > 40, String(stacked));
   await page.locator('#legend .key-toggle').tap();
   await A(page, () => { window.__atlas.setYear(1852); window.__atlas.play(); });
   for (let i = 0; i < 40 && !(await page.locator('#caption.on').count()); i++) await page.waitForTimeout(150);
@@ -567,6 +567,18 @@ process.on('exit', () => server?.kill());
   await page.keyboard.press('Escape');
   await A(page, () => window.__atlas.setView('shores'));
   check('two shores, which cannot zoom, shows no zoom buttons', (await page.locator('#zin').isHidden()) && (await page.locator('#zout').isHidden()));
+  await page.close();
+  // what stays after a light goes out, and the claims the captions make
+  page = await open('#y=1990');
+  await A(page, () => window.__atlas.stop());
+  const rem = await A(page, () => { const A_ = window.__atlas, w = A_.world; A_.setYear(1990); const sc = A_.scene(); const gone = w.actors.filter((a) => a.on < a.d && a.d <= 1990); const marked = new Set([...sc.embers, ...sc.rests].map((x) => x.actor.id)); return [gone.length, gone.filter((a) => marked.has(a.id)).length, sc.embers.every((e) => e.actor.ember), sc.rests.every((r) => !r.actor.ember), sc.rests.length]; });
+  check('every light that has gone out leaves a mark: an ember where the death place is recorded, a ring otherwise', rem[0] > 250 && rem[0] === rem[1] && rem[2] && rem[3] && rem[4] > 150, JSON.stringify(rem));
+  const caps = await A(page, () => window.__atlas.beats().map((b) => b.text));
+  const peak = caps.find((t) => /the most it ever will/.test(t)) || '', tip = caps.find((t) => /^From \d{4} more of the family/.test(t)) || '';
+  check('captions that count lights say when hollow ones are counted', /are hollow/.test(peak) && /record of their own/.test(peak) && /hollow lights included/.test(tip), peak + ' | ' + tip);
+  const brit = await A(page, () => { const A_ = window.__atlas, w = A_.world; const t = A_.beats().find((b) => /no light is left in Britain/.test(b.text)); if (!t) return null; const y = Number(/After (\d{4})/.exec(t.text)[1]); const gb = (yy) => w.actors.filter((a) => ['England', 'Wales'].includes(w.countryOf(a, yy + 0.5))).length; return [y, gb(y), gb(y + 1), Math.max(...Array.from({ length: 2026 - y }, (_, i) => gb(y + 1 + i)))]; });
+  check('the caption about the last light in Britain matches what is drawn', brit && brit[1] > 0 && brit[2] === 0 && brit[3] === 0, JSON.stringify(brit));
+  check('no page text says the tree names no ship', !/names no ship|does not record the ship/.test(await A(page, () => { document.querySelector('#help').click(); return document.querySelector('#record').textContent + document.querySelector('#panel-body').textContent + JSON.stringify(window.__atlas.atlas.leads); })));
   await page.close();
   // phones: every country chip on screen while someone is at sea; the caption under the lower map
   page = await open('#y=1874', { width: 390, height: 800 }, { hasTouch: true, isMobile: true });

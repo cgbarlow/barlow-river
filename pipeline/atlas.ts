@@ -6,6 +6,7 @@
 import type { Family, Lead, Person, RiverData } from '../src/model/types.ts';
 import type { AtlasData, AtlasPerson, AtlasPlace, AtlasStop, StopKind } from '../src/model/atlas-types.ts';
 import { km } from '../src/model/geo.ts';
+import { ageBetween } from '../src/model/kin.ts';
 import { lastKnown, legsOf, ll, sortStops, staysOf, type Stay } from '../src/model/journey.ts';
 import { locate, PLACE, PLACES } from './gazetteer.ts';
 
@@ -39,7 +40,7 @@ export function buildAtlas(river: RiverData): AtlasBuild {
     const seen = new Set<string>();
     // "disputed" on a person means the early record may be someone else of the same name
     const disputed = p.tier === 'disputed' ? (p.tierWhy ?? 'disputed').replace(/^disputed:\s*/i, '') : '';
-    const add = (raw: string | undefined, y: number | undefined, kind: StopKind, why: string, est = false, approx = false) => {
+    const add = (raw: string | undefined, y: number | undefined, kind: StopKind, why: string, est = false, approx = false, date?: string) => {
       const pl = resolve(raw, p);
       if (!pl || y == null) return;
       // one marriage, recorded twice, is one row: keep the one that names the partner
@@ -48,31 +49,37 @@ export function buildAtlas(river: RiverData): AtlasBuild {
       const key = `${y}|${pl.id}|${kind}|${why}`;
       if (seen.has(key)) return;
       seen.add(key);
-      stops.push({ y, p: pl.id, kind, why, ...(est ? { est: true } : {}), ...(approx && !est ? { approx: true } : {}), ...(disputed && (kind === 'birth' || kind === 'baptism') ? { doubt: disputed } : {}) });
+      const full = date && !est && !approx && /[A-Za-z]{3}/.test(date) && date.includes(String(y)) ? date : undefined;
+      stops.push({ y, p: pl.id, kind, why, ...(full ? { date: full } : {}), ...(est ? { est: true } : {}), ...(approx && !est ? { approx: true } : {}), ...(disputed && (kind === 'birth' || kind === 'baptism') ? { doubt: disputed } : {}) });
     };
     const b = p.b!, d = p.d!;
-    add(b.place, b.y, b.kind === 'bap' ? 'baptism' : 'birth', b.kind === 'bap' ? 'baptised' : 'born', Boolean(b.est), Boolean(b.approx));
+    add(b.place, b.y, b.kind === 'bap' ? 'baptism' : 'birth', b.kind === 'bap' ? 'baptised' : 'born', Boolean(b.est), Boolean(b.approx), b.text);
     for (const e of p.events ?? []) {
-      if (!e.place) continue;
-      if (e.tag === 'CHR' || e.tag === 'BAPM') add(e.place, e.y ?? (b.est ? undefined : b.y), 'baptism', 'baptised');
-      else if (e.tag === 'BURI') add(e.place, e.y ?? (d.est ? undefined : d.y), 'burial', 'buried');
+      if (!e.place) {
+        // an arrival the tree dates and gives a destination for, in its own words: "Arrives from England … to Auckland, New Zealand"
+        const to = /^Arrives\b.*\bto ([A-Z][A-Za-z ,]+)$/.exec(e.value ?? '');
+        if (to && e.y != null && e.y >= b.y && e.y <= d.y) add(to[1], e.y, 'event', 'arrival noted in the tree', false, false, e.date);
+        continue;
+      }
+      if (e.tag === 'CHR' || e.tag === 'BAPM') add(e.place, e.y ?? (b.est ? undefined : b.y), 'baptism', 'baptised', false, false, e.date);
+      else if (e.tag === 'BURI') add(e.place, e.y ?? (d.est ? undefined : d.y), 'burial', 'buried', false, false, e.date);
       else if (e.tag === 'CENS') add(e.place, e.y, 'census', 'census');
-      else if (e.tag === 'MARR') add(e.place, e.y, 'marriage', 'married');
+      else if (e.tag === 'MARR') add(e.place, e.y, 'marriage', 'married', false, false, e.date);
       else if (e.y != null && e.y >= b.y && e.y <= d.y) add(e.place, e.y, 'event', /accomplish/i.test(e.label) ? 'an achievement the tree dates to that year and places here' : `in the record for that year: ${e.label.toLowerCase()}`);
     }
-    if (!d.est) add(d.place, d.y, d.kind === 'bur' ? 'burial' : 'death', d.kind === 'bur' ? 'buried' : 'died', false, Boolean(d.approx));
+    if (!d.est) add(d.place, d.y, d.kind === 'bur' ? 'burial' : 'death', d.kind === 'bur' ? 'buried' : 'died', false, Boolean(d.approx), d.text);
     for (const fid of p.fams) {
       const f = F.get(fid);
       if (!f) continue;
       const partner = f.partners.map((id) => P.get(id)).find((q) => q && q.id !== p.id && !q.living);
-      if (f.m?.place && !f.m.est) add(f.m.place, f.m.y, 'marriage', partner ? `married ${first(partner)}` : 'married', false, Boolean(f.m.approx));
+      if (f.m?.place && !f.m.est) add(f.m.place, f.m.y, 'marriage', partner ? `married ${first(partner)}` : 'married', false, Boolean(f.m.approx), f.m.text);
       // A child's recorded birthplace puts both parents there that year.
       for (const cid of f.children) {
         const c = P.get(cid);
         if (!c || c.living || !c.b?.place || c.b.est) continue;
         const y = c.b.y;
         if (y < b.y + 12 || y > d.y + (p.sex === 'M' ? 1 : 0)) continue;
-        add(c.b.place, y, 'child', `${c.b.kind === 'bap' ? 'baptism' : 'birth'} of ${first(c)}`, false, Boolean(c.b.approx));
+        add(c.b.place, y, 'child', `${c.b.kind === 'bap' ? 'baptism' : 'birth'} of ${first(c)}`, false, Boolean(c.b.approx), c.b.text);
       }
     }
     if (stops.length) out.set(p.id, { id: p.id, stops: sortStops(stops) });
@@ -316,8 +323,8 @@ function findings(people: AtlasPerson[], P: Map<string, Person>, F: Map<string, 
   const gaps = all.flatMap((x) => x.legs.map((l) => ({ id: x.a.id, l }))).sort((a, b) => b.l.y1 - b.l.y0 - (a.l.y1 - a.l.y0));
   if (gaps.length && gaps[0].l.y1 - gaps[0].l.y0 >= 30) {
     const g = gaps[0];
-    facts.push({ id: 'a-silence', kind: 'places', y: g.l.y1, people: [g.id], title: `${name(g.id)}: ${g.l.approx0 || g.l.approx1 ? 'about ' : ''}${g.l.y1 - g.l.y0} years with no record`,
-      body: `Recorded in ${place(g.l.ra).name} in ${abt(g.l.approx0, g.l.y0)}, and not again until ${place(g.l.rb).name} in ${abt(g.l.approx1, g.l.y1)}. It is the longest silence between two places in the tree. On the map the light waits where it was last seen, growing dim.` });
+    facts.push({ id: 'a-silence', kind: 'places', y: g.l.y1, people: [g.id], title: `${name(g.id)}: ${ageBetween({ y: g.l.y0, text: g.l.d0 ?? String(g.l.y0), approx: g.l.approx0 }, { y: g.l.y1, text: g.l.d1 ?? String(g.l.y1), approx: g.l.approx1 })} years with no record`,
+      body: `Recorded in ${place(g.l.ra).name} in ${abt(g.l.approx0, g.l.y0)}, and not again until ${place(g.l.rb).name} in ${abt(g.l.approx1, g.l.y1)}${g.l.d0 && g.l.d1 ? ` (${g.l.d0} to ${g.l.d1})` : ''}. It is the longest silence between two places in the tree. On the map the light waits where it was last seen, growing dim.` });
   }
   for (const [c, f] of firstIn) {
     if (c === 'England' || c === 'New Zealand') continue;
@@ -349,8 +356,8 @@ function findings(people: AtlasPerson[], P: Map<string, Person>, F: Map<string, 
       const gap = dated.length >= 2 ? dated[dated.length - 1].m - dated[0].m : -1;
       leads.push({ id: key, kind: 'same-year', y: l.y1, people: [a.id], title: `${name(a.id)}: both sides of the world in ${l.y1}`,
         body: gap >= 0
-          ? `${dated[0].t.replace(/^m/, 'M')}; ${dated[dated.length - 1].t}. ${gap >= 4 ? `About ${['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven'][gap]} months apart, and the voyage took two to three: the dates fit.` : 'The voyage took two to three months, so the dates are tight. Worth checking both.'} The tree names no ship and no sailing date.`
-          : `Recorded in ${place(l.ra).name} and in ${place(l.rb).name} in the same year. The voyage took two to three months, so it is possible if the two records are months apart. The tree gives no fuller dates to check.` });
+          ? `${dated[0].t.replace(/^m/, 'M')}; ${dated[dated.length - 1].t}. ${gap >= 4 ? `About ${['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven'][gap]} months apart, and such a voyage took three to four: the dates fit.` : 'Such a voyage took three to four months, so the dates are tight. Worth checking both.'}${(pa.notes ?? []).some((n) => /\bship\b|vessel/i.test(n)) ? ` A note in the tree names the ship and the dates it sailed and arrived: open ${name(a.id)} in the River to read it.` : ''}`
+          : `Recorded in ${place(l.ra).name} and in ${place(l.rb).name} in the same year. Such a voyage took three to four months, so it is possible only if the two records are months apart. The tree gives no fuller dates to check.` });
     }
   }
   for (const { a, legs } of all) for (const l of legs) if (l.doubt) {

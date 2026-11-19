@@ -29,6 +29,8 @@ export interface AtlasStop {
   kind: StopKind;
   /** the evidence in a few words: "born", "census", "birth of Annie" */
   why: string;
+  /** the full date as the tree gives it, when it gives more than a year: "9 Nov 1874" */
+  date?: string;
   /** the year is estimated, not recorded */
   est?: boolean;
   /** the record itself gives the year loosely: "c. 1823", "after 1808" */
