@@ -61,3 +61,9 @@ Minor, from the last test, not fixed (no code was changed after it):
 Standing items, his to decide: the 1883 arrival note ("with wife, 6 children"); free text the map does not read (cemetery citations, an undated death place); James Carter's "after 1808"; James Finch's 1846 to 1848; small-screen overlaps; "Beverley" (flagged deceased in the tree; if she is living the flag needs correcting in Iris); voyage routes are convention.
 
 Not built, his to choose: comparing two lives; a line to the youngest generation; coincidences; a story as one arc; the full list behind a bar; ages at death by country.
+
+## The owner's decision
+
+Put to the owner on 19 November 2026: accept the Atlas as it stands at about 30 to 31 as a build against a plan scored 31, build the larger features, or fix the four minors and test once more.
+
+The owner chose: **accept as it stands.** Commit `0bf28e7` is the finished, tested build. No further changes are made. Whether and when to merge to `main` remains his decision; no pull request has been opened.
