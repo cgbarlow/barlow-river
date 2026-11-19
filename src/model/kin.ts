@@ -141,7 +141,8 @@ export function lifeLines(t: Tree, p: Person): string[] {
     for (const id of pf.partners) {
       const par = t.P.get(id)!;
       const pd = rec(par, 'd');
-      if (pd && pd.y >= b.y && pd.y - b.y < 12) { const at = ageBetween(b, pd); out.push(`Lost ${par.sex === 'M' ? 'a father' : par.sex === 'F' ? 'a mother' : 'a parent'} ${at === '0' ? 'in the first year of life' : `at ${at}`}.`); break; }
+      // only a parent who died while the child was alive: a child who died first did not lose them
+      if (pd && pd.y >= b.y && pd.y - b.y < 12 && (!d || pd.y < d.y)) { const at = ageBetween(b, pd); out.push(`Lost ${par.sex === 'M' ? 'a father' : par.sex === 'F' ? 'a mother' : 'a parent'} ${at === '0' ? 'in the first year of life' : `at ${at}`}.`); break; }
     }
   }
   const fams = p.fams.map((f) => t.F.get(f)!).filter(Boolean);

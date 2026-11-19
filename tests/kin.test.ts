@@ -83,6 +83,17 @@ describe('ageBetween', () => {
   });
 });
 
+describe('losing a parent', () => {
+  it('is not said of a child who died before the parent did', () => {
+    const dad = { id: 'D', living: false, fams: ['FY'], name: 'D', sex: 'M', b: { y: 1846, text: '1846' }, d: { y: 1890, text: '1890' } } as Person;
+    const kid = { id: 'K', living: false, fams: [], parents: 'FY', name: 'K', b: { y: 1883, text: '1883' }, d: { y: 1884, text: '1884' } } as Person;
+    const sib = { id: 'S', living: false, fams: [], parents: 'FY', name: 'S', b: { y: 1880, text: '1880' }, d: { y: 1950, text: '1950' } } as Person;
+    const tr = { P: new Map([dad, kid, sib].map((p) => [p.id, p])), F: new Map([['FY', { id: 'FY', partners: ['D'], children: ['S', 'K'] } as unknown as Family]]) };
+    expect(lifeLines(tr, kid).join(' ')).not.toMatch(/Lost a/);
+    expect(lifeLines(tr, sib).join(' ')).toMatch(/Lost a father at 9 or 10/);
+  });
+});
+
 describe('birth order', () => {
   const mkd = (id: string, text: string, living = false): Person => ({ id, living, fams: [], parents: 'FX', name: id, b: { y: Number(/\d{4}/.exec(text)![0]), text }, d: { y: 1990, text: '1990' } } as Person);
   const tree = (kids: Person[]) => ({ P: new Map(kids.map((k) => [k.id, k])), F: new Map([['FX', { id: 'FX', partners: [], children: kids.map((k) => k.id) } as unknown as Family]]) });

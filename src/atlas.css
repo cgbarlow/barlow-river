@@ -157,3 +157,6 @@ body.kbd .views:focus { outline: 2px solid var(--amber); outline-offset: -2px; }
 
 /* the story button stays in reach while the findings scroll under it */
 .panel-body .actions:has([data-act='nextstory']) { position: sticky; top: 0; z-index: 2; background: var(--panel, #17273F); padding: 8px 0; margin: 0 !important; }
+
+/* a finding scrolled into view stops below the story button, not under it */
+#panel-body .card { scroll-margin-top: 64px; }

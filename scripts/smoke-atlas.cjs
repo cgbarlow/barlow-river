@@ -661,6 +661,15 @@ process.on('exit', () => server?.kill());
   await page.keyboard.press('ArrowLeft'); await page.keyboard.press('ArrowLeft'); await page.keyboard.press('Home'); await page.waitForTimeout(300);
   check('and arrow keys and Home with it open leave the map drawing', errors.length === e0 && (await A(page, () => isFinite(window.__atlas.stages[0].cam.k))) && (await inked(page)) > 300);
   await page.close();
+  // the story button never covers the title of the story it opens, in the side panel or the bottom sheet
+  for (const [w, h, touch] of [[390, 800, true], [900, 700, false], [1440, 900, false]]) {
+    page = await open('#y=1855', { width: w, height: h }, touch ? { hasTouch: true, isMobile: true } : {});
+    await A(page, () => { window.__atlas.stop(); document.querySelector('#panel').classList.add('open'); });
+    let covered = 0, steps = 0;
+    for (let i = 0; i < 19; i++) { await page.evaluate(() => document.querySelector('[data-act="nextstory"]').click()); await page.waitForTimeout(260); const r = await page.evaluate(() => { const b = document.querySelector('[data-act="nextstory"]').getBoundingClientRect(), t = document.querySelector('#panel-body .card.on .t')?.getBoundingClientRect(), pb = document.querySelector('#panel-body').getBoundingClientRect(); return t ? [t.top >= b.bottom - 1, t.bottom <= pb.bottom + 1 && t.top >= pb.top - 1] : [false, false]; }); steps++; if (!r[0] || !r[1]) covered++; }
+    check(`at ${w}x${h} each story's title is in view below the story button`, steps === 19 && covered === 0, `${covered} of ${steps} covered`);
+    await page.close();
+  }
   // phones: every country chip on screen while someone is at sea; the caption under the lower map
   page = await open('#y=1874', { width: 390, height: 800 }, { hasTouch: true, isMobile: true });
   await A(page, () => { window.__atlas.stop(); window.__atlas.setYear(1874); window.__atlas.settle(); });

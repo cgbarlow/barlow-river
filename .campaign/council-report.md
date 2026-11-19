@@ -1,44 +1,44 @@
-# Council report: the Atlas, round 25
+# Council report: the Atlas, round 26
 
-Subject: the nineteenth full outside test (commit `8e5566b`, a fresh tester), and what was done.
+Subject: the twentieth full outside test (commit `97e82d4`, a fresh tester), and what was done.
 
 ## What the tester found
 
-Verdict on `8e5566b`: **no**, on one defect introduced in round 24.
+Verdict on `97e82d4`: **no**, on two points.
 
-- The owner's requests: met. The Back trap is fixed in every case tried: seven River-to-Atlas-and-back cases on desktop and phone, 31 deep links, a nine-step chain inside the Atlas, reload at each step.
-- Every count and sentence recounted true. Rules A1 to A12 and R1: no violation.
-- Scores: **27.5 of 35 overall, 29.5 as a build**, marked down on Interactive for the crash.
+- The owner's requests: met.
+- The crash of round 25 is fixed: 4,992 checks with a finding open and the year moved every way, on three views, with reloads; 90 more with a person, place, country, family, swatch or Follow active; 1,150 random ordinary actions on four screen sizes. No error, no blank map.
+- Rules A1 to A14: no violation. 338 sentence forms with a number and 140 with a negative reviewed: none false in the Atlas's own text.
+- Scores: **28.5 of 35 overall, 31 as a build.** The build is at the Council's bar.
 
 Blocking:
-- **D1, a crash.** Round 24 let an open finding show its star a year before its own year. The star's "new" ring has a radius worked out from how long ago the finding's year was. More than a year before, the radius is negative and the drawing call throws on every frame: stars, pointers and labels vanish, and reloading that address fails. Open a finding and press the left arrow twice.
-
-Minor: a message can stay for a few seconds after Back; the panel's own Back button adds a history entry; opening a finding replaces an entry instead of adding one.
+- **B1.** The story button, made to stay at the top of the Journeys tab in round 25, covers the title of the story it opens when the panel is a bottom sheet: on a phone and in a 900-wide window, 18 steps of 19.
+- **B2.** "Lost a father at 6 or 7" for Frank H Barlow, born 1883, died 1884. His father died in 1890. The sentence never checked that the child was still alive. Shared code; in the River too, and on `main` today as "at about 6".
 
 ## The Council
 
-**Cat.** Three rounds running, the blocker was something added the round before to gain half a point: an uncounted sentence, an age line, a star. We are now breaking the build faster than we are improving it.
+**Cat.** B1 is the fourth blocker in a row made by the round before. It was called low-risk. Nothing is low-risk without a check on a phone.
 
-**Owl.** Then this round adds nothing. One guard, one check that opens every finding and moves the year everywhere, and two small things that cannot break anything.
+**Owl.** Two fixes, a check each, nothing else.
 
-**Bear.** Agreed. And we stop chasing the last half point after this. If the next test passes, the Council reports the scores as they are.
+**Rabbit.** B2 is older than this branch. Fix it anyway; it is one condition, and say it changes the River.
 
-**Wolf.** The owner should be told that plainly.
+**Bear.** Thirty-one. If the next test passes, we close at whatever it scores and tell the owner the range.
 
-**Simon.** Consensus: fix, guard, test. No new features.
+**Simon.** Consensus.
 
 ## What was done
 
 | Point | Fix |
 |---|---|
-| D1 | The ring is drawn only in the years after a finding's own. A browser check opens each of the eighteen findings, on the globe and on Two shores, and sets the year to one, two and five years before its own, to 1590, 1700, 2026 and back; another loads a finding's address at a year long before its own and presses the arrow keys and Home. |
-| Messages after Back | Going Back or Forward clears any message. |
-| Story button | Stays at the top of the Journeys tab while the findings scroll. |
+| B1 | A finding scrolled into view stops below the story button. A browser check steps through nineteen stories at 390x800, 900x700 and 1440x900 and measures that each title is in view and below the button. |
+| B2 | "Lost a father/mother" is said only when the parent died while the child was alive. A unit test covers a child who died first and a sibling who did not. In the River too. |
+| README | A "c." year gives the age as "about", which is what the page does. |
 
 Nothing else was changed.
 
-94 unit tests, the River's 59 browser checks and the Atlas's 172 pass.
+95 unit tests, the River's 59 browser checks and the Atlas's 175 pass.
 
 ## Next
 
-A full outside test of this commit, with scores. After it the Council will report the scores as they stand and put the question of the bar to the owner.
+A full outside test of this commit, with scores.
