@@ -29,7 +29,7 @@ export interface Actor {
 export interface Light { actor: Actor; ll: LonLat; slot: number; alpha: number; haze: boolean; /** drawn as a ring: this place is borrowed from a relative */ hollow: boolean; site?: string; moving?: boolean }
 export interface Trace { actor: Actor; leg: RoutedLeg; upto?: number; style: 'done' | 'sail' | 'fade' | 'doubt' | 'ahead'; alpha: number }
 export interface Ember { actor: Actor; ll: LonLat; slot: number; alpha: number; site: string; bright?: boolean }
-export interface Ripple { ll: LonLat; slot: number; age: number; kind: 'birth' | 'death'; actor: Actor }
+export interface Ripple { ll: LonLat; slot: number; age: number; kind: 'birth' | 'death' | 'record'; actor: Actor }
 /** what is left where a light was last drawn, when no record says where the person died: not an ember, which marks a recorded death place */
 export interface Rest { actor: Actor; ll: LonLat; slot: number; alpha: number; site: string; hollow: boolean; bright?: boolean }
 export interface Scene { year: number; lights: Light[]; traces: Trace[]; embers: Ember[]; rests: Rest[]; ripples: Ripple[]; alive: number; ship: LonLat | null }
@@ -147,6 +147,8 @@ export class World {
       const prec = this.places.get(s.p)!.prec, haze = prec === 'area' || prec === 'country';
       if (year < a.on + 2) ripples.push({ ll: here, slot: a.slots[idx], age: (year - a.on) / 2, kind: 'birth', actor: a });
       const lent = a.hollow || s.stops.every((x) => x.kind === 'borrowed');
+      // the year a first record of their own arrives, a hollow light turns solid: marked with a ring
+      if (!lent && idx > 0 && a.stays[idx - 1].stops.every((x) => x.kind === 'borrowed') && year >= s.from && year < s.from + 2) ripples.push({ ll: here, slot: a.slots[idx], age: (year - s.from) / 2, kind: 'record', actor: a });
       const w = whereAt(a.stays, year)!;
       // a solid light dims the longer it is since a record last placed the person here
       const fresh = lent ? 1 : Math.max(0.45, 1 - Math.max(0, year - s.to) / 60);

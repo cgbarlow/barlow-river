@@ -164,7 +164,7 @@ function loop(now: number) {
     const reading = !fol && now < captionUntil;
     const reading2 = now < captionUntil;
     // a caption still being read just before a voyage: wait for it, so the voyage does not cut it short
-    const shipSoon = !fol && reading2 && allBeats.some((b) => b.sail && b.y - playYear > 0 && b.y - playYear < 0.6);
+    const shipSoon = reading2 && (followBeats ?? allBeats).some((b) => b.sail && b.y - playYear > 0 && b.y - playYear < 0.6);
     const speed = shipSoon ? 0.05 : sailing ? 0.18 : hop ? 1.1 : pendingBeat && reading2 ? 0.15 : reading ? 0.9 : fol ? (reading2 ? 2.5 : 6) : playYear < 1650 ? 20 : playYear > 1900 ? 5.5 : 8;
     playYear += dt * speed;
     const end = fol ? Math.min(thisYear, fol.stays[fol.stays.length - 1].to + 2) : thisYear;
@@ -197,7 +197,7 @@ function draw(snap = false) {
 // ---------------------------------------------------------------- stars
 /** Findings that belong to one place are starred on the map itself, from the year they happen. */
 let stars: Star[] = [];
-const STARRED = /^a-(first-crossing|farthest|birthplace|silence|split-siblings|first-|same-year|doubt)/;
+const STARRED = /^a-(first-crossing|farthest|birthplace|silence|split-siblings|first-|same-year|doubt|oldest-crosser|longest-stay)/;
 function buildStars() {
   for (const f of [...atlas.facts, ...atlas.leads]) {
     if (!STARRED.test(f.id)) continue;
@@ -406,15 +406,16 @@ function buildBeats() {
   // two findings that belong to a year are told when the year comes
   for (const f of atlas.facts) if (f.id === 'a-split-siblings' || f.id === 'a-silence') beats.push({ y: f.id === 'a-silence' ? f.y : f.y + 1, ids: f.people, text: f.id === 'a-silence' ? `${f.title}. ${f.body.split('. ').slice(0, 1).join('. ')}.` : f.body.split('. ').slice(1, -1).join('. ') + '.' });
   // the quiet years: how many lights the map holds and where, counted, when nothing else is being said
-  for (const y of [1625, 1680, 1730, 1790, 1830]) {
+  for (const y of [1625, 1680, 1730, 1790, 1830, 1935, 1972, 2000]) {
     if (beats.some((x) => Math.abs(x.y - y) < 8)) continue;
     const by = new Map<string, number>(); let n = 0, hollow = 0;
     for (const a of world.actors) { if (!world.lightOf(a, y + 0.5)) continue; const w = whereAt(a.stays, y + 0.5)!, st = a.stays[w.i], reg = world.places.get(st.p)!.region; n++; if (a.hollow || st.stops.every((x) => x.kind === 'borrowed')) hollow++; by.set(reg, (by.get(reg) ?? 0) + 1); }
     if (n < 3) continue;
     const inReg = (r: string) => (r === 'Elsewhere in England' ? 'elsewhere in England' : r === 'Elsewhere' ? 'in other countries' : `in ${r}`);
     const top = [...by].sort((p, q) => q[1] - p[1]), rest = n - top[0][1] - (top[1]?.[1] ?? 0);
-    const where = top.length === 1 ? `all ${inReg(top[0][0])}` : `${top[0][1]} ${inReg(top[0][0])}, ${top[1][1]} ${inReg(top[1][0])}${rest > 0 ? `, ${rest} elsewhere` : ''}`;
-    beats.push({ y, text: `In ${y} the map holds ${n} lights, ${where}. ${hollow === 0 ? 'None is hollow.' : hollow === 1 ? 'One is hollow, drawn with a relative.' : `${hollow} of the ${n} are hollow, drawn with a relative.`}` });
+    const where = top.length === 1 ? `all ${inReg(top[0][0])}` : `${top[0][1]} ${inReg(top[0][0])}, ${top[1][1]} ${inReg(top[1][0])}${rest > 0 ? `, ${rest} in other places` : ''}`;
+    const gone = world.actors.filter((a) => a.d <= y && (a.on < a.d || a.ember)).length;
+    beats.push({ y, text: `In ${y} the map holds ${n} lights, ${where}. ${hollow === 0 ? 'None is hollow.' : hollow === 1 ? 'One is hollow, drawn with a relative.' : `${hollow} of the ${n} are hollow, drawn with a relative.`}${gone >= 20 ? ` ${gone} marks stand where lights have gone out.` : ''}` });
   }
   // the quiet centuries have their own moments: the River's captions that belong to a place
   for (const b of BEATS) if (b.y >= 1700 && !beats.some((x) => Math.abs(x.y - b.y) < 2)) beats.push({ y: b.y, text: b.text });
@@ -424,7 +425,7 @@ function buildBeats() {
   for (let y = trackMin; y <= thisYear; y++) { let held = true; for (let z = y; z < y + 15 && held; z++) { const [eu, nz] = tally(z + 0.5); held = nz > eu; } if (held) { const [eu, nz] = tally(y + 0.5); beats.push({ y, text: `From ${y} more of the family’s lights are in New Zealand than on the other side of the world: ${nz} to ${eu}, hollow lights included. That is among those named here; the living are not counted.` }); break; }
   }
   const lastEu = [...world.actors].filter((a) => a.on < a.d && side(a, a.d - 0.5) === 'eu').sort((x, y) => y.d - x.d)[0];
-  if (lastEu && !lastEu.p.d!.est) { const where = shortPlace(world.siteId(lastEu.stays[lastEu.stays.length - 1].p)); const wl = whereAt(lastEu.stays, lastEu.d - 0.5); const whereLit = wl ? shortPlace(world.siteId(wl.a)) : where; beats.push({ y: lastEu.d, ids: [lastEu.id], text: `${lastEu.p.name} dies in ${lastEu.d}, in ${world.places.get(lastEu.stays[lastEu.stays.length - 1].p)!.country}, far from where this view is looking. ${whereLit && !/^(England|New Zealand|Poland)$/.test(whereLit) ? `The light at ${whereLit}` : 'Hers'} is the last named light on the map.`.replace('Hers is', lastEu.p.sex === 'M' ? 'His is' : 'Hers is') }); }
+  if (lastEu && !lastEu.p.d!.est) { const where = shortPlace(world.siteId(lastEu.stays[lastEu.stays.length - 1].p)); const wl = whereAt(lastEu.stays, lastEu.d - 0.5); const whereLit = wl ? shortPlace(world.siteId(wl.a)) : where; beats.push({ y: lastEu.d, ids: [lastEu.id], text: `${lastEu.p.name} dies in ${lastEu.d}, in ${world.places.get(lastEu.stays[lastEu.stays.length - 1].p)!.country}. ${whereLit && !/^(England|New Zealand|Poland)$/.test(whereLit) ? `The light at ${whereLit}` : 'Hers'} is the last named light on the map.`.replace('Hers is', lastEu.p.sex === 'M' ? 'His is' : 'Hers is') }); }
   // the last of those who made the crossing, and the year New Zealand's lights are mostly its own
   const crossers = world.actors.filter((a) => a.legs.some((l) => l.km > 9000 && !l.assumed && !l.within) && !a.p.d!.est).sort((x, y) => y.d - x.d);
   if (crossers[0]) {
@@ -457,7 +458,7 @@ function buildBeats() {
   const lastNZ = [...world.actors].filter((a) => !a.p.d!.est && nzDeath(a)).sort((x, y) => y.d - x.d)[0];
   if (lastNZ && !beats.some((b) => Math.abs(b.y - lastNZ.d) < 3)) {
     const pl = world.places.get(nzDeath(lastNZ)!.p)!;
-    beats.push({ y: lastNZ.d, ids: [lastNZ.id], text: `${lastNZ.p.name} dies ${pl.prec === 'country' ? 'in New Zealand' : `in ${shortPlace(world.siteId(pl.id))}`} in ${lastNZ.d}: the last death the records place in New Zealand on this map. The family there goes on among the living, who are not shown.` });
+    beats.push({ y: lastNZ.d, ids: [lastNZ.id], text: `${lastNZ.p.name} dies ${pl.prec === 'country' ? 'in New Zealand' : `in ${shortPlace(world.siteId(pl.id))}`} in ${lastNZ.d}: the last death the map’s records place in New Zealand. The family there goes on among the living, who are not shown.` });
   }
   beats.sort((a, b) => a.y - b.y || Number(Boolean(b.sail)) - Number(Boolean(a.sail)));
   // say once what every later "by" means, on the first long gap
@@ -517,7 +518,7 @@ function caption(fromPlay: boolean) {
   const sailing = lastScene?.ship ? beats.findIndex((b) => Boolean(b.sail) && mine(b) && b.y <= y && y < b.y + 1.2) : -1;
   if (sailing >= 0) { if (beats[sailing] !== shownBeat) {
     // the place being left is on screen: let it be read before the voyage takes over
-    if (followBeats && shownBeat && !shownBeat.sail && now < Math.min(captionUntil, shownAt + 3000)) { pendingBeat = true; return; } beatIdx = Math.max(beatIdx, sailing); pendingBeat = false; showBeat(beats[sailing]); } return; }
+    if (followBeats && shownBeat && !shownBeat.sail && now < Math.min(captionUntil, shownAt + 900)) { pendingBeat = true; return; } beatIdx = Math.max(beatIdx, sailing); pendingBeat = false; showBeat(beats[sailing]); } return; }
   let next = -1;
   for (let i = beatIdx + 1; i < beats.length && beats[i].y <= y; i++) if (mine(beats[i]) && beats[i] !== shownBeat && (beats[i].end || !beats[i].sail || y < beats[i].y + 1.2)) { next = i; break; }
   if (next < 0) { pendingBeat = false; if (shownBeat && !shownBeat.end && now > captionUntil + 2500) showBeat(null); return; }
@@ -775,7 +776,7 @@ function helpHtml(): string {
   return `<button class="back" data-act="back">← Back</button><div class="kicker">A short guide</div><h2>How to read the atlas</h2><div class="rec guide">
   <p><b>Each light is a person.</b> It comes on at birth where a birth or baptism is recorded, and goes out when they die. ${world.actors.filter((a) => a.p.d!.est).length} of the ${world.actors.length} have no dated death among the records the map reads: their light goes out seventy years after birth, and leaves no ember, only the diamond. ${world.actors.filter((a) => a.p.b!.est).length} people have no dated birth among them: their birth years are estimated from the family around them. The counts in the captions include these lights. Where a death or burial record names a town or parish, a small ember stays. Otherwise a small open diamond stays at the last place the map has for them: it does not say they died there. Someone whose first record comes later in life is drawn hollow with a parent until then, or, where there is no parent the map can draw them with, not drawn until that record. A solid light dims as the years pass since a record last placed the person there.</p>
   <p><b>A solid light has a record behind it.</b> A birth, baptism, marriage, census, death, burial, a dated event or arrival, or the recorded birth of a child, which places both parents. ${c.recorded} people are placed this way.</p>
-  <p><b>A hollow light is borrowed.</b> ${c.borrowed} people have no placed record of the kind the map reads. They are drawn where a parent, partner, brother, sister or child was last recorded, never earlier than that relative’s own first record. A child drawn with a parent goes where that parent is next recorded, until sixteen. Otherwise a hollow light does not move.</p>
+  <p><b>A hollow light is borrowed.</b> When a first record of the person’s own arrives, the light turns solid and a white ring marks the moment. ${c.borrowed} people have no placed record of the kind the map reads. They are drawn where a parent, partner, brother, sister or child was last recorded, never earlier than that relative’s own first record. A child drawn with a parent goes where that parent is next recorded, until sixteen. Otherwise a hollow light does not move.</p>
   <p><b>A haze is a place known only roughly.</b> “Derbyshire” or “New Zealand” and nothing closer. A county is drawn at its middle. A whole country is drawn just offshore, marked “somewhere in”, so that it cannot be mistaken for a town.</p>
   <p><b>Lines are moves.</b> Solid: both ends are recorded within three years of each other, and the light travels. Dashed: the records leave a longer gap, so the light waits where it was last recorded, dimming, and appears at the new place in the year a record finds it there. Dotted red: the tree itself doubts the two records are the same person.</p>
   <p><b>What the map reads.</b> The tree’s dated, placed records: births, baptisms, censuses, marriages, the births of children, deaths, burials, an occupation, residence, achievement or arrival the tree gives a year and a place, and an emigration or baptism that the tree’s description of a person states with a date and a place. When this page says the map reads no record, it means none of those. A person’s notes in the tree may say more: they are in that person’s record in the River.</p>
@@ -795,7 +796,7 @@ function renderLegend() {
   const sw = state.lens === 'surname' ? LINES.filter((l) => world.actors.some((a) => lineOf(a.id) === l)).map((l) => sw1(l, LINE_COLOUR[l], l)).join('')
     : state.lens === 'place' ? [...new Set(world.actors.map((a) => world.places.get(a.stays[0].p)!.region))].map((r) => sw1(r, REGION_COLOUR[r] ?? '#A9B7CB', r)).join('')
     : sw1('record', CERT.record, 'Placed by a record') + sw1('borrowed', CERT.borrowed, 'With a relative') + sw1('vague', CERT.vague, 'County or country only') + sw1('disputed', CERT.disputed, 'Identity disputed');
-  el.innerHTML = `<button class="key-toggle" aria-expanded="${!el.classList.contains('collapsed')}">Key</button>${sw}<span><i class="ring"></i>Hollow: drawn with a relative</span><span><i class="haze"></i>Known only roughly</span><span><i class="em"></i>Died here</span><span><i class="rest"></i>Last placed here</span><span><i class="ln"></i>Move, known to within three years</span><span><i class="ln d"></i>Move, some time in a window</span><span><i class="ln q"></i>Move in doubt</span><button data-act="help">How to read this</button>`;
+  el.innerHTML = `<button class="key-toggle" aria-expanded="${!el.classList.contains('collapsed')}">Key</button>${sw}<span><i class="ring"></i>Hollow: drawn with a relative</span><span><i class="haze"></i>Known only roughly</span><span><i class="em"></i>Died or buried here</span><span><i class="rest"></i>Last placed here</span><span><i class="ln"></i>Move, known to within three years</span><span><i class="ln d"></i>Move, some time in a window</span><span><i class="ln q"></i>Move in doubt</span><button data-act="help">How to read this</button>`;
 }
 function groupOf(a: Actor): string {
   if (state.lens === 'place') return world.places.get(a.stays[0].p)!.region;

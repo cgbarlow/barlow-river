@@ -182,13 +182,15 @@ export class Stage {
   private ease(sc: Scene, follow: LonLat | null, snap: boolean) {
     const g = this.auto ? this.autoGoal(sc, follow) : this.goal;
     if (!g) return;
-    const c = this.cam, r = snap ? 1 : 0.045;
+    // riding a ship the camera keeps up with it; otherwise it moves unhurriedly
+    const riding = Boolean(sc.ship) && Math.abs(g.lon - (sc.ship as LonLat)[0]) < 0.01;
+    const c = this.cam, r = snap ? 1 : riding ? 0.16 : 0.045;
     // Hold still until the goal has moved a little, then travel all the way: a camera
     // that creeps every frame costs a full redraw of the land every frame.
     let dl = g.lon - c.lon; if (dl > 180) dl -= 360; if (dl < -180) dl += 360;
     if (!snap) {
       const off = (Math.max(Math.abs(dl), Math.abs(g.lat - c.lat)) * c.k) / 1.2 + Math.abs(g.k - c.k) / c.k / 0.2;
-      if (this.travelling ? off < 0.1 : off < 1) { this.travelling = false; return; }
+      if (this.travelling ? off < 0.1 : off < (riding ? 0.15 : 1)) { this.travelling = false; return; }
       this.travelling = true;
     }
     const far = Math.abs(dl) > 40 && !snap;
@@ -349,14 +351,16 @@ export class Stage {
     }
     for (const r of sc.ripples) {
       const q = at(r.ll, r.slot); if (!q) continue;
-      const u = r.kind === 'birth' ? r.age : 1 - r.age;
-      c.globalAlpha = (1 - r.age) * 0.8; c.strokeStyle = this.colourOf(r.actor); c.lineWidth = 1; c.beginPath(); c.arc(q[0], q[1], 3 + u * (r.kind === 'birth' ? 11 : 6), 0, 7); c.stroke();
+      const u = r.kind === 'death' ? 1 - r.age : r.age;
+      c.globalAlpha = (1 - r.age) * 0.8; c.strokeStyle = r.kind === 'record' ? '#fff' : this.colourOf(r.actor); c.lineWidth = r.kind === 'record' ? 1.4 : 1; c.beginPath(); c.arc(q[0], q[1], 3 + u * (r.kind === 'death' ? 6 : r.kind === 'record' ? 8 : 11), 0, 7); c.stroke();
     }
     c.globalAlpha = 1;
     // place names, the busiest first; every place with a light or an ember can be tapped
     const count = new Map<string, number>();
     for (const l of sc.lights) if (l.site) count.set(l.site, (count.get(l.site) ?? 0) + l.alpha);
     for (const e of sc.embers) if (!count.has(e.site)) count.set(e.site, 0.01);
+    // at the present day the offshore marks still say what they are: "somewhere in …"
+    if (!sc.lights.length) for (const r of sc.rests) if (this.world.places.get(r.site)!.prec === 'country') count.set(r.site, Math.max(count.get(r.site) ?? 0, 1));
     const boxes: number[][] = [];
     if (selAt) {
       // the selected person's name goes on first; place names give way to it
