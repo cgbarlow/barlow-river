@@ -629,6 +629,25 @@ process.on('exit', () => server?.kill());
   const mk = await page.evaluate(() => { const s = window.__atlas.stages[0], r = s.canvas.getBoundingClientRect(); const h = s.markHits.filter((m) => m.x > 60 && m.y > 80 && m.x < r.width - 60 && m.y < r.height - 120 && s.markHits.filter((o) => Math.hypot(o.x - m.x, o.y - m.y) < 9).length === 1)[0]; return h ? [h.id, r.left + h.x, r.top + h.y] : null; });
   if (mk) { await page.mouse.click(mk[1], mk[2]); await page.waitForTimeout(150); check('an ember or diamond opens the person it remembers, and the year stays', (await A(page, () => [window.__atlas.state.selected, window.__atlas.state.year])).join() === [mk[0], 2026].join(), JSON.stringify(mk)); } else check('an ember or diamond opens the person it remembers, and the year stays', false, 'no isolated mark found');
   await page.close();
+  // Back is never trapped: arriving from the River with a year outside the person's life, one Back returns to the River
+  page = await open('#y=1800');
+  await page.goto(base + 'index.html#y=1900&p=I82'); await page.waitForSelector('#record:not([hidden]) h2');
+  await page.locator('#see-map').click(); await page.waitForFunction(() => window.__atlas); await page.waitForTimeout(700);
+  const arrived = [await A(page, () => window.__atlas.state.selected), await A(page, () => window.__atlas.state.year)];
+  await page.goBack(); await page.waitForTimeout(700);
+  check('one Back from the Atlas returns to the River, even when the year had to move to the person\'s life', arrived[0] === 'I82' && /index\.html/.test(page.url()), JSON.stringify(arrived) + ' ' + page.url());
+  await page.goto(base + 'atlas.html#y=1855'); await page.waitForFunction(() => window.__atlas);
+  await A(page, () => { const A_ = window.__atlas; A_.stop(); A_.select('I82'); }); await page.waitForTimeout(400);
+  await A(page, () => window.__atlas.openPlace('pirongia')); await page.waitForTimeout(400);
+  await page.goBack(); await page.waitForTimeout(400); const b1 = await A(page, () => [window.__atlas.state.selected, window.__atlas.state.place]);
+  await page.goBack(); await page.waitForTimeout(400); const b2 = await A(page, () => [window.__atlas.state.selected, window.__atlas.state.place]);
+  check('inside the Atlas each Back undoes one step and does not add one', b1[0] === 'I82' && !b1[1] && !b2[0] && !b2[1], JSON.stringify([b1, b2]));
+  // the story button walks every finding with someone on the map, in the order of their years
+  await page.goto(base + 'atlas.html#y=1855'); await page.waitForFunction(() => window.__atlas); await A(page, () => window.__atlas.stop());
+  const story = []; for (let i = 0; i < 19; i++) { await page.locator('[data-act="nextstory"]').click(); await page.waitForTimeout(80); story.push(await A(page, () => window.__atlas.state.finding)); }
+  const ys = await A(page, (ids) => ids.map((id) => [...window.__atlas.atlas.facts, ...window.__atlas.atlas.leads].find((f) => f.id === id).y), story.slice(0, 18));
+  check('the story button walks all eighteen findings in the order of their years, then starts again', new Set(story.slice(0, 18)).size === 18 && ys.every((y, i) => i === 0 || y >= ys[i - 1]) && story[18] === story[0], JSON.stringify(ys));
+  await page.close();
   // phones: every country chip on screen while someone is at sea; the caption under the lower map
   page = await open('#y=1874', { width: 390, height: 800 }, { hasTouch: true, isMobile: true });
   await A(page, () => { window.__atlas.stop(); window.__atlas.setYear(1874); window.__atlas.settle(); });

@@ -222,7 +222,8 @@ export class Stage {
     const c = this.ctx;
     const taken: number[][] = [];
     for (const s of stars) {
-      if (sc.year < s.y) continue;
+      // a finding that is open shows its star even a year before its own, where a story about a voyage begins
+      if (sc.year < s.y && !s.on) continue;
       if (p.vis && !p.vis(s.ll)) continue;
       const q = p.proj(s.ll); if (!q) continue;
       if (p.rect && (q[0] < p.rect[0] + 8 || q[0] > p.rect[2] - 8 || q[1] < p.rect[1] + 24 || q[1] > p.rect[3] - 4)) continue;

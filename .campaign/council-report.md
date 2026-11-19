@@ -1,45 +1,41 @@
-# Council report: the Atlas, round 23
+# Council report: the Atlas, round 24
 
-Subject: the seventeenth full outside test (commit `55e4fde`, a fresh tester), and what was done.
+Subject: the eighteenth full outside test (commit `ea63f62`, a fresh tester), and what was done.
 
 ## What the tester found
 
-Verdict on `55e4fde`: **yes**, fit to merge. No blocking defect.
+Verdict on `ea63f62`: **no**, on one defect, and it is a real one.
 
-- The owner's requests: met, the River included (all 340 of its record boxes checked).
-- Rules A1 to A12 and R1: no violation. 2,640 strip bars recounted; every "most in any year" matches the maximum over all years.
-- 543 sentence forms with a number or quantifier and 133 with a negative reviewed: none false.
-- Scores: **29.5 of 35 overall, 30.5 as a build.**
+- The owner's requests: met. No false statement. No rule violation. No privacy leak. Everything added in round 23 recounted exactly (1,141 samples of the open panel's count against the chip; 21 bar messages).
+- Scores: **28.5 of 35 overall, 30 as a build.**
 
-The last three build scores: 31.5, 30.5, 30.5. The bar is 31.
+Blocking:
+- **D1, the Back button.** Open a person in the River with the year outside their life, press "See on the map", then press Back: the browser stays on the Atlas, however many times Back is pressed. On arrival the Atlas moved the year into the person's life and recorded that as a new step; going Back to the arrival address did the same again. It has been there since the two pages were first linked. Seventeen testers went back and forth between the pages and did not hit it, because they started from a year inside the life.
 
-Minor: a country panel's "N lit in YEAR" line did not follow the year; the family message could show an old year; the focus mark on a strip bar was faint; the borrowed-lights title was ambiguous ("most of all"); focus lost after "not on the map".
-
-What the tester said would add half a point: panels that update live with the year; a "next story" step through the findings; a bar's message saying who came and went; a fresh family message each year; a visible focus ring on bars.
+Minor: the family message could be a year stale and was not renewed in play; a bar message said "at New Zealand"; the story button on a phone closed the sheet that holds the story; a story could open a year before its own star was drawn; the guide said a solid line always means the light travels.
 
 ## The Council
 
-**Owl.** Five items, all small, all in the tester's last column. Do the five.
+**Cat.** Eighteen tests to find a trap on the way back to version 1. The owner asked that version 1 not be disturbed; a visitor who cannot get back to it is disturbed. Fix it at the cause: restoring a view from an address is not a step, so it must not record one.
 
-**Cat.** And each new sentence counted. "3 new here, 18 gone" is a count; check it against the scene before the commit.
+**Owl.** And two checks: one Back from the Atlas returns to the River; inside the Atlas each Back undoes one step.
 
-**Bear.** If the next test says 31 or more with no blocker, we close. If it says 30.5 again, we report that three testers in a row put the build between 30.5 and 31.5 and let the owner judge whether that meets the bar.
+**Bear.** The score has sat at 30 to 31.5 for five tests. We keep taking the tester's column, but we tell the owner the number is where it is.
 
 **Simon.** Consensus.
 
 ## What was done
 
-| For | Change |
+| Point | Fix |
 |---|---|
-| Interactive, Dynamic | An open country panel's count follows the year, in play and in scrubbing. Every strip has a marker at the current year. |
-| Engaging | A "Tell me a story" button in the Journeys tab steps through the thirteen starred findings in the order of their years. |
-| Surprising | A bar's message also says how many are new there since ten years before and how many have gone. |
-| Delightful | The family message is renewed with each year, or cleared. A strip bar has a white focus ring. |
-| Minor | The borrowed-lights title: "168 of the 322 people on the map are placed only by a relative's record; the share is highest for those born in the 1900s". Focus goes to the heading after "not on the map". A county or country strip says "in", not "at". |
+| D1 | Restoring a view from the address bar or from Back no longer adds a history entry. Two browser checks: River → "See on the map" (year outside the life) → one Back returns to the River; inside the Atlas, two Backs undo two steps. |
+| Family message | One message for the year on screen: how many of the family are lit, and how many are on the other side. Renewed whenever the year moves, cleared when play starts, renewed on pause. |
+| Bar message | "in" for a county or country. It names up to three of those new there since ten years before. |
+| Story button | Walks all eighteen findings that have someone on the map, in the order of their years. On a phone the sheet stays open at the story. An open finding shows its star even a year early. |
+| Guide | A solid line is a move known to within three years, or a death and burial in one year, where no light travels. |
+| Finding title | "168 of the 322 people on the map have none of the records the map reads and are drawn with a relative; the share is highest for those born in the 1900s". |
 
-Checked before the commit: the story order (thirteen findings, 1654 to 1959, then round again); England at 1850 reads 113, as its chip does; the 1885 bar says 68 lights, 3 new, 18 gone, and the scene gives 68, 3 and 18.
-
-94 unit tests, the River's 59 browser checks and the Atlas's 166 pass.
+94 unit tests, the River's 59 browser checks and the Atlas's 169 pass.
 
 ## Next
 

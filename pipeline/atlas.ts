@@ -380,7 +380,7 @@ function findings(people: AtlasPerson[], P: Map<string, Person>, F: Map<string, 
     if (rows.length >= 2) {
       const worst = [...rows].sort((x, y) => y[1].lent / y[1].all - x[1].lent / x[1].all)[0];
       facts.push({ id: 'a-borrowed-by-era', kind: 'places', y: worst[0] + 50, people: people.filter((a) => a.borrowed && Math.floor(P.get(a.id)!.b!.y / 100) * 100 === worst[0]).map((a) => a.id),
-        title: `${tot} of the ${people.length} people on the map are placed only by a relative’s record; the share is highest for those born in the ${worst[0]}s`,
+        title: `${tot} of the ${people.length} people on the map have none of the records the map reads and are drawn with a relative; the share is highest for those born in the ${worst[0]}s`,
         body: `Counted by the century of birth, how many of the people drawn have none of the records the map reads and are drawn with a relative: ${rows.map(([c, e]) => `${c}s, ${e.lent} of ${e.all}`).join('; ')}. Where the map reads no dated birth, the century is from the tree’s estimate. The hollow lights are not evenly spread across the centuries.` });
     }
   }
