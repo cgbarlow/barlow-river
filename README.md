@@ -133,9 +133,13 @@ Nothing is published. The built site has been tested served from a `/barlow-rive
 
 ## How the Atlas was reviewed
 
-The Council reviewed the plan, then three mockups, then the build over six rounds, each after an outside tester had been through it. Eight outside passes in all. The reports are in `.campaign/council-report-atlas-*.md`; the last is `council-report-atlas-final.md`.
+The Council reviewed the plan, then three mockups, then the build over sixteen rounds. The build was tested by eleven outside testers in a row. Each wrote its own checker from the two data files, none had seen the others' reports, and each test was followed by fixes and a fresh test of the new commit. The reports are in `.campaign/council-report-atlas-*.md`; the last is `council-report-atlas-closing-2.md`.
 
-The last four outside passes checked the placement rules for every person in every year and found no violations. The final full test scored the Atlas 27.5 of 35 on the seven criteria, and 29.5 judging only what the page does with the data it has. Much of the gap is the records: about half the lights are borrowed and only one voyage is dated closely enough to draw sailing.
+Blocking points found per test: ten, ten, five, two, four, one, one, one, one, two, none. The eleventh test, of commit `d24dec7`, found no blocking defect and judged it fit to merge. The placement rules had no violation in any of the eleven. One bug that blanked the globe was found in the fourth test, fixed, and is now covered by a browser check. From the sixth test on, every blocker was a sentence that said more than the map's records do.
+
+The last test scored the Atlas 28 of 35 on the seven criteria, and 29 judging only what the page does with the data it has. The plan was scored 31 before the build. The gap is mostly the records: about half the lights are borrowed and only one voyage is dated closely enough to draw sailing.
+
+The River's shared code changed on this branch: ages count birthdays, birth order is read from dates, and a count of children is not shown where any child is living.
 
 Where the map reads no dated death (145 of the 322 people on the map) the light goes out seventy years after birth and leaves no ember. The guide says so.
 

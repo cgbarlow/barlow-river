@@ -1,50 +1,72 @@
-# Council report: the Atlas, round 16
+# Council report: the Atlas, closing
 
-Subject: the tenth full outside test in a row (commit `6bdf92f`, a fresh tester), and what was done.
+Subject: the eleventh full outside test in a row (commit `d24dec7`, a fresh tester), and the state of the work against the brief.
 
-## What the tester found
+## The verdict
 
-Verdict on `6bdf92f`: **no**. "The drawing is rule-perfect." Two places still carried the same class of sentence.
+> Yes: d24dec7 is fit to merge as "fully tested and working". I found no blocking defect.
 
-- The owner's four requests: met.
-- Rules A1 to A11: **no violations**, every year and a full play-through. 389 age and order sentences: none wrong. 81 of 81 "last known" sentences right. Every recount true.
-- Every "the map reads…" sentence on the page is true.
-- All six points from round 15 fixed, one partly.
-- Scores: 28 of 35 overall and as a build.
+What the tester checked, by its own checker built from the two data files and not the page's code:
 
-Blocking:
-- **N1.** Every hollow person's panel said "nothing says where X went" under a badge "No place of their own", unscoped. For one woman a citation names a burial transcript in another parish.
-- **D1 residue.** The People tab was fixed last round; the Journeys box, the guide and the README still said eighteen people have "no one to borrow from". Two of them have parents on the map and are undrawn only because they were born and died within one year.
+- **Placement rules A1 to A8:** no violation in any of 437 years (20,079 lights) or 1,573 play-through frames (105,038 lights).
+- **Every recountable number** in the captions, findings, place panels, country panels and life sentences: true. 420 age and order sentences recomputed, none wrong.
+- **Every sentence with a negative in it:** 1,431 sentences in 176 forms, read one by one. None that is scoped to the map is contradicted by a record the map reads.
+- **The owner's four requests:** all met.
+  1. The timelapse on a globe, a flat map (Two shores), or both, with births, deaths and migration.
+  2. The camera crossed hemispheres exactly once, at 1874, riding the voyage. No bounce.
+  3. Other countries: a chip row always on screen, pointers at the globe's rim, insets for Poland and the United States.
+  4. A remnant after every light: 317 people who had a light each leave one ember or ring.
+- **Use:** full play-through, every control by mouse, touch at two phone sizes and keyboard alone, 23 deep links including bad ones, the links to and from the River. No console errors from the page.
+
+## The seven criteria
+
+| | Interesting | Novel | Surprising | Delightful | Engaging | Interactive | Dynamic | Total |
+|---|---|---|---|---|---|---|---|---|
+| Overall | 4 | 4 | 3.5 | 4 | 3.5 | 4.5 | 4.5 | 28 |
+| As a build | 4.5 | 4 | 3.5 | 4 | 4 | 4.5 | 4.5 | 29 |
+
+The plan was scored 31 by the Council before anything was built. The build has not reached that, and the Council will not say it has. The tester's reason, in its own words for the build row: Interesting "better records would raise it"; Surprising "limited by the records; more dated voyages would raise it". Half the lights are borrowed and one voyage is dated closely enough to sail. That is the tree, not the page.
+
+## How it got here
+
+Sixteen Council rounds. Eleven full outside tests of the build in a row, each by a tester who had not seen the others' reports, each followed by fixes and a new test of the new commit.
+
+Blocking points per test: ten, ten, five, two, four, one, one, one, one, two, none.
+
+- The placement rules had no violation in any of the eleven.
+- One crash-class bug was found (the globe going blank after Home) and fixed in round 10.
+- The fifth test found long-gap lines drawn solid against the Key, and one birthplace resolved to the wrong village; both fixed in round 11.
+- From the sixth test on, every blocker was a sentence: the page saying something was not recorded when it meant the map had not read it. The cure was to read more (a dated arrival, emigration and baptism the tree states), to say "the map reads", to say once in the guide what that is, and to add a check that reads every panel, tab, caption and finding.
 
 ## The Council
 
-**Cat.** Round 14 fixed the sentences the tester named. Round 15 fixed the one it missed. This round the tester found two more. The author has been fixing what was pointed at. The only way out is to read every sentence with a negative in it, all of them, before the next tester does.
+**Cat.** I asked for a true "no" eleven times and got ten. I will take the yes. The risk that is left is another sentence of the same kind, and there is now a check for the forms we know.
 
-**Owl.** That is a finite list. Dump every sentence on the page, keep the ones with "no", "not", "nothing", "nobody", "never", "none", "only", and read the templates. There are about 160.
+**Owl.** The process held: no commit was called done on our say-so. The tested commit is the merged candidate; only documents change after it.
 
-**Rabbit.** Then make the automated check carry the patterns that were found.
+**Bear.** The owner asked for births, deaths and migration on the Earth, a camera that does not bounce, the other countries, and something left behind when a light goes out. He has all four.
 
-**Wolf.** Ten testers. Blockers: ten, ten, five, two, four, one, one, one, one, two. Every one since round 10 has been wording. The map has had no rule violation in any of the ten.
+**Rabbit.** The River changed too, in shared code: ages count birthdays, birth order is read from dates, a count of children is not shown where a child is living. Its 59 checks pass. That should be said to the owner plainly, because he asked that version 1 not be disturbed. It is on the branch, not on `main`.
 
-**Simon.** Consensus as Cat and Owl say.
+**Wolf.** `main` is untouched. Nothing is published. No pull request has been opened. Merging is the owner's decision.
 
-## What was done
+**Puppy.** Eleven testers, and the lights were in the right place every time.
 
-The two named points:
-- Hollow panels: "nothing the map reads says where X went". The badge, the tooltip and the Key say "Drawn with a relative".
-- Journeys box, guide and README: "no such record, and no relative the map could draw them with while they were alive".
+**Simon.** Consensus: the Atlas meets the brief's test of "fully tested". The Council recommends it as ready for the owner to merge when he chooses, with the list below.
 
-The author's own sweep of every negative sentence on the page (about 160 templates across 322 person panels, 73 place panels, six country panels, the guide, three tabs, 28 captions and 15 findings). Reworded as a result:
-- "no closer place is given" on a record line is now "this record gives no closer place".
-- "The only record that places X" is now "The only record the map reads that places X".
-- Findings: "No one on the map is placed farther"; "More places than anyone else on the map"; "No record the map reads shows anyone coming back"; "As far as the map's records go, the voyage was one way."
-- The last-light caption: "and by nothing the map reads since".
-- The guide: an arrival is described as an event the tree dates, which is where the map reads it.
+## Left for the owner
 
-The automated sweep now also fails on "nothing says", "to borrow from", "no place of their own", "have no place" and "no one to".
+Not blocking. His to decide.
 
-94 unit tests, the River's 59 browser checks and the Atlas's 160 pass.
-
-## Next
-
-A full outside test of this commit by a fresh tester.
+1. **The last frame** stands far back on the globe, so the remnants are small.
+2. **Hollow lights and "last placed here" rings** are both open circles.
+3. **The 1883 arrival note** says "with wife, 6 children"; only the man is placed by it.
+4. **Free text the map does not read:** cemetery citations for four Polish relatives (so they are listed, not drawn); an undated "Died Christchurch"; a candidate christening in a note; a bare "St Martin".
+5. **James Carter's death** is "after 1808"; his light goes out in 1808 though a son is born in 1816.
+6. **James Finch, 1846 to 1848:** a move to Woodbridge is drawn across two years, though a record puts him in Sproughton again in 1848.
+7. **Wording nits** the last tester listed: two guide sentences; the stop label "no placed record"; the People tab's "Nothing about them is in this page" (the data file does hold an unnamed stub for each living person, as the README says).
+8. **Follow the journey** is slow on short hops; a caption can lag a year in play.
+9. **Small screens:** a few overlaps on a sideways phone.
+10. **The River** shows "Aged about N" one year high in three records. That is version 1's own code, on `main` today.
+11. **"Beverley"** (born about 1948, no death recorded, flagged deceased in the tree) is named in the "not on the map" list. If she is living, the flag needs correcting in Iris.
+12. **Voyage routes** (round the Cape; Panama after 1914) are convention, not checked against a source.
