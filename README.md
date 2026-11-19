@@ -51,7 +51,7 @@ A second mode, at `atlas.html`. The River shows time and doubt. The Atlas adds p
 
 What it will not pretend to know:
 
-- **A solid light has a record.** It is never drawn anywhere before a record puts the person there, and it dims the longer it is since the last one. A hollow light has no record: the person is drawn where a close relative with a record of their own was last recorded, never earlier than that relative's first record. A child drawn with a parent goes where that parent is next recorded, until sixteen; otherwise a hollow light never moves. A haze is a place known only to a county or country; a country is drawn just offshore, marked "somewhere in". Eighteen people have no place and nobody to borrow from. They are listed, not drawn.
+- **A solid light has a record.** It is never drawn anywhere before a record puts the person there, and it dims the longer it is since the last one. A hollow light has no dated, placed record of the kind the map reads: the person is drawn where a close relative with a record of their own was last recorded, never earlier than that relative's first record. A child drawn with a parent goes where that parent is next recorded, until sixteen; otherwise a hollow light never moves. A haze is a place known only to a county or country; a country is drawn just offshore, marked "somewhere in". Eighteen people have no place and nobody to borrow from. They are listed, not drawn.
 - **A loose year stays loose.** Where the record says "c. 1823", the page says "about 1823", gives no age, and never draws a voyage as sailing on it.
 - **When a move happened is almost never recorded.** Where the records pin it to within three years, the light travels. Otherwise it stays where it was last recorded and appears at the new place only in the year a record finds it there.
 - **Sea routes are custom, not record.** A voyage to New Zealand is drawn the way ships went at the time: out round the Cape of Good Hope, and through Panama once the canal had opened. The line is not the course of any one ship; where a note in the tree names a ship, it is in that person's record in the River.
@@ -137,7 +137,9 @@ The Council reviewed the plan, then three mockups, then the build over six round
 
 The last four outside passes checked the placement rules for every person in every year and found no violations. The final full test scored the Atlas 27.5 of 35 on the seven criteria, and 29.5 judging only what the page does with the data it has. Much of the gap is the records: about half the lights are borrowed and only one voyage is dated closely enough to draw sailing.
 
-Where no death is recorded (145 of the 322 people on the map) the light goes out seventy years after birth and leaves no ember. The guide says so.
+Where the map reads no dated death (145 of the 322 people on the map) the light goes out seventy years after birth and leaves no ember. The guide says so.
+
+The map reads the tree's dated, placed records and nothing else: births, baptisms, censuses, marriages, children's births, deaths, burials, events the tree gives a year and a place, and an arrival, emigration or baptism that a person's description states with a date and a place. Where the page says the map reads no record, it means none of those. Free-text notes are in each person's record in the River.
 
 The voyage routes (round the Cape before 1914, through Panama after) are a convention drawn from general knowledge, not checked against a source.
 

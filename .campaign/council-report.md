@@ -1,49 +1,43 @@
-# Council report: the Atlas, round 13
+# Council report: the Atlas, round 14
 
-Subject: the seventh full outside test in a row (commit `0dde5e1`, a fresh tester), and what was done.
+Subject: the eighth full outside test in a row (commit `a548814`, a fresh tester asked to sweep the whole page for one class of sentence), and what was done.
 
 ## What the tester found
 
-Verdict on `0dde5e1`: **no**, on one point, with a caveat the tester stated itself.
+Verdict on `a548814`: **no**, on one class of point.
 
 - The owner's four requests: met.
-- All eleven rules, every whole year and two full play-throughs, by the tester's own checker: **no violations**.
-- Every caption, finding and count recounts true. All 619 stops are backed by a record. No console errors from the page.
-- The blocker from round 12 is fixed for the person it named.
-- Scores: 28 of 35 overall, 27 as a build.
+- Rules A1 to A11, by the tester's own checker over 437 years, 20,079 lights and two full play-throughs: **no violations**.
+- Every first, last and most recounts true. No broken interaction. No console errors.
+- All six points from round 13 fixed.
+- Scores: 29.5 of 35 overall, 29 as a build.
 
-Blocking:
-- **D1.** William Henry Carter's panel said "The records here do not date the voyage". The tree's own description of him says "Emigrated to Wellington in 1857". The same cause in Mary Ann Seaman's panel: "birthplace not recorded", where her description says "Baptised 5 Mar 1815 at Westfield". The tester's caveat: these facts sit in the free-text description, which the map did not read; if that is out of scope, the point is minor.
-
-Minor: an order of two same-year records the dates do settle; a ring's wording for four people whose death record names only a county or country; two Welsh places keyed "Elsewhere in England"; "c. 1808" for "after 1808" in lists; "b." for a baptism date in one header.
+Blocking, all one class (a sentence saying outright that something is absent when the tree says it somewhere):
+- William Henry Carter's panel listed his 1857 emigration and, a few lines down, said "The map reads no dated record of this voyage".
+- "No death is recorded" for a woman whose description says "Died Christchurch, New Zealand", with no date.
+- "X has no recorded place" for four Polish people whose citations name a cemetery.
+- The Poland panel's "have no place recorded".
 
 ## The Council
 
-**Cat.** The tester is right to block and right about the cause. For three rounds the false sentence has been the same sentence: the page saying "no record" when it means "no record I read". Fixing the people one at a time will not end it. Two things will. Read the dated, placed facts the descriptions state. And never say "no record": say what the map reads, and say once, in the guide, what that is.
+**Cat.** Round 13 fixed the cause for two patterns and left the other sentences as they were. That was half a job and the sweep found the other half. Now do the whole of it: every sentence on the page that asserts an absence is rewritten to say what the map reads, and a check reads every panel, caption, finding and the guide and fails on any bare "not recorded".
 
-**Owl.** Both. The descriptions hold nineteen dated sentences; two patterns among them are a date, a place and nothing to interpret: "Baptised D at P" and "Emigrated to P in Y". Read those two. Do not parse the rest.
+**Owl.** And the Carter sentence was simply a bug: the condition looked for the word "arrival" and his record says "emigrated".
 
-**Rabbit.** And the guide should send people to the River for the notes.
+**Rabbit.** The guide's list of what the map reads was short by two kinds. Make it exact.
 
-**Wolf.** Tell the owner plainly: seven testers. The blockers went ten, ten, five, two, four, one, one. The last two were one sentence each.
+**Wolf.** Eight testers. The owner should hear that the map itself has been clean for all eight, and that every blocker since round 10 has been wording.
 
-**Bear, Puppy.** Agreed.
-
-**Simon.** Consensus: fix the cause, not the instance; fix the five minors; test again.
+**Simon.** Consensus: one sweep, one automated check so it cannot come back, test again.
 
 ## What was done
 
-| Point | Fix |
-|---|---|
-| D1, the cause | The map reads a baptism or emigration that a person's description states with a date and a place. Mary Ann Seaman is now placed at Westfield by her baptism; William Henry Carter is in Wellington from 1857. |
-| D1, the wording | No sentence says "no record" or "not recorded" outright. They say what the map reads. The guide has a new paragraph, "What the map reads", and points to the River for notes. |
-| Same-year order | Two records in one year with full dates are given in order. |
-| Ring wording | "At the last place the map has for them." |
-| Welsh places | Keyed "Elsewhere". |
-| "after 1808" | In lists, search and tooltips too. |
-| Baptism in a header | "bapt." |
+- Every absence sentence in panels, captions, findings, toasts, the guide and the README now says what the map reads: "The map reads no dated death", "no placed record of the kind the map reads", "The map reads no ship or sailing date for this crossing", and so on.
+- The voyage sentence no longer claims the voyage is undated. Where the map has a dated arrival or emigration it gives the date; in every case it points to the River for the tree's notes.
+- The guide's "What the map reads" lists every kind of record the map uses.
+- A browser check opens all 322 person panels, the six country panels, the guide, every caption and every finding, and fails on a bare "not recorded", "no record", "the tree does not", "nobody wrote" and the like.
 
-94 unit tests, the River's 59 browser checks and the Atlas's 158 pass.
+94 unit tests, the River's 59 browser checks and the Atlas's 160 pass.
 
 ## Next
 

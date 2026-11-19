@@ -139,12 +139,12 @@ export function windowText(leg: Leg, name: (id: string) => string): string {
   // each place as the record of that year names it
   const a = name(leg.ra), b = name(leg.rb);
   if (leg.burial) return `Died in ${a} and was buried in ${b}, in ${leg.y0}.`;
-  if (leg.follows) return `No record of their own for either place. Drawn with a parent in ${a}, then in ${b} from ${leg.y1}, where that parent is next recorded.`;
+  if (leg.follows) return `The map reads no record of their own for either place. Drawn with a parent in ${a}, then in ${b} from ${leg.y1}, where that parent is next recorded.`;
   if (leg.assumed) return `The map reads no placed record before ${leg.y1}: ${a} is where a parent was. First placed in ${b} in ${leg.y1}.`;
   const y0 = `${leg.approx0 ? 'about ' : ''}${leg.y0}`, y1 = `${leg.approx1 ? 'about ' : ''}${leg.y1}`;
   // two records in one year whose full dates give the order
   if (leg.y1 === leg.y0 && leg.d0 && leg.d1 && leg.d0 !== leg.d1) return `In ${a} (${leg.d0}), then in ${b} (${leg.d1}).`;
-  if (leg.y1 === leg.y0) return leg.km > 1500 ? `In ${a} and in ${b} in ${y0}.` : `In ${a} and in ${b} in ${y0}. The records do not say which came first.`;
+  if (leg.y1 === leg.y0) return leg.km > 1500 ? `In ${a} and in ${b} in ${y0}.` : `In ${a} and in ${b} in ${y0}. The dates the map reads do not say which came first.`;
   // counted from the full dates where the tree has both
   const n = leg.d0 && leg.d1 && !leg.approx0 && !leg.approx1 ? Number(ageBetween({ y: leg.y0, text: leg.d0 }, { y: leg.y1, text: leg.d1 })) || leg.y1 - leg.y0 : leg.y1 - leg.y0;
   return `Last known in ${a} in ${y0}. In ${b} by ${y1}. The move was some time in ${n <= 1 ? 'that year' : `those ${leg.approx0 || leg.approx1 ? 'roughly ' : ''}${n} years`}.`;

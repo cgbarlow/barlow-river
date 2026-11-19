@@ -87,7 +87,7 @@ process.on('exit', () => server?.kill());
   await page.waitForSelector('#record:not([hidden]) h2');
   check('tapping a light opens the person', (await page.locator('#record h2').textContent()) === 'Edwin Watkins');
   check('the record lists the places in order with the evidence', (await page.locator('#record .stops li').count()) >= 6 && /census/.test(await page.locator('#record .stops').textContent()) && /birth of/.test(await page.locator('#record .stops').textContent()));
-  check('a voyage is described as custom, not record', /usual route/.test(await page.locator('#record .move.sail').first().textContent()) && /no record gives the course sailed/.test(await page.locator('#record').textContent()));
+  check('a voyage is described as custom, not record', /usual route/.test(await page.locator('#record .move.sail').first().textContent()) && /not the course of one ship/.test(await page.locator('#record').textContent()));
   check('the record links to the River for the same person', (await page.locator('#open-river').getAttribute('href')).includes(encodeURIComponent(edwin)));
   check('the address bar carries the person and the year', /p=/.test(page.url()) || (await page.waitForTimeout(400), /p=/.test(page.url())));
 
@@ -580,6 +580,14 @@ process.on('exit', () => server?.kill());
   check('the caption about the last light in Britain matches what is drawn', brit && brit[1] > 0 && brit[2] === 0 && brit[3] === 0, JSON.stringify(brit));
   const p67 = await A(page, () => { window.__atlas.select('I67'); return document.querySelector('#record').textContent; });
   check('a voyage whose arrival the tree dates is not said to be undated', /The tree dates the arrival: 2 Jul 1883/.test(p67) && !/do not date the voyage/.test(p67.split('Auckland to')[0].split('to Auckland').pop() || ''), (p67.match(/to Auckland[^]*?River\./) || [''])[0].slice(0, 300));
+  await page.keyboard.press('Escape');
+  // the page never says outright that something is unrecorded: it says what the map reads
+  const allText = await A(page, () => { const A_ = window.__atlas, out = []; for (const a of A_.world.actors) { A_.select(a.id); out.push(a.id + ' :: ' + document.querySelector('#record').textContent); } for (const c of ['England', 'New Zealand', 'Wales', 'Poland', 'United States', 'Ireland']) { A_.openCountry(c); out.push(c + ' :: ' + document.querySelector('#record').textContent); } document.querySelector('#help').click(); out.push('guide :: ' + document.querySelector('#record').textContent); out.push('captions :: ' + A_.beats().map((b) => b.text).join(' | ')); out.push('findings :: ' + JSON.stringify([A_.atlas.facts, A_.atlas.leads])); return out; });
+  const bare = /\bnot recorded\b|\bno recorded\b|No death is recorded|(?<!map reads )[Nn]o record\b|the tree does not|[Rr]ecords (here )?do not (say|date)|[Nn]obody wrote|names no ship|No ship is named/;
+  const hitsBare = allText.filter((t) => bare.test(t)).map((t) => t.split(' :: ')[0] + ': ' + (bare.exec(t) || [''])[0]);
+  check('no panel, caption, finding or guide text says outright that something is unrecorded', allText.length > 320 && hitsBare.length === 0, hitsBare.slice(0, 6).join(' | '));
+  const whc = allText.find((t) => t.startsWith('L5KW-4FV')) || '';
+  check('a voyage the map has a dated emigration for is not called undated', /The tree dates the arrival: 1857/.test(whc) && !/no dated record of this voyage/.test(whc));
   await page.keyboard.press('Escape');
   check('no page text says the tree names no ship', !/names no ship|does not record the ship/.test(await A(page, () => { document.querySelector('#help').click(); return document.querySelector('#record').textContent + document.querySelector('#panel-body').textContent + JSON.stringify(window.__atlas.atlas.leads); })));
   await page.close();

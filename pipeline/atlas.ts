@@ -248,7 +248,7 @@ function findings(people: AtlasPerson[], P: Map<string, Person>, F: Map<string, 
     const c = crossings[0], sameYear = crossings.filter((x) => x.l.y1 === c.l.y1);
     facts.push({ id: 'a-first-crossing', kind: 'crossing', y: c.l.y1, people: sameYear.map((x) => x.id),
       title: `The first of the family is in New Zealand by ${abt(c.l.approx1, c.l.y1)}`,
-      body: `${sameYear.map((x) => name(x.id)).join(' and ')}: last recorded in ${place(c.l.ra).name} in ${abt(c.l.approx0, c.l.y0)}, in ${place(c.l.rb).name} by ${abt(c.l.approx1, c.l.y1)}. No ship is named for this crossing.` });
+      body: `${sameYear.map((x) => name(x.id)).join(' and ')}: last recorded in ${place(c.l.ra).name} in ${abt(c.l.approx0, c.l.y0)}, in ${place(c.l.rb).name} by ${abt(c.l.approx1, c.l.y1)}. The map reads no ship or sailing date for this crossing.` });
     const ids = [...new Set(crossings.map((x) => x.id))];
     facts.push({ id: 'a-crossings', kind: 'crossing', y: crossings[Math.floor(crossings.length / 2)].l.y1, people: ids,
       title: `${ids.length} people are recorded on both sides of the world`,
@@ -299,7 +299,7 @@ function findings(people: AtlasPerson[], P: Map<string, Person>, F: Map<string, 
   if (byChild.length > 3) {
     const ys = byChild.flatMap((a) => a.stops.filter((x) => x.kind === 'child').map((x) => x.y));
     facts.push({ id: 'a-by-child', kind: 'places', y: Math.min(...ys), people: byChild.map((a) => a.id), title: `${byChild.length} people are on the map only because a child was born`,
-      body: `${mothers.length} of them are women. No record of their own names a place: not a birth, a marriage or a burial. The only thing that says where they were is the entry for a child's birth or baptism.` });
+      body: `${mothers.length} of them are women. None of their own records that the map reads names a place: not a birth, a marriage or a burial. What places them is the entry for a child's birth or baptism.` });
   }
   // began in Europe, ended in New Zealand, and the other way
   const ended = all.filter((x) => x.st.length > 1).map((x) => ({ id: x.a.id, from: place(x.st[0].p).country, to: place(x.st[x.st.length - 1].p).country }));
@@ -330,13 +330,13 @@ function findings(people: AtlasPerson[], P: Map<string, Person>, F: Map<string, 
     };
     facts.push({ id: 'a-split-siblings', kind: 'crossing', y: Math.min(...splits.map((x) => x.when)), people: splits.flatMap((x) => [...x.stayed, ...x.went]),
       title: `${splits.length === 1 ? 'One family was' : `${splits.length} families were`} split by the voyage`,
-      body: `Brothers and sisters, one recorded in New Zealand and another, alive at the time, last recorded on the other side of the world. ${splits.map(line).join(' ')} Whether they met again, the tree does not say.` });
+      body: `Brothers and sisters, one recorded in New Zealand and another, alive at the time, last recorded on the other side of the world. ${splits.map(line).join(' ')} Whether they met again, the records the map reads do not say.` });
   }
   // the longest silence between two records of one life
   const gaps = all.flatMap((x) => x.legs.map((l) => ({ id: x.a.id, l }))).sort((a, b) => b.l.y1 - b.l.y0 - (a.l.y1 - a.l.y0));
   if (gaps.length && gaps[0].l.y1 - gaps[0].l.y0 >= 30) {
     const g = gaps[0];
-    facts.push({ id: 'a-silence', kind: 'places', y: g.l.y1, people: [g.id], title: `${name(g.id)}: ${ageBetween({ y: g.l.y0, text: g.l.d0 ?? String(g.l.y0), approx: g.l.approx0 }, { y: g.l.y1, text: g.l.d1 ?? String(g.l.y1), approx: g.l.approx1 })} years with no record`,
+    facts.push({ id: 'a-silence', kind: 'places', y: g.l.y1, people: [g.id], title: `${name(g.id)}: ${ageBetween({ y: g.l.y0, text: g.l.d0 ?? String(g.l.y0), approx: g.l.approx0 }, { y: g.l.y1, text: g.l.d1 ?? String(g.l.y1), approx: g.l.approx1 })} years between records`,
       body: `Recorded in ${place(g.l.ra).name} in ${abt(g.l.approx0, g.l.y0)}, and not again until ${place(g.l.rb).name} in ${abt(g.l.approx1, g.l.y1)}${g.l.d0 && g.l.d1 ? ` (${g.l.d0} to ${g.l.d1})` : ''}. It is the longest silence between two places in the tree. On the map the light waits where it was last seen, growing dim.` });
   }
   for (const [c, f] of firstIn) {
