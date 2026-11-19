@@ -149,6 +149,8 @@ body.kbd .views:focus { outline: 2px solid var(--amber); outline-offset: -2px; }
 .strip svg { display: block; width: 100%; height: 34px; }
 .strip rect.bar { fill: var(--amber); opacity: .85; pointer-events: none; }
 .strip rect.hit { fill: transparent; cursor: pointer; outline: none; }
-.strip rect.hit:hover, .strip rect.hit:focus-visible { fill: rgba(242,181,68,.22); }
+.strip rect.hit:hover { fill: rgba(242,181,68,.22); }
+.strip rect.hit:focus-visible { fill: rgba(255,255,255,.18); stroke: #fff; stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.strip rect.now { fill: #fff; opacity: .9; pointer-events: none; }
 .strip figcaption { display: flex; justify-content: space-between; gap: 10px; font: 500 10.5px var(--mono); color: var(--ink-3); margin-top: 3px; }
 .strip figcaption span:nth-child(2) { font: 400 12px/1.35 Inter, system-ui, sans-serif; color: var(--ink-2); text-align: center; }

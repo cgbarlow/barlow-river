@@ -265,14 +265,18 @@ function strip(here: (a: Actor, y: number) => boolean, what: string, where: stri
   // each decade is a button the full height of the strip, so a short bar is as easy to hit as a tall one
   const bars = rows.map(([d, n], i) => { const y = Math.min(thisYear - 1, d + 5), h = n ? Math.max(1.8, (n / tall) * 20) : 0; return `${n ? `<rect class="bar" x="${i + 0.1}" y="${20 - h}" width="0.8" height="${h}" rx="0.15"/>` : ''}<rect class="hit" data-act="goyear" data-y="${y}" data-where="${esc(where)}" tabindex="0" role="button" aria-label="${d}s: ${n} ${n === 1 ? 'light' : 'lights'} in ${y}. Go to ${y}." x="${i}" y="0" width="1" height="20"><title>${y}: ${n}</title></rect>`; }).join('');
   const most = `The most in any year: ${top}, first in ${topY}.`;
-  return `<figure class="strip" aria-label="Lights ${esc(what)} by decade${lit.length ? `, from the ${lit[0][0]}s to the ${lit[lit.length - 1][0]}s` : ''}. ${most}"><svg viewBox="0 0 ${rows.length} 20" preserveAspectRatio="none">${bars}</svg><figcaption><span>${d0}</span><span>Each bar: lights ${esc(what)} in the middle year of a decade, hollow lights included. ${most} Tap a bar to go to that year and see who.</span><span>${Math.floor((thisYear - 1) / 10) * 10}</span></figcaption></figure>`;
+  return `<figure class="strip" aria-label="Lights ${esc(what)} by decade${lit.length ? `, from the ${lit[0][0]}s to the ${lit[lit.length - 1][0]}s` : ''}. ${most}"><svg viewBox="0 0 ${rows.length} 20" preserveAspectRatio="none" data-d0="${d0}">${bars}<rect class="now" x="${(Math.round(state.year) - d0) / 10 - 0.06}" y="0" width="0.12" height="20"/></svg><figcaption><span>${d0}</span><span>Each bar: lights ${esc(what)} in the middle year of a decade, hollow lights included. ${most} Tap a bar to go to that year and see who.</span><span>${Math.floor((thisYear - 1) / 10) * 10}</span></figcaption></figure>`;
 }
 /** who stands somewhere in a year: named in a message when a strip's bar is tapped */
 function whoWasThere(where: string, y: number) {
   const [kind, id] = [where[0], where.slice(2)];
-  const there = world.actors.filter((a) => { if (!world.lightOf(a, y + 0.5)) return false; if (kind === 'c') return world.countryOf(a, y + 0.5) === id; const w = whereAt(a.stays, y + 0.5)!; return !(w.b && w.sail) && world.siteId(w.a) === id; }).sort((p, q) => p.b - q.b);
+  const isThere = (a: Actor, yy: number) => { if (!world.lightOf(a, yy + 0.5)) return false; if (kind === 'c') return world.countryOf(a, yy + 0.5) === id; const w = whereAt(a.stays, yy + 0.5)!; return !(w.b && w.sail) && world.siteId(w.a) === id; };
+  const there = world.actors.filter((a) => isThere(a, y)).sort((p, q) => p.b - q.b);
   const name = kind === 'c' ? (id === 'United States' ? 'the United States' : id) : placeName(id).split(',')[0];
-  toast(there.length ? `${y}: ${there.length} ${there.length === 1 ? 'light' : 'lights'} ${kind === 'c' ? 'in' : 'at'} ${name}. ${there.slice(0, 4).map((a) => a.p.name).join(', ')}${there.length > 4 ? ` and ${there.length - 4} more` : ''}.` : `${y}: no light ${kind === 'c' ? 'in' : 'at'} ${name}.`, 6000);
+  const was = new Set(world.actors.filter((a) => isThere(a, y - 10)).map((a) => a.id)), now = new Set(there.map((a) => a.id));
+  const came = there.filter((a) => !was.has(a.id)).length, went = [...was].filter((id) => !now.has(id)).length;
+  const change = y - 10 >= trackMin ? ` Since ${y - 10}: ${came} new here, ${went} gone.` : '';
+  toast(there.length ? `${y}: ${there.length} ${there.length === 1 ? 'light' : 'lights'} ${kind === 'c' ? 'in' : 'at'} ${name}. ${there.slice(0, 4).map((a) => a.p.name).join(', ')}${there.length > 4 ? ` and ${there.length - 4} more` : ''}.${change}` : `${y}: no light ${kind === 'c' ? 'in' : 'at'} ${name}.${change}`, 7000);
 }
 function countryHtml(c: (typeof countries)[number]): string {
   const here = (id: string) => world.places.get(id)!.country === c.name;
@@ -291,7 +295,7 @@ function countryHtml(c: (typeof countries)[number]): string {
   const loose = (y: number | null) => (y != null && own.some((a) => recorded(a).some((s) => s.y === y && s.approx)) && !own.some((a) => recorded(a).some((s) => s.y === y && !s.approx)) ? 'about ' : '');
   const list = (title: string, as: Actor[]) => (as.length ? `<h3>${title} (${as.length})</h3><div class="who">${[...as].sort((x, y) => x.b - y.b).slice(0, 60).map((a) => chip(a.id)).join('')}${as.length > 60 ? `<span class="rel">and ${as.length - 60} more: see the People tab</span>` : ''}</div>` : '');
   return `<button class="back" data-act="back">← Back</button><div class="rec"><div class="kicker">Country</div><h2>${esc(c.name)}</h2>
-  <div class="life">${first == null ? 'Lights here are drawn with relatives only' : first === last ? `Recorded in ${loose(first)}${first}` : `Recorded from ${loose(first)}${first} to ${loose(last)}${last}`} · ${counts.get(c.name) ?? 0} lit in ${Math.round(state.year)}</div>
+  <div class="life">${first == null ? 'Lights here are drawn with relatives only' : first === last ? `Recorded in ${loose(first)}${first}` : `Recorded from ${loose(first)}${first} to ${loose(last)}${last}`} · <span id="lit-now" data-country="${esc(c.name)}">${counts.get(c.name) ?? 0} lit in ${Math.round(state.year)}</span></div>
   <p>${c.people.length} ${c.people.length === 1 ? 'person is' : 'people are'} placed here at some time, in ${c.sites.length} ${c.sites.length === 1 ? 'place' : 'places'}${lent.length ? `: ${own.length} by a record, ${lent.length} drawn with a relative` : ''}.${c.name === 'Poland' ? ' Most of the Polish lines are living, or have no dated, placed record of the kind the map reads, so Poland is nearly dark on this map. That is a gap in what the map can use, not in the family.' : ''}</p>
   ${strip((q, y) => world.countryOf(q, y) === c.name, `in ${c.name === 'United States' ? 'the United States' : c.name}`, `c:${c.name}`)}
   ${(() => { let y0 = 0, y1 = 0; for (let y = trackMin; y < thisYear; y++) if (world.actors.some((q) => world.countryOf(q, y + 0.5) === c.name)) { if (!y0) y0 = y; y1 = y; } return y0 ? `<p class="fine">On the map a light stands in ${esc(c.name === 'United States' ? 'the United States' : c.name)} from ${y0} to ${y1}, hollow lights included.</p>` : ''; })()}
@@ -313,7 +317,7 @@ function setYear(y: number, fromPlay = false) {
   if (changed || !fromPlay) {
     state.year = shown;
     $('#year').textContent = String(shown);
-    if (!fromPlay && family) { const away = frameFamily(); if (away !== familyAway) { familyAway = away; if (away) toast(`${away} of the family ${away === 1 ? 'is' : 'are'} on the other side of the world in ${shown}: Two shores shows both.`, 5000); } }
+    if (!fromPlay && family) { const away = frameFamily(); if (away) toast(`${away} of the family ${away === 1 ? 'is' : 'are'} on the other side of the world in ${shown}: Two shores shows both.`, 5000); else if (familyAway) clearToast(); familyAway = away; }
     const alive = world.actors.filter((a) => world.lightOf(a, shown >= thisYear ? thisYear : shown + 0.5)).length;
     $('#alive').textContent = shown >= thisYear ? (isSmall() ? `${atlas.meta.counts.living} living` : `${atlas.meta.counts.living} living, not shown`) : `${alive} lit`;
     const u = (shown - trackMin) / (thisYear - trackMin);
@@ -321,6 +325,8 @@ function setYear(y: number, fromPlay = false) {
     $('#track').setAttribute('aria-valuenow', String(shown));
     document.querySelectorAll<SVGRectElement>('#spark rect').forEach((r) => r.classList.toggle('past', Number(r.dataset.y) <= shown));
     renderCountries(shown);
+    // an open country or place panel keeps in step with the year
+    { const ln = document.querySelector<HTMLElement>('#lit-now'); if (ln) ln.textContent = shown >= thisYear ? `no light in ${shown}` : `${counts.get(ln.dataset.country!) ?? 0} lit in ${shown}`; const sv = document.querySelector<SVGElement>('#record .strip svg'); sv?.querySelector('.now')?.setAttribute('x', String((shown - Number(sv.dataset.d0)) / 10 - 0.06)); }
     caption(fromPlay);
     writeHash();
   }
@@ -733,6 +739,7 @@ function journeysHtml(): string {
   <p class="lede">Every light is a person, shown where the records put them in the chosen year. Press play and watch four centuries pass.</p>
   <div class="counts"><div><b>${c.recorded}</b>people placed by a record of their own, or of their child’s birth or their marriage</div><div><b>${c.borrowed}</b>with no placed record of the kind the map reads: drawn hollow, where a close relative was</div><div><b>${c.unplaced}</b>with no such record, and no relative the map could draw them with while they were alive: <button class="inline" data-act="unplaced">not on the map</button></div><div><b>${c.living}</b>living relatives: not shown at all</div></div>
   <div class="proofline"><b>What the map cannot know.</b> The records say where someone was in a given year. They almost never say when a move happened. A solid line is a move known to within three years. A dashed line is a move that happened some time in a longer gap: the light stays where it was last recorded, dimming, and appears at the new place only in the year a record finds it there. No solid light is drawn anywhere before a record puts the person there, and it dims the longer it is since the last one. Where the map reads no dated death the light goes out seventy years after birth. A hollow light is drawn with a relative, from the year that relative is recorded.</div>
+  <div class="actions" style="margin:10px 0 2px"><button class="btn solid" data-act="nextstory">${state.finding ? 'Next story →' : 'Tell me a story →'}</button></div>
   <h3>What the map shows</h3><div class="cards">${atlas.facts.map((f) => findingCard(f, 'fact')).join('')}</div>
   <h3>Worth a second look</h3><div class="cards">${atlas.leads.map((f) => findingCard(f, 'lead')).join('')}</div>
   <p class="fine">Places were set by hand from the place names in the tree. No address or map service was used, so nothing about the family left this page’s build. Voyages between Europe and New Zealand are drawn along the usual sea route of their time, not the course of any one ship.</p>`;
@@ -767,7 +774,7 @@ function peopleHtml(): string {
   return `<div class="kicker">${rows.length - unlit.length} people with a light${embersOnly ? `, ${embersOnly} with only an ember` : ''}${neither ? `, ${neither} recorded within a single year with neither` : ''}</div><h2>Everyone, in order of birth</h2>
   <input class="filter" id="pfilter" type="search" placeholder="Filter by name or place" aria-label="Filter the list by name or place">
   <p class="fine" id="pnone" hidden>No one on the map matches. Living people are not listed.</p><ul class="plist" id="plist">${rows.map((a) => `<li data-key="${esc(fold(a.p.name + ' ' + a.stays.map((s) => placeName(s.p)).join(' ')))}"><button data-go="${esc(a.id)}">${dot(a)}<span>${esc(a.p.name)}<small>${esc(a.stays.map((s) => shortPlace(world.siteId(s.p))).filter((v, i, arr) => v !== arr[i - 1]).join(' → '))}${a.hollow ? ' (with a relative)' : ''}</small></span><small>${esc(shortLife(a.p))}</small></button></li>`).join('')}</ul>
-  <h3 id="unplaced">Not on the map</h3><p class="lede">${none.length} people have none of the dated, placed records the map reads, and no close relative it could draw them with while they were alive. They are not drawn anywhere.</p>
+  <h3 id="unplaced" tabindex="-1">Not on the map</h3><p class="lede">${none.length} people have none of the dated, placed records the map reads, and no close relative it could draw them with while they were alive. They are not drawn anywhere.</p>
   <ul class="plist">${none.map((p) => `<li><button data-none="${esc(p.id)}" disabled><i style="background:#5B6B83"></i><span>${esc(p.name)}</span><small>${esc(shortLife(p))}</small></button></li>`).join('')}</ul>
   <p class="fine">${atlas.meta.counts.living} living relatives are in the tree. Nothing that identifies them is shown on this page: no light, no place, no name.</p>`;
 }
@@ -807,7 +814,7 @@ function placeHtml(site: string): string {
   const list = (title: string, as: Actor[]) => (as.length ? `<h3>${title} (${as.length})</h3><div class="who">${as.sort((x, y) => x.b - y.b).map((a) => chip(a.id)).join('')}</div>` : '');
   return `<button class="back" data-act="back">← Back</button><div class="rec"><div class="kicker">${esc(pl.country)}</div><h2>${esc(pl.name)}</h2>
   <div class="life">${isFinite(s.y0) ? (s.y0 === s.y1 ? `Recorded in ${s.abt(s.y0)}${s.y0}` : `Recorded from ${s.abt(s.y0)}${s.y0} to ${s.abt(s.y1)}${s.y1}`) : 'Lights here are drawn with relatives only'}</div>
-  ${strip((q, y) => { if (!world.lightOf(q, y)) return false; const w = whereAt(q.stays, y)!; return !(w.b && w.sail) && world.siteId(w.a) === site; }, `at ${pl.name.split(',')[0]}`, `s:${site}`)}
+  ${strip((q, y) => { if (!world.lightOf(q, y)) return false; const w = whereAt(q.stays, y)!; return !(w.b && w.sail) && world.siteId(w.a) === site; }, `${['area', 'country'].includes(pl.prec) ? 'in' : 'at'} ${pl.name.split(',')[0]}`, `s:${site}`)}
   <p>${PREC[pl.prec]}${(() => { const v = [...new Set(s.people.flatMap((a) => a.a.stops.filter((x) => x.p === site && x.named).map((x) => x.named!)))]; return v.length ? ` Some records here name a village that is not placed on this map (${esc(v.join(', '))}); they are drawn here too.` : ''; })()}${parishes.length ? ` Includes ${esc(parishes.join(', '))}.` : ''}</p>
   ${list('Born or baptised here', s.born)}${list('Died or buried here', s.died)}${list('Recorded here', s.here)}${list('Drawn here with a relative', s.lent)}
   <div class="actions">${isFinite(s.y0) ? `<button class="btn quiet" data-act="goyear" data-y="${s.y0}">Go to ${s.abt(s.y0)}${s.y0}</button>` : ''}</div></div>`;
@@ -983,7 +990,13 @@ function bindChrome() {
     if (!act) return;
     if (act === 'back') goBack();
     else if (act === 'help') { stop(); clearToast(); family = null; state.selected = null; state.place = null; state.focus = null; state.track = null; trail.length = 0; openRecord('help', helpHtml()); kick(); }
-    else if (act === 'unplaced') { state.tab = 'people'; renderTab(); openSheet(true); document.querySelector('#unplaced')?.scrollIntoView({ block: 'start' }); }
+    else if (act === 'unplaced') { state.tab = 'people'; renderTab(); openSheet(true); document.querySelector('#unplaced')?.scrollIntoView({ block: 'start' }); refocus('#unplaced'); }
+    else if (act === 'nextstory') {
+      // the starred findings, one after another in the order of their years
+      const order = [...atlas.facts, ...atlas.leads].filter((f) => STARRED.test(f.id) && f.people.some((id) => world.byId.has(id))).sort((p, q) => p.y - q.y);
+      const i = order.findIndex((f) => f.id === state.finding), next = order[(i + 1) % order.length];
+      if (state.finding === next.id) return; openFinding(next.id); refocus('[data-act="nextstory"]');
+    }
     else if (act === 'goyear') { const el = t.closest<HTMLElement>('[data-y]')!; stop(); setYear(Number(el.dataset.y)); if (el.dataset.where) whoWasThere(el.dataset.where, Number(el.dataset.y)); else openSheet(false); }
     else if (act === 'family' && state.selected) {
       // parents, brothers and sisters, partners and children, lit together: where one household ended up
