@@ -335,7 +335,7 @@ function findings(people: AtlasPerson[], P: Map<string, Person>, F: Map<string, 
   }
   for (const { a, legs } of all) for (const l of legs) if (l.doubt) {
     leads.push({ id: 'a-doubt-' + a.id, kind: 'doubt', y: l.y1, people: [a.id], title: `The oldest move on the map is the one in doubt`,
-      body: `${name(a.id)}: recorded as a child in ${place(l.a).name} in ${l.y0}, a father in ${place(l.b).name} by ${l.y1}. ${Math.round(km(ll(place(l.a)), ll(place(l.b))) / 10) * 10} km, and he would have been ${l.y1 - yr(a.id)}. The tree itself says: ${l.doubt}. If these are two men, this journey never happened.` });
+      body: `${name(a.id)}: recorded as a child in ${place(l.a).name} in ${l.y0}, a father in ${place(l.b).name} by ${l.y1}. ${Math.round(km(ll(place(l.a)), ll(place(l.b))) / 10) * 10} km, and he would have been about ${l.y1 - yr(a.id)}. The tree itself says: ${l.doubt}. If these are two men, this journey never happened.` });
   }
   return { facts, leads };
 }

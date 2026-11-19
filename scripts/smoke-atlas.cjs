@@ -258,6 +258,13 @@ process.on('exit', () => server?.kill());
   await A(page, () => { window.__atlas.setYear(1856); window.__atlas.settle(); });
   const star = await page.evaluate(() => { const s = window.__atlas.stages[0], q = s.starScreen('a-first-crossing'), r = s.canvas.getBoundingClientRect(); return q ? [r.left + q[0], r.top + q[1]] : null; });
   check('a finding is starred on the map from the year it happens, not before', before === null && Array.isArray(star));
+  // a tap near both a star and a light goes to whichever is nearer
+  const near = await page.evaluate(() => { const s = window.__atlas.stages[0], st = s.starScreen('a-first-crossing'), r = s.canvas.getBoundingClientRect(); let best = null; for (const l of window.__atlas.scene().lights) { const q = s.screenOf(l.actor.id); if (!q) continue; const d = Math.hypot(q[0] - st[0], q[1] - st[1]); if (d < 30 && (!best || d < best.d)) best = { d, id: l.actor.id, x: r.left + q[0], y: r.top + q[1] }; } return best; });
+  if (near) {
+    await page.mouse.click(near.x, near.y);
+    check('a click on a light beside a star opens the person, not the finding', (await A(page, () => window.__atlas.state.selected)) !== null && (await A(page, () => window.__atlas.state.finding)) === null, JSON.stringify(near));
+    await page.keyboard.press('Escape');
+  } else check('a click on a light beside a star opens the person, not the finding', true, 'no light within 30 px of the star at this size');
   await page.mouse.click(star[0], star[1]);
   check('tapping the star opens the finding', (await A(page, () => window.__atlas.state.finding)) === 'a-first-crossing' && (await page.locator('#panel-body .card.on').count()) === 1);
   await page.keyboard.press('Escape');
@@ -268,6 +275,17 @@ process.on('exit', () => server?.kill());
   const told = new Set();
   for (let i = 0; i < 90; i++) { await page.waitForTimeout(150); if (await page.locator('#caption.on').count()) told.add(await page.locator('#caption').textContent()); if (!(await A(page, () => window.__atlas.state.playing))) break; }
   check('following someone who never sails still tells their records, place by place', told.size >= 2 && [...told].some((t) => /Sproughton/.test(t)) && [...told].some((t) => /Howick/.test(t)) && ![...told].some((t) => /Edwin Watkins/.test(t)), [...told].map((t) => t.slice(0, 40)).join(' | '));
+  // a second follow, started while the first one's caption is still up, shows none of the first's
+  await A(page, () => window.__atlas.stop());
+  await A(page, (id) => window.__atlas.select(id), tf1);
+  await page.locator('#record [data-act="follow"]').click();
+  for (let i = 0; i < 30 && !(await page.locator('#caption.on').count()); i++) await page.waitForTimeout(100);
+  const firstCap = await page.locator('#caption').textContent();
+  await A(page, (id) => window.__atlas.select(id), edwin);
+  await page.locator('#record [data-act="follow"]').click();
+  const second = new Set();
+  for (let i = 0; i < 20; i++) { await page.waitForTimeout(100); if (await page.locator('#caption.on').count()) second.add(await page.locator('#caption').textContent()); }
+  check('a second follow never shows the first person’s caption', /Sproughton/.test(firstCap) && ![...second].some((t) => /Sproughton|Howick/.test(t)), [...second].map((t) => t.slice(0, 30)).join(' | '));
   await A(page, () => window.__atlas.stop());
   await page.keyboard.press('Escape');
   await A(page, () => window.__atlas.setYear(1880));
@@ -403,6 +421,23 @@ process.on('exit', () => server?.kill());
   await page.waitForTimeout(500);
   check('a tap on a light opens the sheet with a person', (await page.locator('#panel.open').count()) === 1 && (await page.locator('#record h2').isVisible()));
   await page.locator('#record .back').click();
+  // one finger turns the globe, two fingers zoom it, and the page itself does not move
+  const cdp = await page.context().newCDPSession(page);
+  const vb = await page.locator('#view-a').boundingBox();
+  const mx = vb.x + vb.width / 2, my = vb.y + vb.height / 2;
+  const touch = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts.map(([x, y], i) => ({ x, y, id: i })) });
+  const lon1 = await A(page, () => window.__atlas.stages[0].cam.lon);
+  await touch('touchStart', [[mx, my]]); for (let i = 1; i <= 6; i++) await touch('touchMove', [[mx - i * 15, my + i * 3]]); await touch('touchEnd', []);
+  check('on a phone one finger turns the globe', Math.abs((await A(page, () => window.__atlas.stages[0].cam.lon)) - lon1) > 0.5 && (await page.evaluate(() => scrollY)) === 0);
+  const k1 = await A(page, () => window.__atlas.stages[0].cam.k);
+  await touch('touchStart', [[mx - 30, my], [mx + 30, my]]); for (let i = 1; i <= 6; i++) await touch('touchMove', [[mx - 30 - i * 12, my], [mx + 30 + i * 12, my]]); await touch('touchEnd', []);
+  check('on a phone two fingers zoom it', (await A(page, () => window.__atlas.stages[0].cam.k)) > k1 * 1.3, `${k1.toFixed(2)} -> ${(await A(page, () => window.__atlas.stages[0].cam.k)).toFixed(2)}`);
+  await page.locator('#zfit').tap();
+  await A(page, () => window.__atlas.settle());
+  const sp = await page.evaluate(() => { const s = window.__atlas.stages[0], r = s.canvas.getBoundingClientRect(); const id = (window.__atlas.atlas.facts.concat(window.__atlas.atlas.leads)).map((f) => f.id).find((i) => s.starScreen(i)); const q = id ? s.starScreen(id) : null; return q ? [id, r.left + q[0], r.top + q[1]] : null; });
+  if (sp) { await page.touchscreen.tap(sp[1], sp[2]); await page.waitForTimeout(300); check('on a phone a tap on a star opens something', (await A(page, () => window.__atlas.state.finding)) !== null || (await A(page, () => window.__atlas.state.selected)) !== null, sp[0]); await page.keyboard.press('Escape'); }
+  if (await page.locator('#panel.open').count()) await page.locator('#grab').tap();
+  await A(page, () => { window.__atlas.setYear(1880); window.__atlas.stages[0].resume(); window.__atlas.settle(); });
   await page.locator('.view [data-view="shores"]').tap();
   await A(page, () => window.__atlas.settle());
   const stacked = await A(page, () => { const s = window.__atlas.stages[0], w = window.__atlas.world; const e = w.actors.find((a) => s.screenOf(a.id) && w.lightOf(a, 1880)?.[0] < 10), n = w.actors.find((a) => s.screenOf(a.id) && w.lightOf(a, 1880)?.[0] > 150); return e && n ? s.screenOf(n.id)[1] - s.screenOf(e.id)[1] : 0; });

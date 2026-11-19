@@ -344,7 +344,7 @@ function buildBeats() {
     const their = many ? 'their' : sex === 'F' ? 'her' : sex === 'M' ? 'his' : 'their', them = many ? 'them' : sex === 'F' ? 'her' : sex === 'M' ? 'him' : 'them', they = many ? 'they' : sex === 'F' ? 'she' : sex === 'M' ? 'he' : 'they';
     const last = g.sameFrom && !g.assumed ? ` Last recorded in ${from} in ${yr(g.a0, g.y0)}.` : '';
     let text: string;
-    if (g.doubt) text = `A Francis Barlow is a father in ${to}. If he is the boy baptised at ${from}, he came 250 km and was fifteen. The tree doubts it.`;
+    if (g.doubt) text = `A Francis Barlow is a father in ${to}. If he is the boy baptised at ${from}, he came 250 km and was about fifteen. The tree doubts it.`;
     else if (g.sail) text = `${who}: in ${from} in ${g.y0}, in ${to} by ${g.y1}. The voyage falls in ${g.y1 === g.y0 ? 'that year' : 'those years'}.`;
     else if (g.dies) text = `${who} ${many ? 'die' : 'dies'} in ${to} in ${yr(g.a1, g.y1)}.${last}`;
     else if (g.assumed) text = `${who} ${are} first recorded in ${yr(g.a1, g.y1)}, in ${to}.`;
@@ -352,7 +352,7 @@ function buildBeats() {
       // children with no record of their own who are drawn arriving with them
       const dsite = world.siteId(g.dest);
       const kids = world.actors.filter((a) => a.a.stops[0].kind === 'borrowed' && names.some((n) => a.a.stops[0].why.includes(`, ${n}`)) && a.legs.some((l) => l.follows && l.y1 === g.y1 && world.siteId(l.b) === dsite)).length;
-      const withKids = kids ? ` ${kids === 1 ? `One of ${their} children` : `${kids} of ${their} children`}, not recorded in ${kids === 1 ? 'its' : 'their'} own right by then, ${kids === 1 ? 'is' : 'are'} drawn with ${them}.` : '';
+      const withKids = kids ? ` ${kids === 1 ? `One of ${their} children` : `${kids} of ${their} children`}, with no record yet of ${kids === 1 ? 'the child’s' : 'their'} own, ${kids === 1 ? 'is' : 'are'} drawn with ${them}.` : '';
       text = `By ${yr(g.a1, g.y1)} ${many ? who : names[0] + age(g.ids[0], g.y1)} ${are} in ${to}.${last}${withKids}${childrenLine(g.ids, g.y1, g.dest)}`;
     }
     beats.push({ y: g.sail ? g.y0 : g.y1, sail: g.sail && !g.doubt, ids: g.ids, text: tidy(text), they });
@@ -460,7 +460,7 @@ function hover(person: string | null, site: string | null, x: number, y: number)
   const tip = $('#tip');
   if (!person && !site) { tip.hidden = true; return; }
   if (site?.startsWith('star:')) { const f = [...atlas.facts, ...atlas.leads].find((x) => x.id === site.slice(5)); tip.innerHTML = `<b>${esc(f?.title)}</b><small>A finding. Tap to read it.</small>`; }
-  else if (person) { const a = world.byId.get(person)!; tip.innerHTML = `<b>${esc(a.p.name)}</b><small>${esc(shortLife(a.p))}${a.hollow ? ' · no place of their own' : ''}</small>`; }
+  else if (person) { const a = world.byId.get(person)!; tip.innerHTML = `${a.p.photo ? `<img class="face" src="${esc(a.p.photo)}" alt="" onerror="this.remove()">` : ''}<b>${esc(a.p.name)}</b><small>${esc(shortLife(a.p))}${a.hollow ? ' · no place of their own' : ''}</small>`; }
   else tip.innerHTML = `<b>${esc(placeName(site!))}</b><small>${world.atSite.get(site!)?.length ?? 0} people</small>`;
   tip.hidden = false; tip.style.left = Math.min(innerWidth - 270, x + 14) + 'px'; tip.style.top = y + 14 + 'px';
 }
@@ -471,7 +471,7 @@ function frameIds(ids: string[]) {
 }
 function clearAll() {
   stop(); state.selected = null; state.place = null; state.finding = null; state.focus = null; state.follow = null; state.track = null; state.country = null; state.group = null; trail.length = 0;
-  closeRecord(); renderLegend(); renderTab(); renderCountries(state.year); writeHash(); kick();
+  closeRecord(); renderLegend(); renderTab(); renderCountries(state.year); openSheet(false); writeHash(); kick();
 }
 function select(id: string | null, _moveYear = true) {
   const moveYear = _moveYear;
@@ -654,7 +654,7 @@ function personHtml(a: Actor): string {
   ${lines.length ? `<p class="lifelines">${esc(lines.join(' '))}</p>` : ''}
   ${a.hollow ? `<p>No record gives a place for ${esc((p.given ?? p.name ?? '').replace(/\.$/, ''))}. The hollow light is drawn in ${esc(placeName(a.stays[0].p))}, where ${lender ? `<button class="inline" data-go="${esc(lender.id)}">${esc(lender.name)}</button>` : 'a close relative'} was. ${moved ? `While a child it goes where that parent is next recorded, and after that it stays put, because nothing says where ${esc(given)} went.` : `It does not move, because nothing says where ${esc(given)} went.`}${a.a.seen ? ` It is not drawn before ${a.a.seen}, ${esc(a.a.seenWhy ?? 'the first year that relative is recorded')}.` : ''}</p>` : ''}
   <h3>${a.hollow ? 'Why the light is here' : 'Where ' + esc((p.given ?? p.name ?? '').split(' ')[0]) + ' is placed, and why'}</h3><ol class="stops">${stops}</ol>
-  ${a.a.stops.some((x) => x.kind === 'baptism' && a.a.stops.some((z) => z.kind === 'birth' && z.y === x.y + 1)) ? `<p class="fine">The baptism is listed a year before the birth because the record uses the old calendar, in which the year began on 25 March: “${esc(p.b?.text ?? '')}”.</p>` : ''}
+  ${a.a.stops.some((x) => x.kind === 'baptism' && a.a.stops.some((z) => z.kind === 'birth' && z.y === x.y + 1)) ? `<p class="fine">The baptism is listed a year before the birth because the record uses the old calendar, in which the year began on 25 March. A baptism early in ${p.b?.y} by our reckoning was still ${(p.b?.y ?? 0) - 1} by theirs.</p>` : ''}
   ${moves ? `<h3>Moves</h3>${moves}` : ''}
   ${a.on >= a.d ? `<p class="fine">The only record that places ${esc(given)} is a death or burial. There is no light on the map, only what is left from ${about(a.d)}${a.d}.</p>` : a.a.seen ? `<p class="fine">Nothing places ${esc(given)} before ${about(a.a.seen)}${a.a.seen}, so no light is drawn until then.</p>` : ''}
   ${p.d?.est ? `<p class="fine">No death is recorded. The light goes out seventy years after birth, and no ember is left.</p>` : !a.ember ? (vagueDeath ? `<p class="fine">${esc(given)} died in ${esc(placeName(vagueDeath.p))}. No closer place is recorded, so no ember is left on the map.</p>` : `<p class="fine">Where ${esc(given)} died is not recorded, so no ember is left on the map.</p>`) : ''}
