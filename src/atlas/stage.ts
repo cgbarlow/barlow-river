@@ -11,7 +11,8 @@ export interface CameraPlan { turn: number; ride: [number, number] | null }
 /** One outline of the world: coarse, with detail baked into the islands the family lives on (scripts/build-land.ts). */
 export interface Lands { coarse: GeoPermissibleObjects }
 export interface StageEvents {
-  onPick: (person: string | null, site: string | null) => void;
+  /** `mark` is true when what was picked is an ember or diamond, not a light */
+  onPick: (person: string | null, site: string | null, mark?: boolean) => void;
   onHover: (person: string | null, site: string | null, x: number, y: number) => void;
   /** a star was tapped */
   onFinding: (id: string) => void;
@@ -60,6 +61,7 @@ export class Stage {
   focusSide: 'gb' | 'nz' = 'gb';
   private hits: Hit[] = [];
   private siteHits: Hit[] = [];
+  private markHits: Hit[] = [];
   private labelHits: { x0: number; y0: number; x1: number; y1: number; id: string }[] = [];
   private countryHits: { x0: number; y0: number; x1: number; y1: number; name: string }[] = [];
   private starHits: Hit[] = [];
@@ -205,7 +207,7 @@ export class Stage {
     this.ease(sc, opts.follow ?? null, Boolean(opts.snap));
     const c = this.ctx, { W, H, cam } = this;
     c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0); c.clearRect(0, 0, W, H);
-    this.hits = []; this.siteHits = []; this.labelHits = []; this.countryHits = []; this.starHits = [];
+    this.hits = []; this.markHits = []; this.siteHits = []; this.labelHits = []; this.countryHits = []; this.starHits = [];
     const ps = this.panels();
     if (this.kind === 'shores') { this.drawShores(ps, sc, selected); for (const p of ps) this.drawStars(p, sc, opts.stars ?? []); return; }
     const p = ps[0], zoom = this.cam.k;
@@ -324,12 +326,14 @@ export class Stage {
     for (const r of sc.rests) {
       const q = at(r.ll, r.slot); if (!q) continue;
       const d = r.bright ? 3.4 : 2.7; c.globalAlpha = (r.bright ? 0.85 : 0.55) * r.alpha * (r.hollow ? 0.8 : 1); c.strokeStyle = this.colourOf(r.actor); c.beginPath(); c.moveTo(q[0], q[1] - d); c.lineTo(q[0] + d, q[1]); c.lineTo(q[0], q[1] + d); c.lineTo(q[0] - d, q[1]); c.closePath(); c.stroke();
+      this.markHits.push({ x: q[0], y: q[1], id: r.actor.id });
     }
     c.globalAlpha = 1;
     for (const e of sc.embers) {
       const q = at(e.ll, e.slot); if (!q) continue;
       if (e.bright) { c.globalAlpha = 0.5 * e.alpha; c.drawImage(glow(this.colourOf(e.actor), true), q[0] - 9, q[1] - 9, 18, 18); }
       c.globalAlpha = (e.bright ? 0.95 : 0.7) * e.alpha; c.fillStyle = this.colourOf(e.actor); c.beginPath(); c.arc(q[0], q[1], e.bright ? 2.6 : 1.8, 0, 7); c.fill();
+      this.markHits.push({ x: q[0], y: q[1], id: e.actor.id });
     }
     c.globalCompositeOperation = 'lighter';
     for (const l of sc.lights) {
@@ -430,13 +434,15 @@ export class Stage {
   }
 
   // ---------- pointer ----------
-  nearest(x: number, y: number, r = 16): { person: string | null; site: string | null } {
+  nearest(x: number, y: number, r = 16): { person: string | null; site: string | null; mark?: boolean } {
     let best = r, person: string | null = null;
     for (const h of this.hits) { const d = Math.hypot(h.x - x, h.y - y); if (d < best) { best = d; person = h.id; } }
     // a place name is a target over its whole length, unless a light sits right under the pointer
     const lab = this.labelHits.find((h) => x >= h.x0 && x <= h.x1 && y >= h.y0 && y <= h.y1);
     if (lab && !(person && best <= 5)) return { person: null, site: lab.id };
     if (person) return { person, site: null };
+    // an ember or a diamond names its person too, when the pointer is right on it
+    { let bm = Math.min(8, r / 2), who: string | null = null; for (const h of this.markHits) { const d = Math.hypot(h.x - x, h.y - y); if (d < bm) { bm = d; who = h.id; } } if (who && !lab) return { person: who, site: null, mark: true }; }
     let site: string | null = null; best = r + 6;
     for (const h of this.siteHits) { const d = Math.hypot(h.x - x, h.y - y); if (d < best) { best = d; site = h.id; } }
     return { person: null, site };
@@ -480,7 +486,7 @@ export class Stage {
       if (!this.pointers.has(e.pointerId)) return;
       const single = this.pointers.size === 1;
       this.pointers.delete(e.pointerId); this.pinch = 0;
-      if (single && !this.moved && e.type === 'pointerup') { const [x, y] = local(e); const ch = this.countryAt(x, y); if (ch) { this.ev.onCountry(ch); return; } const st = this.starAt(x, y, e.pointerType === 'touch' ? 16 : 11); if (st && this.dist(this.starHits, x, y) <= this.dist(this.hits, x, y)) { this.ev.onFinding(st); return; } const n = this.nearest(x, y, e.pointerType === 'touch' ? 24 : 16); this.ev.onPick(n.person, n.site); }
+      if (single && !this.moved && e.type === 'pointerup') { const [x, y] = local(e); const ch = this.countryAt(x, y); if (ch) { this.ev.onCountry(ch); return; } const st = this.starAt(x, y, e.pointerType === 'touch' ? 16 : 11); if (st && this.dist(this.starHits, x, y) <= this.dist(this.hits, x, y)) { this.ev.onFinding(st); return; } const n = this.nearest(x, y, e.pointerType === 'touch' ? 24 : 16); this.ev.onPick(n.person, n.site, n.mark); }
     };
     cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
     cv.addEventListener('pointerleave', () => this.ev.onHover(null, null, 0, 0));

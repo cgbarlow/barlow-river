@@ -141,7 +141,7 @@ export function lifeLines(t: Tree, p: Person): string[] {
     for (const id of pf.partners) {
       const par = t.P.get(id)!;
       const pd = rec(par, 'd');
-      if (pd && pd.y >= b.y && pd.y - b.y < 12) { const at = ageBetween(b, pd); out.push(`Lost ${par.sex === 'M' ? 'a father' : par.sex === 'F' ? 'a mother' : 'a parent'} ${at === '0' ? 'in the first year of life' : /^\d+$/.test(at) || at.startsWith('about') ? `at ${at}` : `at about ${pd.y - b.y}`}.`); break; }
+      if (pd && pd.y >= b.y && pd.y - b.y < 12) { const at = ageBetween(b, pd); out.push(`Lost ${par.sex === 'M' ? 'a father' : par.sex === 'F' ? 'a mother' : 'a parent'} ${at === '0' ? 'in the first year of life' : `at ${at}`}.`); break; }
     }
   }
   const fams = p.fams.map((f) => t.F.get(f)!).filter(Boolean);

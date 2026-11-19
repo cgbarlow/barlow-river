@@ -1,39 +1,44 @@
-# Council report: the Atlas, round 21
+# Council report: the Atlas, round 22
 
-Subject: the fifteenth full outside test (commit `7d80523`, a fresh tester), and what was done.
+Subject: the sixteenth full outside test (commit `4f04158`, a fresh tester), and what was done.
 
 ## What the tester found
 
-Verdict on `7d80523`: **no**, "not quite", on one line.
+Verdict on `4f04158`: **no**, on one point, "on a strict reading".
 
-- The owner's four requests: met.
-- Rules A1 to A12 for the Atlas: no violation. Every bar of every decade strip (6 countries, 73 places) recounted from the drawn frames and found exact. All 18 findings, all 38 captions and 172 quantifier forms recount true.
-- Scores: **28.5 of 35 overall, 31.5 as a build.** The build is over the Council's bar of 31 for the first time.
+- The owner's requests: met, including that the River is not disturbed. All 340 River record boxes opened; the age line is right in each.
+- Rules A1 to A8, A10 to A12: no violation. `atlas.json` rebuilt by the tester: identical.
+- Scores: **28.5 of 35 overall, 30.5 as a build.** The test before gave the build 31.5. Two testers, one point apart.
 
 Blocking:
-- **D1.** In the River, James Carter's record box said "Died after 1808 … Aged about 35", beside a son born in 1816. The age line added last round treated an "after" date like a "c." date. The life-summary code already refuses such dates; the new line did not.
+- **D1.** The decade strips said "Most in the 1840s: 106" and "Never more than 13". The bars sample the middle year of each decade. In 15 of 60 strips some other year has more: England has 113 lights in 1850, and the same panel says so two lines above.
 
-Minor: a decade strip said "Most in the 1960s: 1" when several decades were level (27 of 57 strips); two small-screen overlaps; one keyboard path where Esc left focus on the page body.
+Minor: a finding said "322 lights" where 317 people ever have a light; "Lost a father at about 11" from bare years; the guide did not say that a life inside one year has no light; strip bars too small to hit and not reachable by keyboard; "Light the family" lost relatives who crossed later without saying so; an emigration called an arrival.
 
 ## The Council
 
-**Cat.** A fix to version 1 broke version 1 for one man. The owner asked that the River not be disturbed. Every change to shared code now gets a River check of its own.
+**Cat.** "Most" and "never" are claims about every year. The strip counted one year in ten. Count every year, or do not say it. Count every year.
 
-**Owl.** One line and one wording. Add a browser check for each.
+**Owl.** Then the minors, each one line. And the tester's half-point column: tappable bars that say who stood there, bars for the keyboard, an ember that names its person, family kept in sight.
 
-**Bear.** 31.5. The bar is met on the build. It is not met on a commit a tester has passed. Fix, test, and only then say so.
+**Bear.** The score went down a point with a different tester on a better build. The number has noise of about a point. We report both and do not pick.
 
-**Simon.** Consensus as Owl and Bear say.
+**Simon.** Consensus as Cat and Owl say.
 
 ## What was done
 
 | Point | Fix |
 |---|---|
-| D1 | The River gives no age at death when either date is "after" or "before". A browser check opens James Carter in the River and looks for it; another checks Peter Barlow reads "Aged 85". |
-| Tied peaks | A strip with several level decades says "Never more than N, first in the Xs." A browser check counts the bars from the scene and checks the wording. |
-| Interactive | A bar in a decade strip can be tapped to go to that decade. |
+| D1 | The strip says "The most in any year: N, first in YEAR", counted over every year. The bars are described as the middle year of each decade. A browser check recounts it for three countries. |
+| Bars | Each decade is a full-height target, reachable by Tab and pressed with Enter. Tapping one goes to that year and names who stood there. |
+| Embers and diamonds | Pointing at one names the person; tapping opens their record and keeps the year. |
+| Light the family | When relatives end up on the other side of the world as the year is moved, a message says how many. |
+| "322 lights" | "168 of the 322 people on the map are drawn with a relative". |
+| "at about 11" | "at 10 or 11" from bare years, in the River too. |
+| Guide | Says a life recorded within a single year has no light. |
+| Emigration | Called an emigration. |
 
-94 unit tests, the River's 59 browser checks and the Atlas's 164 pass. One River check failed once in a full run and passed on two reruns; it reads the current year off the screen and is sensitive to timing.
+94 unit tests, the River's 59 browser checks and the Atlas's 166 pass.
 
 ## Next
 

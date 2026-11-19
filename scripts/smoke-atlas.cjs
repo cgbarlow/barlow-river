@@ -588,7 +588,7 @@ process.on('exit', () => server?.kill());
   const hitsBare = allText.filter((t) => bare.test(t)).map((t) => t.split(' :: ')[0] + ': ' + (bare.exec(t) || [''])[0]);
   check('no panel, caption, finding or guide text says outright that something is unrecorded', allText.length > 320 && hitsBare.length === 0, hitsBare.slice(0, 6).join(' | '));
   const whc = allText.find((t) => t.startsWith('L5KW-4FV')) || '';
-  check('a voyage the map has a dated emigration for is not called undated', /The tree dates the arrival: 1857/.test(whc) && !/no dated record of this voyage/.test(whc));
+  check('a voyage the map has a dated emigration for is not called undated', /The tree dates the emigration: 1857/.test(whc) && !/no dated record of this voyage/.test(whc));
   await page.keyboard.press('Escape');
   check('no page text says the tree names no ship', !/names no ship|does not record the ship/.test(await A(page, () => { document.querySelector('#help').click(); return document.querySelector('#record').textContent + document.querySelector('#panel-body').textContent + JSON.stringify(window.__atlas.atlas.leads); })));
   await page.close();
@@ -617,11 +617,17 @@ process.on('exit', () => server?.kill());
   check('and counts birthdays where both dates are full: Peter Barlow, 13 Oct 1776 to 1 Mar 1862, aged 85', /Aged 85(?! or)/.test(await page.locator('#record').textContent()));
   // a decade strip: its bars are counted from the scene, a tied peak is not called the most, and a bar goes to its decade
   await page.goto(base + 'atlas.html#y=1855'); await page.waitForFunction(() => window.__atlas);
-  const st17 = await A(page, () => { const A_ = window.__atlas, w = A_.world; A_.stop(); const out = []; for (const c of ['New Zealand', 'Poland']) { A_.openCountry(c); if (A_.state.country !== c) A_.openCountry(c); const f = document.querySelector('#record .strip'); const bars = [...f.querySelectorAll('rect')].map((r) => [Number(r.dataset.y), Number(r.querySelector('title').textContent.split(': ')[1])]); const ok = bars.every(([y, n]) => w.actors.filter((a) => w.countryOf(a, y + 0.5) === c).length === n); const top = Math.max(...bars.map((b) => b[1])), tied = bars.filter((b) => b[1] === top).length > 1; out.push([c, bars.length, ok, tied, /Most in the/.test(f.textContent), /Never more than/.test(f.textContent)]); } return out; });
-  check('decade strips count the lights drawn, and a tied peak is not called the most', st17.every((r) => r[1] > 0 && r[2] && r[3] === r[5] && r[3] !== r[4]), JSON.stringify(st17));
+  const st17 = await A(page, () => { const A_ = window.__atlas, w = A_.world, out = []; A_.stop(); for (const c of ['New Zealand', 'England', 'Poland']) { A_.openCountry(c); if (A_.state.country !== c) A_.openCountry(c); const f = document.querySelector('#record .strip'); const bars = [...f.querySelectorAll('rect.hit')].map((r) => [Number(r.dataset.y), Number(r.querySelector('title').textContent.split(': ')[1])]); const at = (y) => w.actors.filter((a) => w.countryOf(a, y + 0.5) === c).length; const ok = bars.every(([y, n]) => at(y) === n); let top = 0, topY = 0; for (let y = 1590; y < 2026; y++) { const n = at(y); if (n > top) { top = n; topY = y; } } out.push([c, bars.length, ok, f.textContent.includes(`The most in any year: ${top}, first in ${topY}.`), top, topY]); } return out; });
+  check('decade strips count the lights drawn, and the most in any year is counted over every year', st17.every((r) => r[1] > 40 && r[2] && r[3]), JSON.stringify(st17));
   await A(page, () => { window.__atlas.openCountry('New Zealand'); if (window.__atlas.state.country !== 'New Zealand') window.__atlas.openCountry('New Zealand'); });
-  const barY = await page.evaluate(() => { const r = [...document.querySelectorAll('#record .strip rect')].pop(); r.dispatchEvent(new MouseEvent('click', { bubbles: true })); return Number(r.dataset.y); });
-  check('tapping a bar goes to that decade', (await A(page, () => window.__atlas.state.year)) === barY, String(barY));
+  const barY = await page.evaluate(() => { const r = [...document.querySelectorAll('#record .strip rect.hit')].find((x) => x.dataset.y === '1885'); r.dispatchEvent(new MouseEvent('click', { bubbles: true })); return Number(r.dataset.y); });
+  check('tapping a bar goes to that year and names who stood there', (await A(page, () => window.__atlas.state.year)) === barY && /1885: \d+ lights in New Zealand\./.test((await page.locator('.toast').textContent()) || ''), String(barY));
+  await page.locator('#record .strip rect.hit').nth(30).focus(); await page.keyboard.press('Enter');
+  check('a bar can be reached and pressed from the keyboard', (await A(page, () => window.__atlas.state.year)) === (await page.evaluate(() => Number(document.querySelectorAll('#record .strip rect.hit')[30].dataset.y))));
+  // an ember or diamond names its person, and picking it keeps the year
+  await A(page, () => { const A_ = window.__atlas; A_.select(null); document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); A_.setYear(2026); A_.settle(); });
+  const mk = await page.evaluate(() => { const s = window.__atlas.stages[0], r = s.canvas.getBoundingClientRect(); const h = s.markHits.filter((m) => m.x > 60 && m.y > 80 && m.x < r.width - 60 && m.y < r.height - 120 && s.markHits.filter((o) => Math.hypot(o.x - m.x, o.y - m.y) < 9).length === 1)[0]; return h ? [h.id, r.left + h.x, r.top + h.y] : null; });
+  if (mk) { await page.mouse.click(mk[1], mk[2]); await page.waitForTimeout(150); check('an ember or diamond opens the person it remembers, and the year stays', (await A(page, () => [window.__atlas.state.selected, window.__atlas.state.year])).join() === [mk[0], 2026].join(), JSON.stringify(mk)); } else check('an ember or diamond opens the person it remembers, and the year stays', false, 'no isolated mark found');
   await page.close();
   // phones: every country chip on screen while someone is at sea; the caption under the lower map
   page = await open('#y=1874', { width: 390, height: 800 }, { hasTouch: true, isMobile: true });

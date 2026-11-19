@@ -102,7 +102,7 @@ describe('lifeLines', () => {
   it('tells a life from the family around it', () => {
     const a = lifeLines(t, P.get('A')!).join(' ');
     expect(a).toMatch(/elder of two children/);
-    expect(a).toMatch(/Lost a mother at about 8/);
+    expect(a).toMatch(/Lost a mother at 7 or 8/);
     // bare years cannot say which side of a birthday: the age is given as either
     expect(a).toMatch(/Married at 23 or 24/);
     expect(a).toMatch(/One child on record, at 24 or 25/);
