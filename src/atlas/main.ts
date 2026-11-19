@@ -228,7 +228,7 @@ function renderCountries(year: number) {
   const kept = new Map<string, number>();
   if (finale) for (const a of world.actors) if (a.on < a.d || a.ember) { const c = world.places.get(a.stays[a.stays.length - 1].p)!.country; kept.set(c, (kept.get(c) ?? 0) + 1); }
   const sea = counts.get('sea') ?? 0;
-  const html = (finale ? `<span class="sea">Remembered</span>` : '') + (sea ? `<span class="sea"><span class="full">At sea</span><span class="short" aria-hidden="true">Sea</span> <b>${sea}</b></span>` : '') + countries.map((c) => { const n = finale ? kept.get(c.name) ?? 0 : counts.get(c.name) ?? 0; return `<button data-country="${esc(c.name)}" aria-pressed="${state.country === c.name}" class="${n ? '' : 'none'}" aria-label="${esc(c.name)}: ${n} ${finale ? 'remembered' : 'lit'}" title="${esc(c.name)}: ${n} ${finale ? 'remembered' : 'lit'} in ${Math.floor(year)}, ${c.people.length} ${c.people.length === 1 ? 'person' : 'people'} in all"><span class="full">${esc(c.name)}</span><span class="short" aria-hidden="true">${SHORT[c.name] ?? esc(c.name)}</span> <b>${n}</b></button>`; }).join('');
+  const html = (finale ? `<span class="sea"><span class="full">Remembered</span><span class="short" aria-hidden="true">Kept</span></span>` : '') + (sea ? `<span class="sea"><span class="full">At sea</span><span class="short" aria-hidden="true">Sea</span> <b>${sea}</b></span>` : '') + countries.map((c) => { const n = finale ? kept.get(c.name) ?? 0 : counts.get(c.name) ?? 0; return `<button data-country="${esc(c.name)}" aria-pressed="${state.country === c.name}" class="${n ? '' : 'none'}" aria-label="${esc(c.name)}: ${n} ${finale ? 'remembered' : 'lit'}" title="${esc(c.name)}: ${n} ${finale ? 'remembered' : 'lit'} in ${Math.floor(year)}, ${c.people.length} ${c.people.length === 1 ? 'person' : 'people'} in all"><span class="full">${esc(c.name)}</span><span class="short" aria-hidden="true">${SHORT[c.name] ?? esc(c.name)}</span> <b>${n}</b></button>`; }).join('');
   if (html !== chipsHtml) { chipsHtml = html; $('#countries').innerHTML = html; fitChips(); }
 }
 function openCountry(name: string, moveYear = true) {
@@ -542,6 +542,8 @@ function frameIds(ids: string[]) {
 function clearAll() {
   stop(); state.selected = null; state.place = null; state.finding = null; state.focus = null; state.follow = null; state.track = null; state.country = null; state.group = null; trail.length = 0;
   family = null; clearToast(); showBeat(null);
+  // the camera goes back to following the family
+  for (const s of stages) s.resume();
   closeRecord(); renderLegend(); renderTab(); renderCountries(state.year); openSheet(false); writeHash(); kick();
 }
 function select(id: string | null, _moveYear = true) {
@@ -676,7 +678,7 @@ function journeysHtml(): string {
   return `<div class="kicker">Where the family was</div><h2>Births, deaths and the moves between</h2>
   <p class="lede">Every light is a person, shown where the records put them in the chosen year. Press play and watch four centuries pass.</p>
   <div class="counts"><div><b>${c.recorded}</b>people placed by a record of their own, or of their child’s birth or their marriage</div><div><b>${c.borrowed}</b>with no placed record of the kind the map reads: drawn hollow, where a close relative was</div><div><b>${c.unplaced}</b>with no such record and no one to borrow from: <button class="inline" data-act="unplaced">not on the map</button></div><div><b>${c.living}</b>living relatives: not shown at all</div></div>
-  <div class="proofline"><b>What the map cannot know.</b> The records say where someone was in a given year. They almost never say when a move happened. A solid line is a move known to within three years. A dashed line is a move that happened some time in a longer gap: the light stays where it was last recorded, dimming, and appears at the new place only in the year a record finds it there. No solid light is drawn anywhere before a record puts the person there, and it dims the longer it is since the last one. Where no death is recorded the light goes out seventy years after birth. A hollow light is drawn with a relative, from the year that relative is recorded.</div>
+  <div class="proofline"><b>What the map cannot know.</b> The records say where someone was in a given year. They almost never say when a move happened. A solid line is a move known to within three years. A dashed line is a move that happened some time in a longer gap: the light stays where it was last recorded, dimming, and appears at the new place only in the year a record finds it there. No solid light is drawn anywhere before a record puts the person there, and it dims the longer it is since the last one. Where the map reads no dated death the light goes out seventy years after birth. A hollow light is drawn with a relative, from the year that relative is recorded.</div>
   <h3>What the map shows</h3><div class="cards">${atlas.facts.map((f) => findingCard(f, 'fact')).join('')}</div>
   <h3>Worth a second look</h3><div class="cards">${atlas.leads.map((f) => findingCard(f, 'lead')).join('')}</div>
   <p class="fine">Places were set by hand from the place names in the tree. No address or map service was used, so nothing about the family left this page’s build. Voyages between Europe and New Zealand are drawn along the usual sea route of their time, not the course of any one ship.</p>`;
@@ -711,7 +713,7 @@ function peopleHtml(): string {
   return `<div class="kicker">${rows.length - unlit.length} people with a light${embersOnly ? `, ${embersOnly} with only an ember` : ''}${neither ? `, ${neither} recorded within a single year with neither` : ''}</div><h2>Everyone, in order of birth</h2>
   <input class="filter" id="pfilter" type="search" placeholder="Filter by name or place" aria-label="Filter the list by name or place">
   <p class="fine" id="pnone" hidden>No one on the map matches. Living people are not listed.</p><ul class="plist" id="plist">${rows.map((a) => `<li data-key="${esc(fold(a.p.name + ' ' + a.stays.map((s) => placeName(s.p)).join(' ')))}"><button data-go="${esc(a.id)}">${dot(a)}<span>${esc(a.p.name)}<small>${esc(a.stays.map((s) => shortPlace(world.siteId(s.p))).filter((v, i, arr) => v !== arr[i - 1]).join(' → '))}${a.hollow ? ' (with a relative)' : ''}</small></span><small>${esc(shortLife(a.p))}</small></button></li>`).join('')}</ul>
-  <h3 id="unplaced">Not on the map</h3><p class="lede">${none.length} people have no placed record and no close relative with one. They are not drawn anywhere.</p>
+  <h3 id="unplaced">Not on the map</h3><p class="lede">${none.length} people have none of the dated, placed records the map reads, and no close relative it could draw them with while they were alive. They are not drawn anywhere.</p>
   <ul class="plist">${none.map((p) => `<li><button data-none="${esc(p.id)}" disabled><i style="background:#5B6B83"></i><span>${esc(p.name)}</span><small>${esc(shortLife(p))}</small></button></li>`).join('')}</ul>
   <p class="fine">${atlas.meta.counts.living} living relatives are in the tree. Nothing about them is in this page: no light, no place, no name.</p>`;
 }
@@ -759,7 +761,7 @@ function helpHtml(): string {
   const c = atlas.meta.counts;
   return `<button class="back" data-act="back">← Back</button><div class="kicker">A short guide</div><h2>How to read the atlas</h2><div class="rec guide">
   <p><b>Each light is a person.</b> It comes on at birth where a birth or baptism is recorded, and goes out when they die. ${world.actors.filter((a) => a.p.d!.est).length} of the ${world.actors.length} have no dated death among the records the map reads: their light goes out seventy years after birth, and leaves no ember, only the ring. ${world.actors.filter((a) => a.p.b!.est).length} people have no dated birth among them: their birth years are estimated from the family around them. The counts in the captions include these lights. Where a death or burial record names a town or parish, a small ember stays. Otherwise a fainter open ring stays at the last place the map has for them: it does not say they died there. Someone whose first record comes later in life is drawn hollow with a parent until then, or, with no parent to borrow from, not drawn until that record. A solid light dims as the years pass since a record last placed the person there.</p>
-  <p><b>A solid light has a record behind it.</b> A birth, baptism, marriage, census, burial, or the recorded birth of a child, which places both parents. ${c.recorded} people are placed this way.</p>
+  <p><b>A solid light has a record behind it.</b> A birth, baptism, marriage, census, death, burial, a dated event or arrival, or the recorded birth of a child, which places both parents. ${c.recorded} people are placed this way.</p>
   <p><b>A hollow light is borrowed.</b> ${c.borrowed} people have no placed record of the kind the map reads. They are drawn where a parent, partner, brother, sister or child was last recorded, never earlier than that relative’s own first record. A child drawn with a parent goes where that parent is next recorded, until sixteen. Otherwise a hollow light does not move.</p>
   <p><b>A haze is a place known only roughly.</b> “Derbyshire” or “New Zealand” and nothing closer. A county is drawn at its middle. A whole country is drawn just offshore, marked “somewhere in”, so that it cannot be mistaken for a town.</p>
   <p><b>Lines are moves.</b> Solid: both ends are recorded within three years of each other, and the light travels. Dashed: the records leave a longer gap, so the light waits where it was last recorded, dimming, and appears at the new place in the year a record finds it there. Dotted red: the tree itself doubts the two records are the same person.</p>
@@ -769,7 +771,7 @@ function helpHtml(): string {
   <p><b>Stars are findings.</b> A star on the map marks something the records show when you count: the first of the family in New Zealand, the move that is in doubt, the longest silence. It appears in the year it happens. Tap it to read it.</p>
   <p><b>Tap the Key.</b> Each colour in the Key is a button: tap a family line, a region or a kind of certainty to light only those people.</p>
   <p><b>Every country is named.</b> The row of countries above the map counts the lights lit in each this year. On the globe, a country out of view is named at the rim, in the direction it lies. Tap either to go there and see who it was.</p>
-  <p><b>Who is missing.</b> ${c.living} living relatives are not shown at all. ${c.unplaced} people have no such record and no relative to borrow from. Most of the Polish lines are living or undated, which is why Poland is nearly dark.</p>
+  <p><b>Who is missing.</b> ${c.living} living relatives are not shown at all. ${c.unplaced} people have no such record and no relative to borrow from. Most of the Polish lines are living, or have dates but no placed record the map reads, which is why Poland is nearly dark.</p>
   <h3>Keys</h3><dl class="kv"><dt>Space</dt><dd>Play or pause</dd><dt>← →</dt><dd>One year. With Shift, ten. Home and End for the first and last year</dd><dt>↑ ↓</dt><dd>With the map focused, step through people in birth order</dd><dt>G S B</dt><dd>Globe, two shores, both</dd><dt>1 2 3</dt><dd>Surname, first place, certainty</dd><dt>/</dt><dd>Find a person or place</dd><dt>+ − 0</dt><dd>Zoom in, out, follow the family</dd><dt>Esc</dt><dd>Close, clear</dd></dl></div>`;
 }
 
@@ -957,7 +959,8 @@ function bindChrome() {
   document.addEventListener('pointerdown', () => document.body.classList.remove('kbd'), true);
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Tab') document.body.classList.add('kbd');
-    const t = e.target as HTMLElement;
+    // a key event can arrive with the document itself as its target
+    const t = e.target instanceof Element ? (e.target as HTMLElement) : document.body;
     if (t.matches('input, textarea, select') || e.metaKey || e.ctrlKey || e.altKey) return;
     const k = e.key.toLowerCase();
     if (e.key === ' ' && !t.matches('button, a')) { e.preventDefault(); if (state.playing) stop(); else play(resumeFollow()); }

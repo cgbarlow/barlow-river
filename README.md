@@ -98,7 +98,7 @@ npm run data
 npm test
 ```
 
-3. Commit `public/data/river.json` and `public/data/atlas.json`. `npm run data` builds both. If the tree has a place name the gazetteer does not know, the build stops and lists it: add it to `pipeline/gazetteer.ts`.
+3. Commit `public/data/river.json` and `public/data/atlas.json`. `npm run data` builds both. If a record in the tree has a place name the gazetteer does not know, the build stops and lists it: add it to `pipeline/gazetteer.ts`. A place named only in a person's free-text description is skipped when it cannot be placed.
 
 The case file cards in `src/casefile.ts` are written by hand from the Iris document "Hypothesis: the original Barlow village". When that document changes, update the cards. A test fails if a card points at someone who is no longer in the tree.
 
