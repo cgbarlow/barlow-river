@@ -253,6 +253,16 @@ function openCountry(name: string, moveYear = true) {
   openRecord('country', countryHtml(c));
   writeHash(); kick();
 }
+/** how many lights stand somewhere, decade by decade: a strip of bars with its first and last decade named */
+function strip(here: (a: Actor, y: number) => boolean, what: string): string {
+  const d0 = Math.floor(trackMin / 10) * 10, rows: [number, number][] = [];
+  for (let d = d0; d < thisYear; d += 10) { const y = Math.min(thisYear - 1, d + 5) + 0.5; rows.push([d, world.actors.filter((a) => here(a, y)).length]); }
+  const top = Math.max(...rows.map((r) => r[1]));
+  if (!top) return '';
+  const lit = rows.filter((r) => r[1]), peak = rows.find((r) => r[1] === top)!;
+  const bars = rows.map(([d, n], i) => (n ? `<rect x="${i + 0.1}" y="${20 - (n / top) * 20}" width="0.8" height="${(n / top) * 20}" rx="0.15"><title>${d}s: ${n}</title></rect>` : '')).join('');
+  return `<figure class="strip" aria-label="Lights ${esc(what)} by decade, from the ${lit[0][0]}s to the ${lit[lit.length - 1][0]}s, the most in the ${peak[0]}s."><svg viewBox="0 0 ${rows.length} 20" preserveAspectRatio="none">${bars}</svg><figcaption><span>${d0}</span><span>Lights ${esc(what)} at the middle of each decade, hollow lights included. Most in the ${peak[0]}s: ${top}.</span><span>${Math.floor((thisYear - 1) / 10) * 10}</span></figcaption></figure>`;
+}
 function countryHtml(c: (typeof countries)[number]): string {
   const here = (id: string) => world.places.get(id)!.country === c.name;
   const recorded = (a: Actor) => a.a.stops.filter((s) => s.kind !== 'borrowed' && here(s.p));
@@ -272,10 +282,11 @@ function countryHtml(c: (typeof countries)[number]): string {
   return `<button class="back" data-act="back">← Back</button><div class="rec"><div class="kicker">Country</div><h2>${esc(c.name)}</h2>
   <div class="life">${first == null ? 'Lights here are drawn with relatives only' : first === last ? `Recorded in ${loose(first)}${first}` : `Recorded from ${loose(first)}${first} to ${loose(last)}${last}`} · ${counts.get(c.name) ?? 0} lit in ${Math.round(state.year)}</div>
   <p>${c.people.length} ${c.people.length === 1 ? 'person is' : 'people are'} placed here at some time, in ${c.sites.length} ${c.sites.length === 1 ? 'place' : 'places'}${lent.length ? `: ${own.length} by a record, ${lent.length} drawn with a relative` : ''}.${c.name === 'Poland' ? ' Most of the Polish lines are living, or have no dated, placed record of the kind the map reads, so Poland is nearly dark on this map. That is a gap in what the map can use, not in the family.' : ''}</p>
+  ${strip((q, y) => world.countryOf(q, y) === c.name, `in ${c.name === 'United States' ? 'the United States' : c.name}`)}
+  ${(() => { let y0 = 0, y1 = 0; for (let y = trackMin; y < thisYear; y++) if (world.actors.some((q) => world.countryOf(q, y + 0.5) === c.name)) { if (!y0) y0 = y; y1 = y; } return y0 ? `<p class="fine">On the map a light stands in ${esc(c.name === 'United States' ? 'the United States' : c.name)} from ${y0} to ${y1}, hollow lights included.</p>` : ''; })()}
   <h3>Places (${c.sites.length})</h3><div class="who">${c.sites.map((id) => `<button data-place="${esc(id)}">${esc(shortPlace(id))}</button>`).join('')}</div>
   ${list('Born or baptised here', born)}${list('Came here from another country', came)}${list('Recorded here, with no placed birth record', rest)}${list('Drawn here with a relative', lent)}
   ${died.length ? `<h3>Of those, died or buried here (${died.length})</h3><div class="who">${[...died].sort((x, y) => x.d - y.d).slice(0, 60).map((a) => chip(a.id)).join('')}${died.length > 60 ? `<span class="rel">and ${died.length - 60} more</span>` : ''}</div>` : ''}
-  ${(() => { let y0 = 0, y1 = 0; for (let y = trackMin; y < thisYear; y++) if (world.actors.some((q) => world.countryOf(q, y + 0.5) === c.name)) { if (!y0) y0 = y; y1 = y; } return y0 ? `<p class="fine">On the map a light stands in ${esc(c.name === 'United States' ? 'the United States' : c.name)} from ${y0} to ${y1}, hollow lights included.</p>` : ''; })()}
   ${first != null ? `<div class="actions"><button class="btn quiet" data-act="goyear" data-y="${first}">Go to ${loose(first)}${first}</button></div>` : ''}</div>`;
 }
 
@@ -409,6 +420,16 @@ function buildBeats() {
   for (const f of atlas.facts) if (f.id === 'a-oldest-crosser' && !beats.some((x) => Math.abs(x.y - f.y) < 2)) beats.push({ y: f.y, ids: f.people.slice(0, 1), text: `${f.title}. ${f.body.split('. ').slice(1, 2).join('. ')}.` });
   // two findings that belong to a year are told when the year comes
   for (const f of atlas.facts) if (f.id === 'a-split-siblings' || f.id === 'a-silence') beats.push({ y: f.id === 'a-silence' ? f.y : f.y + 1, ids: f.people, text: f.id === 'a-silence' ? `${f.title}. ${f.body.split('. ').slice(0, 1).join('. ')}.` : f.body.split('. ').slice(1, -1).join('. ') + '.' });
+  // the first record the map reads in each English region, told in its year when nothing else is being said
+  {
+    const firsts = new Map<string, { y: number; a: Actor; why: string; loose: boolean }>();
+    for (const a of world.actors) for (const st of a.a.stops) { if (st.kind === 'borrowed' || st.est) continue; const reg = world.places.get(st.p)!.region; const f = firsts.get(reg); if (!f || st.y < f.y) firsts.set(reg, { y: st.y, a, why: st.why, loose: Boolean(st.approx) }); }
+    for (const [reg, f] of firsts) {
+      if (!['Norfolk', 'Suffolk', 'Kent', 'Cornwall', 'London', 'Staffordshire'].includes(reg) || beats.some((x) => Math.abs(x.y - f.y) < 3)) continue;
+      const same = world.actors.filter((a) => a.a.stops.some((st) => st.kind !== 'borrowed' && !st.est && st.y === f.y && world.places.get(st.p)!.region === reg));
+      beats.push({ y: f.y, ids: same.map((a) => a.id), text: `The first dated record the map reads in ${reg} is in ${f.loose ? 'about ' : ''}${f.y}: of ${same.length === 1 ? f.a.p.name : `${same.length} people, ${f.a.p.name} among them`}.` });
+    }
+  }
   // the quiet years: how many lights the map holds and where, counted, when nothing else is being said
   for (const y of [1625, 1680, 1730, 1790, 1830, 1935, 1972, 2000]) {
     if (beats.some((x) => Math.abs(x.y - y) < 8)) continue;
@@ -525,7 +546,8 @@ function caption(fromPlay: boolean) {
     if (followBeats && shownBeat && !shownBeat.sail && now < Math.min(captionUntil, shownAt + 900)) { pendingBeat = true; return; } beatIdx = Math.max(beatIdx, sailing); pendingBeat = false; showBeat(beats[sailing]); } return; }
   let next = -1;
   for (let i = beatIdx + 1; i < beats.length && beats[i].y <= y; i++) if (mine(beats[i]) && beats[i] !== shownBeat && (beats[i].end || !beats[i].sail || y < beats[i].y + 1.2)) { next = i; break; }
-  if (next < 0) { pendingBeat = false; if (shownBeat && !shownBeat.end && now > captionUntil + 2500) showBeat(null); return; }
+  // a caption that has been read goes after a moment; one whose year is well past goes at once
+  if (next < 0) { pendingBeat = false; if (shownBeat && !shownBeat.end && (now > captionUntil + 2500 || (now > captionUntil && y > (shownBeat.label ?? shownBeat.y) + 6))) showBeat(null); return; }
   if (shownBeat && now < captionUntil) { pendingBeat = true; return; }
   pendingBeat = false; beatIdx = next; showBeat(beats[next]);
 }
@@ -773,6 +795,7 @@ function placeHtml(site: string): string {
   const list = (title: string, as: Actor[]) => (as.length ? `<h3>${title} (${as.length})</h3><div class="who">${as.sort((x, y) => x.b - y.b).map((a) => chip(a.id)).join('')}</div>` : '');
   return `<button class="back" data-act="back">← Back</button><div class="rec"><div class="kicker">${esc(pl.country)}</div><h2>${esc(pl.name)}</h2>
   <div class="life">${isFinite(s.y0) ? (s.y0 === s.y1 ? `Recorded in ${s.abt(s.y0)}${s.y0}` : `Recorded from ${s.abt(s.y0)}${s.y0} to ${s.abt(s.y1)}${s.y1}`) : 'Lights here are drawn with relatives only'}</div>
+  ${strip((q, y) => { if (!world.lightOf(q, y)) return false; const w = whereAt(q.stays, y)!; return !(w.b && w.sail) && world.siteId(w.a) === site; }, `at ${pl.name.split(',')[0]}`)}
   <p>${PREC[pl.prec]}${(() => { const v = [...new Set(s.people.flatMap((a) => a.a.stops.filter((x) => x.p === site && x.named).map((x) => x.named!)))]; return v.length ? ` Some records here name a village that is not placed on this map (${esc(v.join(', '))}); they are drawn here too.` : ''; })()}${parishes.length ? ` Includes ${esc(parishes.join(', '))}.` : ''}</p>
   ${list('Born or baptised here', s.born)}${list('Died or buried here', s.died)}${list('Recorded here', s.here)}${list('Drawn here with a relative', s.lent)}
   <div class="actions">${isFinite(s.y0) ? `<button class="btn quiet" data-act="goyear" data-y="${s.y0}">Go to ${s.abt(s.y0)}${s.y0}</button>` : ''}</div></div>`;

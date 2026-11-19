@@ -1,29 +1,28 @@
-# Council report: the Atlas, round 19
+# Council report: the Atlas, round 20
 
-Subject: the thirteenth full outside test (commit `595aa84`, a fresh tester), and what was done.
+Subject: the fourteenth full outside test (commit `09fdda4`, a fresh tester), and what was done.
 
 ## What the tester found
 
-Verdict on `595aa84`: **no**, on one sentence.
+Verdict on `09fdda4`: **yes**, fit to merge. No blocking defect.
 
 - The owner's four requests: met.
-- Rules A1 to A8 and A10 to A12: no violation. 1,539 negative sentences in 302 forms reviewed: none contradicted.
-- Every count in every caption and finding recounted true, including all the captions added in rounds 17 and 18.
-- The camera now stays within 8 degrees of the ship; the voyage caption is up for the whole crossing.
-- Scores: **28.5 of 35 overall, 30 as a build.** Up from 29.5. The bar is 31.
+- Rules A1 to A12: no violation, including at four points in every year, not only whole years.
+- **Every number and every quantifier on the page recounted:** 277 sentence forms with a number or a "most/all/first/last", and 404 with a negative. None false.
+- Everything added in round 19 recounted exactly.
+- Scores: **28.5 of 35 overall, 30 as a build.** The same as the test before. The bar is 31.
 
-Blocking:
-- **D1.** The finding added in round 17, "Noah Barlow: 8 records in Norwich across 65 years", ended "Most lives here are two or three records." Of the 154 people with records of their own, 68 have one, 29 two and 22 three. "Most" is false on any reading.
+Minor: the River's "Aged about N" is one year high in 21 records, not the three reported earlier; a counted caption can stay on screen twenty years after its year; a title clipped in the Poland inset on a phone; the longer Key needs scrolling on a sideways phone.
 
-Minor: the ship off screen for a fifth of a second at departure in "Sail with"; the Key did not show the white ring or the stars; the child-age line skipped undated children without saying so; "some time in that year" for a move between two consecutive years.
+What the tester said would add half a point: a presence-over-time strip in each place and country panel; captions for the long middle (1700 to 1850); retiring a counted caption once its year is well past. And three larger features: comparing two lives, a person's line to the youngest generation, and automatic coincidences.
 
 ## The Council
 
-**Cat.** That sentence was mine in spirit: a line added for colour, in a round whose rule was that every new sentence be counted. It was not counted. The rule stands and is now applied to this round's sentences one by one before the commit.
+**Owl.** Two tests at thirty. The first three items are small and each maps to a criterion. Do those. The three larger features are new scope: put them to the owner.
 
-**Owl.** Replace it with the count. Then the tester's last column again, one item per criterion.
+**Cat.** The River's age line is version 1's own code and it is wrong in 21 records. We have the function that gets it right. Use it. Tell the owner the River changes.
 
-**Bear.** Thirty. One point to go, and the list says where.
+**Bear.** Agreed. And say plainly that the score may stay at thirty: two testers in a row put the overall at 28.5 because of the records.
 
 **Simon.** Consensus as Owl says.
 
@@ -31,18 +30,19 @@ Minor: the ship off screen for a fifth of a second at departure in "Sail with"; 
 
 | For | Change |
 |---|---|
-| D1 | The sentence is replaced by the count: "Of the 154 people on the map with records of their own, 68 have a single one." |
-| Interesting | A new finding, counted by century of birth: how many of the people drawn are borrowed (1500s 2 of 5; 1600s 10 of 36; 1700s 61 of 101; 1800s 81 of 162; 1900s 14 of 18). |
-| Novel | Each country's panel says from which year to which a light stands there on the map. |
-| Delightful | Opening a finding about a voyage lands on the year before, with its people on shore and in view. The camera pulls back with the ship as it leaves, so it does not start off screen. |
-| Engaging | A counted caption at 2000, so the last thirty years are not silent. |
-| Interactive | The Key shows the white ring and the star, and each swatch shows how many people it lights. |
-| Dynamic | Following a person, play slows into a voyage instead of jumping into it. |
-| Minor | Child ages say "the first with a recorded date" when some children have none (River too). A move between consecutive years reads "between those two years". Clicking the very ends of the year track gives the first and last year. |
-
-Each sentence added this round was checked against the data before the commit; one interpretive clause was cut for want of a count.
+| Interesting | Every place panel and country panel has a strip of bars: how many lights stand there at the middle of each decade, with the peak decade and its count. |
+| Engaging | Captions for the first dated record the map reads in Cornwall (1757) and Kent (1773), and in Staffordshire (1592), where no other caption is near. |
+| Dynamic | A counted caption leaves the screen once its year is more than six years past. |
+| River | "Aged N" is counted from the full dates, "N or N+1" from bare years, "under one year" for an infant. |
+| Minor | The inset title on the last frame shows the count alone, so it fits. |
 
 94 unit tests, the River's 59 browser checks and the Atlas's 160 pass.
+
+## Put to the owner, not built
+
+- Compare two lives side by side on the map.
+- A person's line down to the youngest generation, drawn on the map.
+- Coincidences flagged automatically (relatives in one town in one year).
 
 ## Next
 

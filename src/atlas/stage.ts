@@ -424,7 +424,7 @@ export class Stage {
     }
     const local: Scene = { ...sc, lights: sc.lights.filter((l) => !l.moving || !sc.traces.some((t) => t.actor === l.actor && t.style === 'sail' && crossing(t))) };
     // at the present day each shore says how many it remembers
-    if (!sc.lights.length && (sc.embers.length || sc.rests.length)) for (const p of ps) { const n = [...sc.embers, ...sc.rests].filter((m) => !p.vis || p.vis(m.ll)).length, r = p.rect!; if (!n) continue; c.font = '500 11px "IBM Plex Mono", ui-monospace, Menlo, monospace'; c.textBaseline = 'alphabetic'; const tw = c.measureText(p.title!.toUpperCase()).width; c.fillStyle = '#F2B544'; c.fillText(`· ${n} REMEMBERED`, r[0] + 8 + tw + 8, p.small ? r[1] + 16 : r[1] - 7); }
+    if (!sc.lights.length && (sc.embers.length || sc.rests.length)) for (const p of ps) { const n = [...sc.embers, ...sc.rests].filter((m) => !p.vis || p.vis(m.ll)).length, r = p.rect!; if (!n) continue; c.font = '500 11px "IBM Plex Mono", ui-monospace, Menlo, monospace'; c.textBaseline = 'alphabetic'; const tw = c.measureText(p.title!.toUpperCase()).width; c.fillStyle = '#F2B544'; c.fillText(p.small ? `· ${n}` : `· ${n} REMEMBERED`, r[0] + 8 + tw + 8, p.small ? r[1] + 16 : r[1] - 7); }
     for (const p of ps) { this.traces(p, sc, (t) => !crossing(t)); this.marks(p, local, selected, p.small ? 5 : 7, p.small ? 3 : 14); }
     if (!tall) { c.save(); c.translate(this.W / 2, this.H / 2); c.rotate(-Math.PI / 2); c.fillStyle = '#6E8099'; c.font = 'italic 13px Newsreader, Georgia, serif'; c.textAlign = 'center'; c.fillText('about 19,000 km of sea, folded away', 0, 4); c.restore(); }
   }
