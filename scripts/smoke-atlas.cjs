@@ -578,6 +578,9 @@ process.on('exit', () => server?.kill());
   check('captions that count lights say when hollow ones are counted', /are hollow/.test(peak) && /record of their own/.test(peak) && /hollow lights included/.test(tip), peak + ' | ' + tip);
   const brit = await A(page, () => { const A_ = window.__atlas, w = A_.world; const t = A_.beats().find((b) => /no light is left in Britain/.test(b.text)); if (!t) return null; const y = Number(/After (\d{4})/.exec(t.text)[1]); const gb = (yy) => w.actors.filter((a) => ['England', 'Wales'].includes(w.countryOf(a, yy + 0.5))).length; return [y, gb(y), gb(y + 1), Math.max(...Array.from({ length: 2026 - y }, (_, i) => gb(y + 1 + i)))]; });
   check('the caption about the last light in Britain matches what is drawn', brit && brit[1] > 0 && brit[2] === 0 && brit[3] === 0, JSON.stringify(brit));
+  const p67 = await A(page, () => { window.__atlas.select('I67'); return document.querySelector('#record').textContent; });
+  check('a voyage whose arrival the tree dates is not said to be undated', /The tree dates the arrival: 2 Jul 1883/.test(p67) && !/do not date the voyage/.test(p67.split('Auckland to')[0].split('to Auckland').pop() || ''), (p67.match(/to Auckland[^]*?River\./) || [''])[0].slice(0, 300));
+  await page.keyboard.press('Escape');
   check('no page text says the tree names no ship', !/names no ship|does not record the ship/.test(await A(page, () => { document.querySelector('#help').click(); return document.querySelector('#record').textContent + document.querySelector('#panel-body').textContent + JSON.stringify(window.__atlas.atlas.leads); })));
   await page.close();
   // Home after playing: the first years have no light at all, and the globe must still draw

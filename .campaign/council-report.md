@@ -1,56 +1,52 @@
-# Council report: the Atlas, round 11
+# Council report: the Atlas, round 12
 
-Subject: the fifth full outside test in a row (commit `196551f`, a fresh tester on a different model), and what was done.
+Subject: the sixth full outside test in a row (commit `cea294e`, a fresh tester), and what was done.
 
 ## What the tester found
 
-Verdict on `196551f`: **no**, on four points, all false statements or breaches of the page's own stated rules. None is a crash.
+Verdict on `cea294e`: **no, though it is close.** One blocker, one sentence.
 
-- The owner's four requests: met. The remnant "with a reservation": on the last frame the globe stands so far back that the marks are small.
-- The globe-blanking bug: fixed, across 49 scenarios. No console error in any run.
-- Rules A1 to A9 by the tester's checker: no violations. A10 broken for one person.
-- Everything from round 10 fixed or mostly fixed.
-- Scores: 28.5 of 35 overall, 28 as a build.
+- The owner's four requests: met.
+- Every point from round 11 (N1 to N7): fixed. All 122 place strings were put through the gazetteer and read: none lets a later word win. Every solid line has a window of three years or less. All 79 "last known" sentences open at the last record that names the place.
+- Rules A1 to A8, by the tester's own checker, every year and every frame of four play-throughs: **no violations**.
+- 93 unit tests run by the tester: pass.
+- Scores: 28 of 35 overall, 29 as a build.
 
 Blocking:
-1. **N1.** William Barlow (1606) shown "born" at Mucklestone. His record says Betley, a baptism, with Mucklestone only in a note about doubt. The place matcher read the note.
-2. **N2.** Once a long-gap move was over, its line was drawn solid. The Key says solid means known to within three years. 59 of 78 solid lines in 1950 were not.
-3. **N3.** "No closer place is given" was false for three records that name a village (Milton, Gratton, Harton) the map could not place.
-4. **N4.** A move's window opened at a record naming only the country or county, making it too narrow ("Last known in New Zealand in 1888 … those 2 years" for a man last placed in Auckland in 1883).
+- **B1.** Peter William Barlow's panel said "the records here do not date the voyage" beside his own record, "1883 Auckland, arrival noted in the tree", dated 2 July 1883.
+
+Minor: a death recorded as "after 1808" shown as "c. 1808"; a same-year death and burial drawn dashed; a guide sentence that read as if 31 people lacked both birth and death; three small-screen overlaps; "London" for a Lambeth parish in one caption.
 
 ## The Council
 
-**Cat.** N2 is the largest thing any tester has found since round 7 and it was in plain sight: most of the long lines on the map contradicted the Key. Five testers looked at the same lines. The lesson is to test the Key against the drawing, not only the drawing against the data.
+**Cat.** One false sentence, in one panel, about the one record added in round 9. It is the same class as before, but the class is now nearly empty: the tester machine-checked every move sentence, every place string and every line style and found this alone.
 
-**Owl.** Four fixes, each one place in the code. N1 is an ordering of two patterns. N2 is one condition. N3 is carrying the village name through. N4 is where the window opens.
+**Owl.** Fix it, fix the three one-line minors, test again. Nothing else.
 
-**Rabbit.** For N3, do not guess where Gratton or Harton is. Carry the name the record gives and say the map could not place it.
+**Wolf.** Tell the owner the count: six testers, and the blockers went ten, ten, five, two, four, one.
 
-**Bear.** The last frame is the owner's remnant in its final form and the tester calls it small. That is taste and it is the owner's to call; list it for him.
+**Bear, Rabbit, Puppy.** Agreed.
 
-**Wolf.** The owner has said he hopes this is the last round. He should get the truth: five testers, five "no", each on fewer and smaller points, and no rule violation in any.
-
-**Puppy.** D1 held under 49 attempts to break it.
-
-**Simon.** Consensus: fix the four, add a test for each, and test again. Report the trend to the owner plainly and let him decide when it is enough.
+**Simon.** Consensus as Owl says. The small-screen overlaps and the "after 1808" light going out in 1808 go on the owner's list.
 
 ## What was done
 
-| # | Point | Fix |
-|---|---|---|
-| N1 | Betley record placed at Mucklestone as a birth | A place string that begins "Betley" is Betley; a record marked as a baptism is shown as one. |
-| N2 | Long-gap lines solid once over | They stay dashed. Only a move known to within three years is solid. |
-| N3 | "No closer place is given" where a village is named | The stop carries the village name; the panel says the record names it and the map could not place it. The county's panel lists such villages. |
-| N4 | Window opened at a country-only record | The window opens at the last record that names the place being left. The number of years is counted from full dates where both are known. |
-| N5 | Ember-only person selected but off-screen | The camera goes to the ember. |
+| Point | Fix |
+|---|---|
+| B1 | Where the tree dates the arrival, the panel says so and gives the date. |
+| "after 1808" shown as "c. 1808" | The stop reads "after 1808". |
+| Same-year death and burial dashed | Drawn solid: it is known to within the year. |
+| Guide: "31 have no birth on record either" | "31 people have no birth on record". |
 
-93 unit tests, the River's 59 browser checks and the Atlas's 157 pass.
+93 unit tests, the River's 59 browser checks and the Atlas's 158 pass.
 
 ## Left for the owner
 
-- The last frame stands far back, so the remnants are small.
+- The last frame stands far back, so the remnants are small on the globe.
 - Hollow lights and "last placed here" rings are both open circles.
-- The 1883 note says "with wife, 6 children"; only the man himself is placed by it.
+- The 1883 note says "with wife, 6 children"; only the man is placed by it.
+- James Carter's death is recorded as "after 1808"; his light goes out in 1808 though a son is born in 1816.
+- Small screens: stars pushed outside their panel on a sideways phone; a rim pointer under the chip row with the sheet open; the open Key over the closing caption.
 
 ## Next
 
