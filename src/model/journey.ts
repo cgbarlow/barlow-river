@@ -13,7 +13,7 @@ import { km, type LonLat } from './geo.ts';
 /** A window of this many years or fewer is drawn as a voyage. */
 export const SAIL_MAX = 3;
 
-export interface Stay { p: string; from: number; to: number; stops: AtlasStop[]; /** a closer place inside the vaguer one before it (New Zealand, then Carterton): the same stay known better, not a move */ within?: boolean }
+export interface Stay { p: string; from: number; to: number; stops: AtlasStop[]; /** the last year here rests only on a record naming the county or country, not this place */ toVague?: boolean; /** a closer place inside the vaguer one before it (New Zealand, then Carterton): the same stay known better, not a move */ within?: boolean }
 export interface Leg { a: string; b: string; /** the places as the records at each end name them: a stay is kept at the closest place ever recorded, which a given year's record may not name */ ra: string; rb: string; /** the full dates of the records at each end, where the tree gives them */ d0?: string; d1?: string; /** a death in one place and the burial in another: the order is known */ burial?: boolean; y0: number; y1: number; km: number; sail: boolean; /** rests on a disputed identity: the words from the record */ doubt?: string; /** not a move: one end is the county or country that holds the other */ within?: boolean; /** starts from a borrowed place, so it is an inference and not a recorded move */ assumed?: boolean; /** both ends are borrowed: a child drawn with a parent, going where the parent is next recorded */ follows?: boolean; /** the year at that end is only approximate in the record */ approx0?: boolean; approx1?: boolean }
 
 const ORDER: Record<string, number> = { borrowed: 0, birth: 1, baptism: 1, census: 2, event: 2, marriage: 2, child: 2, death: 8, burial: 9 };
@@ -56,6 +56,7 @@ export function staysOf(person: AtlasPerson, place: (id: string) => AtlasPlace):
     const same = last && lent(last) === (s.kind === 'borrowed');
     if (last && same && (last.p === s.p || town(last.p) === s.p || town(s.p) === last.p || contains(place(s.p), place(last.p)))) {
       if (town(s.p) === last.p) last.p = s.p;
+      { const vg = contains(place(s.p), place(last.p)); if (s.y > last.to) last.toVague = vg; else if (s.y === last.to && !vg) last.toVague = false; }
       last.to = Math.max(last.to, s.y); last.stops.push(s);
     }
     else out.push({ p: s.p, from: last ? Math.max(s.y, last.to) : s.y, to: last ? Math.max(s.y, last.to) : s.y, stops: [s], ...(last && same && contains(place(last.p), place(s.p)) ? { within: true } : {}) });
@@ -77,7 +78,7 @@ export function legsOf(stays: Stay[], place: (id: string) => AtlasPlace): Leg[] 
     const s0 = [...stays[i - 1].stops].reverse().find((x) => x.y === y0) ?? stays[i - 1].stops[stays[i - 1].stops.length - 1], s1 = stays[i].stops.find((x) => x.y === y1) ?? stays[i].stops[0];
     const ra = s0.p, rb = s1.p;
     const burial = y0 === y1 && s0.kind === 'death' && stays[i].stops.every((x) => x.kind === 'burial');
-    out.push({ a: a.id, b: b.id, ra, rb, ...(s0.date ? { d0: s0.date } : {}), ...(s1.date ? { d1: s1.date } : {}), ...(burial ? { burial } : {}), y0, y1, km: km(ll(a), ll(b)), sail: y1 - y0 <= SAIL_MAX && !assumed && !within && !ap0 && !ap1 && !burial, ...(ap0 ? { approx0: true } : {}), ...(ap1 ? { approx1: true } : {}), ...(assumed ? { assumed } : {}), ...(follows ? { follows } : {}), ...(within ? { within } : {}), ...(doubt && stays[i - 1].stops.every((s) => s.doubt) !== stays[i].stops.every((s) => s.doubt) ? { doubt } : {}) });
+    out.push({ a: a.id, b: b.id, ra, rb, ...(s0.date ? { d0: s0.date } : {}), ...(s1.date ? { d1: s1.date } : {}), ...(burial ? { burial } : {}), y0, y1, km: km(ll(a), ll(b)), sail: y1 - y0 <= SAIL_MAX && !assumed && !within && !ap0 && !ap1 && !burial && !stays[i - 1].toVague, ...(ap0 ? { approx0: true } : {}), ...(ap1 ? { approx1: true } : {}), ...(assumed ? { assumed } : {}), ...(follows ? { follows } : {}), ...(within ? { within } : {}), ...(doubt && stays[i - 1].stops.every((s) => s.doubt) !== stays[i].stops.every((s) => s.doubt) ? { doubt } : {}) });
   }
   return out;
 }
@@ -109,10 +110,11 @@ export function whereAt(stays: Stay[], year: number): Where | null {
     // nor from a vague place to a closer one inside it: that is not a journey
     if (lent(s) || next.within) { if (year >= next.from) continue; return { i, a: s.p, b: next.p, t: w > 0 ? (year - s.to) / w : 0, sail: false, leg: i }; }
     // both ends recorded in the same year: the voyage is drawn across that year
-    if (w === 0 && !(s.stops.some((x) => x.y === s.to && x.approx) && !s.stops.some((x) => x.y === s.to && !x.approx)) && !(next.stops.some((x) => x.y === next.from && x.approx) && !next.stops.some((x) => x.y === next.from && !x.approx)) && year >= next.from && year < next.from + 1) return { i, a: s.p, b: next.p, t: year - next.from, sail: true, leg: i };
+    if (w === 0 && !(s.stops.some((x) => x.y === s.to && x.approx) && !s.stops.some((x) => x.y === s.to && !x.approx)) && !(next.stops.some((x) => x.y === next.from && x.approx) && !next.stops.some((x) => x.y === next.from && !x.approx)) && !s.toVague && year >= next.from && year < next.from + 1) return { i, a: s.p, b: next.p, t: year - next.from, sail: true, leg: i };
     if (year >= next.from) continue;
     const loose = s.stops.some((x) => x.y === s.to && x.approx) && !s.stops.some((x) => x.y === s.to && !x.approx) || next.stops.some((x) => x.y === next.from && x.approx) && !next.stops.some((x) => x.y === next.from && !x.approx);
-    if (w <= SAIL_MAX && !loose) {
+    // a last record that names only the county or country does not date a departure from this town
+    if (w <= SAIL_MAX && !loose && !s.toVague) {
       // a voyage is drawn over its window, never less than a year
       const span = Math.max(1, w), start = next.from - span;
       if (year <= start) return { i, a: s.p };

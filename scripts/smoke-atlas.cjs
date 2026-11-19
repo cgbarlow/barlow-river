@@ -580,6 +580,22 @@ process.on('exit', () => server?.kill());
   check('the caption about the last light in Britain matches what is drawn', brit && brit[1] > 0 && brit[2] === 0 && brit[3] === 0, JSON.stringify(brit));
   check('no page text says the tree names no ship', !/names no ship|does not record the ship/.test(await A(page, () => { document.querySelector('#help').click(); return document.querySelector('#record').textContent + document.querySelector('#panel-body').textContent + JSON.stringify(window.__atlas.atlas.leads); })));
   await page.close();
+  // Home after playing: the first years have no light at all, and the globe must still draw
+  page = await open('#y=1700');
+  await A(page, () => { const A_ = window.__atlas; A_.stop(); A_.setYear(1700); A_.play(); });
+  await page.waitForTimeout(9000);
+  await page.keyboard.press('Home'); await page.waitForTimeout(600);
+  const home1 = await A(page, () => { const c = window.__atlas.stages[0].cam; return [window.__atlas.state.year, isFinite(c.k) && isFinite(c.lon) && isFinite(c.lat)]; });
+  await A(page, () => { window.__atlas.setYear(1850); window.__atlas.settle(); });
+  check('Home after playing lands on the first, empty year and the globe still draws afterwards', home1[0] === 1590 && home1[1] && (await inked(page)) > 500 && errors.length === 0, JSON.stringify(home1) + ' ' + errors.slice(0, 1).join());
+  for (const y0 of [1790, 1960]) { await A(page, (y) => { const A_ = window.__atlas; A_.setYear(y); A_.play(); }, y0); await page.waitForTimeout(1500); await page.keyboard.press('Home'); await page.waitForTimeout(300); }
+  check('and again from later years', (await A(page, () => isFinite(window.__atlas.stages[0].cam.k))) && errors.length === 0);
+  await A(page, () => { window.__atlas.setYear(2026); window.__atlas.settle(); });
+  const fin = await page.evaluate(() => [...document.querySelectorAll('#countries button')].map((b) => b.getAttribute('aria-label')));
+  const finSum = await A(page, () => { const sc = window.__atlas.scene(); return sc.embers.length + sc.rests.length; });
+  check('on the last frame the chips count what each country remembers, and they add up to the marks drawn', fin.every((t) => /remembered$/.test(t)) && fin.reduce((n, t) => n + Number(/: (\d+)/.exec(t)[1]), 0) === finSum && finSum > 300, JSON.stringify(fin) + ' ' + finSum);
+  check('no finding says the tree names no ship', !/does not name a ship|names no ship/.test(await A(page, () => JSON.stringify([window.__atlas.atlas.facts, window.__atlas.atlas.leads]))));
+  await page.close();
   // phones: every country chip on screen while someone is at sea; the caption under the lower map
   page = await open('#y=1874', { width: 390, height: 800 }, { hasTouch: true, isMobile: true });
   await A(page, () => { window.__atlas.stop(); window.__atlas.setYear(1874); window.__atlas.settle(); });

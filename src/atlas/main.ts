@@ -223,8 +223,12 @@ function renderCountries(year: number) {
   // counted at the very moment the map is drawn, so a voyage on the water is at sea in the count too
   const at = state.playing ? playYear : year >= thisYear ? thisYear : Math.floor(year) + 0.5;
   for (const a of world.actors) { const c = world.countryOf(a, at); if (c) counts.set(c, (counts.get(c) ?? 0) + 1); }
+  // at the present day nobody named is lit: the chips count what each country remembers, embers and rings together
+  const finale = year >= thisYear;
+  const kept = new Map<string, number>();
+  if (finale) for (const a of world.actors) if (a.on < a.d || a.ember) { const c = world.places.get(a.stays[a.stays.length - 1].p)!.country; kept.set(c, (kept.get(c) ?? 0) + 1); }
   const sea = counts.get('sea') ?? 0;
-  const html = (sea ? `<span class="sea"><span class="full">At sea</span><span class="short" aria-hidden="true">Sea</span> <b>${sea}</b></span>` : '') + countries.map((c) => { const n = counts.get(c.name) ?? 0; return `<button data-country="${esc(c.name)}" aria-pressed="${state.country === c.name}" class="${n ? '' : 'none'}" aria-label="${esc(c.name)}: ${n} lit" title="${esc(c.name)}: ${n} lit in ${Math.floor(year)}, ${c.people.length} ${c.people.length === 1 ? 'person' : 'people'} in all"><span class="full">${esc(c.name)}</span><span class="short" aria-hidden="true">${SHORT[c.name] ?? esc(c.name)}</span> <b>${n}</b></button>`; }).join('');
+  const html = (finale ? `<span class="sea">Remembered</span>` : '') + (sea ? `<span class="sea"><span class="full">At sea</span><span class="short" aria-hidden="true">Sea</span> <b>${sea}</b></span>` : '') + countries.map((c) => { const n = finale ? kept.get(c.name) ?? 0 : counts.get(c.name) ?? 0; return `<button data-country="${esc(c.name)}" aria-pressed="${state.country === c.name}" class="${n ? '' : 'none'}" aria-label="${esc(c.name)}: ${n} ${finale ? 'remembered' : 'lit'}" title="${esc(c.name)}: ${n} ${finale ? 'remembered' : 'lit'} in ${Math.floor(year)}, ${c.people.length} ${c.people.length === 1 ? 'person' : 'people'} in all"><span class="full">${esc(c.name)}</span><span class="short" aria-hidden="true">${SHORT[c.name] ?? esc(c.name)}</span> <b>${n}</b></button>`; }).join('');
   if (html !== chipsHtml) { chipsHtml = html; $('#countries').innerHTML = html; fitChips(); }
 }
 function openCountry(name: string, moveYear = true) {
@@ -285,7 +289,7 @@ function setYear(y: number, fromPlay = false) {
     $('#year').textContent = String(shown);
     if (!fromPlay && family) frameFamily();
     const alive = world.actors.filter((a) => world.lightOf(a, shown >= thisYear ? thisYear : shown + 0.5)).length;
-    $('#alive').textContent = shown >= thisYear ? `${atlas.meta.counts.living} living, not shown` : `${alive} lit`;
+    $('#alive').textContent = shown >= thisYear ? (isSmall() ? `${atlas.meta.counts.living} living` : `${atlas.meta.counts.living} living, not shown`) : `${alive} lit`;
     const u = (shown - trackMin) / (thisYear - trackMin);
     $('#track-fill').style.width = u * 100 + '%'; $('#track-handle').style.left = u * 100 + '%';
     $('#track').setAttribute('aria-valuenow', String(shown));

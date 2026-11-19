@@ -235,7 +235,7 @@ function findings(people: AtlasPerson[], P: Map<string, Person>, F: Map<string, 
     const c = crossings[0], sameYear = crossings.filter((x) => x.l.y1 === c.l.y1);
     facts.push({ id: 'a-first-crossing', kind: 'crossing', y: c.l.y1, people: sameYear.map((x) => x.id),
       title: `The first of the family is in New Zealand by ${abt(c.l.approx1, c.l.y1)}`,
-      body: `${sameYear.map((x) => name(x.id)).join(' and ')}: last recorded in ${place(c.l.ra).name} in ${abt(c.l.approx0, c.l.y0)}, in ${place(c.l.rb).name} by ${abt(c.l.approx1, c.l.y1)}. The tree does not name a ship.` });
+      body: `${sameYear.map((x) => name(x.id)).join(' and ')}: last recorded in ${place(c.l.ra).name} in ${abt(c.l.approx0, c.l.y0)}, in ${place(c.l.rb).name} by ${abt(c.l.approx1, c.l.y1)}. No ship is named for this crossing.` });
     const ids = [...new Set(crossings.map((x) => x.id))];
     facts.push({ id: 'a-crossings', kind: 'crossing', y: crossings[Math.floor(crossings.length / 2)].l.y1, people: ids,
       title: `${ids.length} people are recorded on both sides of the world`,

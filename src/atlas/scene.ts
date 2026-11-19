@@ -135,9 +135,10 @@ export class World {
       if (dead) {
         if (a.ember) embers.push({ actor: a, ll: here, slot: a.slots[idx], alpha: dim, site, bright: finale });
         else if (a.on < a.d) {
-          // no recorded death place: a fainter mark stays where the light was last drawn
-          const w = whereAt(a.stays, a.d - 0.01)!, at = a.stays[w.i];
-          rests.push({ actor: a, ll: this.ll(at.p), slot: a.slots[w.i], alpha: dim, site: this.siteId(at.p), hollow: a.hollow || at.stops.every((x) => x.kind === 'borrowed'), bright: finale });
+          // no recorded death place: a fainter mark stays where the map last has them
+          // the last place the records, or the relative they are drawn with, put them: a death record that names only a county or country counts
+          const at = s;
+          rests.push({ actor: a, ll: this.ll(at.p), slot: a.slots[idx], alpha: dim, site: this.siteId(at.p), hollow: a.hollow || at.stops.every((x) => x.kind === 'borrowed'), bright: finale });
         }
         if (year < a.d + 3) ripples.push({ ll: here, slot: a.slots[idx], age: (year - a.d) / 3, kind: 'death', actor: a });
         continue;

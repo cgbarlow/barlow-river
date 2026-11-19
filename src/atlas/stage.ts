@@ -145,6 +145,8 @@ export class Stage {
     const mine = sc.lights.filter((l) => !l.moving && l.ll[0] > -30 && (l.ll[0] > 100) === nz);
     // with only a handful of lights left, hold a steady view: chasing them makes the zoom pump
     if (mine.length < 12 && (nz || this.kFloor >= 6)) { if (!nz) this.kFloor = 6; return nz ? { lon: 174.2, lat: -40.6, k: 5.4 } : { lon: -0.6, lat: 52.6, k: 6 }; }
+    // nobody lit on this side (the first years, before the first birth): the home view, never a centre worked out from nothing
+    if (!mine.length) return nz ? { lon: 174.2, lat: -40.6, k: 5.4 } : { lon: -0.6, lat: 52.6, k: Math.min(6, isFinite(this.kFloor) ? this.kFloor : 6) };
     const g = this.around(mine.map((l) => l.ll), mine.map((l) => l.alpha), 9);
     const side = nz ? 'nz' : 'eu';
     if (sc.year < this.lastYear - 0.01 || side !== this.lastSide) this.kFloor = Infinity;
@@ -154,6 +156,7 @@ export class Stage {
   }
   /** Centre on these points, and stand back far enough to see nearly all of them. */
   private around(lls: LonLat[], weights: number[] | null, maxK: number): Goal {
+    if (!lls.length) return { lon: this.cam.lon, lat: this.cam.lat, k: this.cam.k };
     let x = 0, y = 0, z = 0;
     lls.forEach((ll, i) => { const a = (ll[0] * Math.PI) / 180, b = (ll[1] * Math.PI) / 180, w = weights ? weights[i] : 1; x += w * Math.cos(b) * Math.cos(a); y += w * Math.cos(b) * Math.sin(a); z += w * Math.sin(b); });
     const c: LonLat = [(Math.atan2(y, x) * 180) / Math.PI, (Math.atan2(z, Math.hypot(x, y)) * 180) / Math.PI];
@@ -315,16 +318,16 @@ export class Stage {
       return q;
     };
     // where a light was last drawn: a small open ring, fainter than an ember
-    c.lineWidth = 0.8;
+    c.lineWidth = 1;
     for (const r of sc.rests) {
       const q = at(r.ll, r.slot); if (!q) continue;
-      c.globalAlpha = (r.bright ? 0.6 : 0.3) * r.alpha * (r.hollow ? 0.75 : 1); c.strokeStyle = this.colourOf(r.actor); c.beginPath(); c.arc(q[0], q[1], r.bright ? 2.1 : 1.7, 0, 7); c.stroke();
+      c.globalAlpha = (r.bright ? 0.7 : 0.5) * r.alpha * (r.hollow ? 0.8 : 1); c.strokeStyle = this.colourOf(r.actor); c.beginPath(); c.arc(q[0], q[1], r.bright ? 2.4 : 2.2, 0, 7); c.stroke();
     }
     c.globalAlpha = 1;
     for (const e of sc.embers) {
       const q = at(e.ll, e.slot); if (!q) continue;
       if (e.bright) { c.globalAlpha = 0.5 * e.alpha; c.drawImage(glow(this.colourOf(e.actor), true), q[0] - 9, q[1] - 9, 18, 18); }
-      c.globalAlpha = (e.bright ? 0.95 : 0.5) * e.alpha; c.fillStyle = this.colourOf(e.actor); c.beginPath(); c.arc(q[0], q[1], e.bright ? 1.8 : 1.3, 0, 7); c.fill();
+      c.globalAlpha = (e.bright ? 0.95 : 0.7) * e.alpha; c.fillStyle = this.colourOf(e.actor); c.beginPath(); c.arc(q[0], q[1], e.bright ? 2 : 1.7, 0, 7); c.fill();
     }
     c.globalCompositeOperation = 'lighter';
     for (const l of sc.lights) {
