@@ -27,6 +27,7 @@ body.kbd .views:focus { outline: 2px solid var(--amber); outline-offset: -2px; }
 .countries > :first-child { margin-left: auto; }
 .countries > * { pointer-events: auto; flex: none; }
 .countries button, .countries .sea { min-height: 32px; padding: 0 11px; border-radius: 16px; border: 1px solid var(--line); background: rgba(23,39,63,.92); color: var(--ink); font-size: 12.5px; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+.countries .short { display: none; }
 .countries b { font: 500 12px var(--mono); color: var(--amber); }
 .countries button.none { color: var(--ink-3); } .countries button.none b { color: var(--ink-3); }
 .countries button:hover { border-color: #4A6186; }
@@ -81,7 +82,10 @@ body.kbd .views:focus { outline: 2px solid var(--amber); outline-offset: -2px; }
   .atlas .lens.view button[data-view='both'] { display: none; }
   .countries { left: 8px; right: 0; top: 4px; padding: 0 28px 2px 0; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); }
   .countries > :first-child { margin-left: 0; }
-  .countries button, .countries .sea { min-height: 36px; }
+  .countries button, .countries .sea { min-height: 36px; padding: 0 9px; }
+  /* short names, so every country fits without a swipe */
+  .countries .full { display: none; } .countries .short { display: inline; }
+  .countries { -webkit-mask-image: none; mask-image: none; padding-right: 8px; }
   /* clear of the zoom column on the right */
   .atlas .caption { bottom: 84px; left: 12px; right: 68px; width: auto; max-width: none; transform: translateY(6px); text-align: left; font-size: 14px; }
   .atlas .caption.on { transform: none; }
@@ -114,6 +118,7 @@ body.kbd .views:focus { outline: 2px solid var(--amber); outline-offset: -2px; }
   .countries { left: 8px; right: 0; top: 4px; padding-right: 20px; }
   .countries > :first-child { margin-left: 0; }
   .countries button, .countries .sea { min-height: 30px; font-size: 11.5px; padding: 0 8px; }
+  .countries .full { display: none; } .countries .short { display: inline; }
   .atlas .caption { bottom: 8px; font-size: 13px; max-width: calc(100% - 150px); }
   /* no room for zoom buttons beside a map this small: pinch instead */
   .atlas #zin, .atlas #zout { display: none; }

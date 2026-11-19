@@ -13,6 +13,8 @@ export interface Lands { coarse: GeoPermissibleObjects }
 export interface StageEvents {
   onPick: (person: string | null, site: string | null) => void;
   onHover: (person: string | null, site: string | null, x: number, y: number) => void;
+  /** a star was tapped */
+  onFinding: (id: string) => void;
   /** an off-screen country's pointer was tapped */
   onCountry: (name: string) => void;
   /** the user took the camera */
@@ -28,6 +30,8 @@ const PL: [number, number, number, number] = [13.5, 48.8, 24.6, 55];
 const US: [number, number, number, number] = [-81, 35.5, -66.5, 46];
 /** a country to point at when it is out of view */
 export interface Pointer { name: string; ll: LonLat; n: number; on?: boolean }
+/** a finding that belongs to a place: a star on the map from the year it happens */
+export interface Star { id: string; ll: LonLat; y: number; on?: boolean }
 const inBox = (b: number[]) => (ll: LonLat) => ll[0] >= b[0] && ll[0] <= b[2] && ll[1] >= b[1] && ll[1] <= b[3];
 const spiral = (slot: number, gap: number): [number, number] => { const r = gap * Math.sqrt(slot), t = slot * 2.39996; return [r * Math.cos(t), r * Math.sin(t)]; };
 const sprites = new Map<string, HTMLCanvasElement>();
@@ -57,6 +61,7 @@ export class Stage {
   private hits: Hit[] = [];
   private siteHits: Hit[] = [];
   private countryHits: { x0: number; y0: number; x1: number; y1: number; name: string }[] = [];
+  private starHits: Hit[] = [];
   private pointers = new Map<number, { x: number; y: number }>();
   private moved = false;
   private pinch = 0;
@@ -135,7 +140,7 @@ export class Stage {
     if (!sc.lights.length && sc.embers.length) return nz ? { lon: 150, lat: -20, k: 1.25 } : { lon: 5, lat: 45, k: 1.6 };
     const mine = sc.lights.filter((l) => !l.moving && l.ll[0] > -30 && (l.ll[0] > 100) === nz);
     // with only a handful of lights left, hold a steady view: chasing them makes the zoom pump
-    if (mine.length < 12) return nz ? { lon: 174.2, lat: -40.6, k: 5.4 } : { lon: -0.6, lat: 52.6, k: 6 };
+    if (mine.length < 12 && (nz || this.kFloor >= 6)) { if (!nz) this.kFloor = 6; return nz ? { lon: 174.2, lat: -40.6, k: 5.4 } : { lon: -0.6, lat: 52.6, k: 6 }; }
     const g = this.around(mine.map((l) => l.ll), mine.map((l) => l.alpha), 9);
     const side = nz ? 'nz' : 'eu';
     if (sc.year < this.lastYear - 0.01 || side !== this.lastSide) this.kFloor = Infinity;
@@ -185,18 +190,41 @@ export class Stage {
   }
 
   // ---------- drawing ----------
-  draw(sc: Scene, selected: string | null, opts: { follow?: LonLat | null; snap?: boolean; pointers?: Pointer[] } = {}) {
+  draw(sc: Scene, selected: string | null, opts: { follow?: LonLat | null; snap?: boolean; pointers?: Pointer[]; stars?: Star[] } = {}) {
     this.ease(sc, opts.follow ?? null, Boolean(opts.snap));
     const c = this.ctx, { W, H, cam } = this;
     c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0); c.clearRect(0, 0, W, H);
-    this.hits = []; this.siteHits = []; this.countryHits = [];
+    this.hits = []; this.siteHits = []; this.countryHits = []; this.starHits = [];
     const ps = this.panels();
-    if (this.kind === 'shores') { this.drawShores(ps, sc, selected); return; }
+    if (this.kind === 'shores') { this.drawShores(ps, sc, selected); for (const p of ps) this.drawStars(p, sc, opts.stars ?? []); return; }
     const p = ps[0], zoom = this.cam.k;
     this.cached(['globe', cam.lon.toFixed(2), cam.lat.toFixed(2), cam.k.toFixed(3)].join(), () => this.base(p, this.lands.coarse));
     this.traces(p, sc);
     this.marks(p, sc, selected, Math.min(9, 3 + zoom * 0.7), 12);
+    this.drawStars(p, sc, opts.stars ?? []);
     this.drawPointers(p, opts.pointers ?? []);
+  }
+  /** Findings that belong to a place are starred there from the year they happen, with a ring while they are new. */
+  private drawStars(p: Panel, sc: Scene, stars: Star[]) {
+    const c = this.ctx;
+    const taken: number[][] = [];
+    for (const s of stars) {
+      if (sc.year < s.y) continue;
+      if (p.vis && !p.vis(s.ll)) continue;
+      const q = p.proj(s.ll); if (!q) continue;
+      if (p.rect && (q[0] < p.rect[0] + 8 || q[0] > p.rect[2] - 8 || q[1] < p.rect[1] + 24 || q[1] > p.rect[3] - 4)) continue;
+      let x = q[0], y = q[1] - 17;
+      while (taken.some((t) => Math.abs(t[0] - x) < 15 && Math.abs(t[1] - y) < 13)) x += 15;
+      taken.push([x, y]);
+      const fresh = sc.year - s.y;
+      if (fresh < 3) { c.globalAlpha = 1 - fresh / 3; c.strokeStyle = '#F2B544'; c.lineWidth = 1.5; c.beginPath(); c.arc(x, y, 7 + fresh * 6, 0, 7); c.stroke(); }
+      c.globalAlpha = 1;
+      c.fillStyle = s.on ? '#fff' : '#F2B544'; c.strokeStyle = 'rgba(10,20,34,.9)'; c.lineWidth = 2;
+      c.beginPath();
+      for (let i = 0; i < 10; i++) { const r = i % 2 ? 2.8 : 6.4, a = -Math.PI / 2 + (i * Math.PI) / 5; c[i ? 'lineTo' : 'moveTo'](x + r * Math.cos(a), y + r * Math.sin(a)); }
+      c.closePath(); c.stroke(); c.fill();
+      this.starHits.push({ x, y, id: s.id });
+    }
   }
   /**
    * The globe shows one side of the world. Any other country with lights lit is
@@ -387,6 +415,10 @@ export class Stage {
     for (const h of this.siteHits) { const d = Math.hypot(h.x - x, h.y - y); if (d < best) { best = d; site = h.id; } }
     return { person: null, site };
   }
+  /** how far the nearest of these marks is from a point: a tap goes to whichever mark it is closest to */
+  private dist(hits: Hit[], x: number, y: number): number { let d = Infinity; for (const h of hits) d = Math.min(d, Math.hypot(h.x - x, h.y - y)); return d; }
+  starAt(x: number, y: number, r = 11): string | null { return this.starHits.find((h) => Math.hypot(h.x - x, h.y - y) < r)?.id ?? null; }
+  starScreen(id: string): [number, number] | null { const h = this.starHits.find((x) => x.id === id); return h ? [h.x, h.y] : null; }
   countryAt(x: number, y: number): string | null { return this.countryHits.find((h) => x >= h.x0 && x <= h.x1 && y >= h.y0 && y <= h.y1)?.name ?? null; }
   pointerScreen(name: string): [number, number] | null { const h = this.countryHits.find((x) => x.name === name); return h ? [(h.x0 + h.x1) / 2, (h.y0 + h.y1) / 2] : null; }
   /** where a person's light was last drawn, for tests and keyboard focus */
@@ -399,7 +431,7 @@ export class Stage {
     cv.addEventListener('pointerdown', (e) => { this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY }); this.moved = false; this.pinch = 0; try { cv.setPointerCapture(e.pointerId); } catch { /* synthetic */ } });
     cv.addEventListener('pointermove', (e) => {
       const p = this.pointers.get(e.pointerId);
-      if (!p) { const [x, y] = local(e); if (this.countryAt(x, y)) { cv.style.cursor = 'pointer'; this.ev.onHover(null, null, 0, 0); return; } const n = this.nearest(x, y); cv.style.cursor = n.person || n.site ? 'pointer' : this.kind === 'shores' ? 'default' : 'grab'; this.ev.onHover(n.person, n.site, e.clientX, e.clientY); return; }
+      if (!p) { const [x, y] = local(e); if (this.countryAt(x, y)) { cv.style.cursor = 'pointer'; this.ev.onHover(null, null, 0, 0); return; } const sh = this.starAt(x, y); if (sh && this.dist(this.starHits, x, y) <= this.dist(this.hits, x, y)) { cv.style.cursor = 'pointer'; this.ev.onHover(null, 'star:' + sh, e.clientX, e.clientY); return; } const n = this.nearest(x, y); cv.style.cursor = n.person || n.site ? 'pointer' : this.kind === 'shores' ? 'default' : 'grab'; this.ev.onHover(n.person, n.site, e.clientX, e.clientY); return; }
       const dx = e.clientX - p.x, dy = e.clientY - p.y;
       if (this.pointers.size === 2) {
         p.x = e.clientX; p.y = e.clientY;
@@ -417,7 +449,7 @@ export class Stage {
       if (!this.pointers.has(e.pointerId)) return;
       const single = this.pointers.size === 1;
       this.pointers.delete(e.pointerId); this.pinch = 0;
-      if (single && !this.moved && e.type === 'pointerup') { const [x, y] = local(e); const ch = this.countryAt(x, y); if (ch) { this.ev.onCountry(ch); return; } const n = this.nearest(x, y, e.pointerType === 'touch' ? 24 : 16); this.ev.onPick(n.person, n.site); }
+      if (single && !this.moved && e.type === 'pointerup') { const [x, y] = local(e); const ch = this.countryAt(x, y); if (ch) { this.ev.onCountry(ch); return; } const st = this.starAt(x, y, e.pointerType === 'touch' ? 16 : 11); if (st && this.dist(this.starHits, x, y) <= this.dist(this.hits, x, y)) { this.ev.onFinding(st); return; } const n = this.nearest(x, y, e.pointerType === 'touch' ? 24 : 16); this.ev.onPick(n.person, n.site); }
     };
     cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
     cv.addEventListener('pointerleave', () => this.ev.onHover(null, null, 0, 0));

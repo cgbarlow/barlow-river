@@ -46,7 +46,8 @@ A second mode, at `atlas.html`. The River shows time and doubt. The Atlas adds p
 4. **Tap a place.** Who was born there, who died there, who is only recorded there, and from when to when.
 5. **See every country.** A row above the map names each country in the records and counts the lights lit there that year: England, New Zealand, Wales, Poland, Ireland, the United States, and anyone at sea. On the globe, a country out of view is named at the rim in the direction it lies. Tap either to go there and see who it was.
 6. **Switch the lens.** By surname, by birthplace, or by how well the place is known.
-7. **Read the findings.** The first of the family in New Zealand, the life that ended farthest from where it began, a couple recorded on both sides of the world in one year, and the oldest move on the map, which is the one in doubt.
+7. **Stars on the map.** A finding that belongs to a place is starred there from the year it happens. Tap it to read it.
+8. **Read the findings.** The first of the family in New Zealand, the life that ended farthest from where it began, a couple recorded on both sides of the world in one year, and the oldest move on the map, which is the one in doubt.
 
 What it will not pretend to know:
 
@@ -133,7 +134,7 @@ Nothing is published. The built site has been tested served from a `/barlow-rive
 
 The Council reviewed the plan, then three mockups, then the build over five rounds, each after an outside tester had been through it. Six outside passes in all. The reports are in `.campaign/council-report-atlas-*.md`; the last is `council-report-atlas-closing.md`. The outside testers' final scores on the seven criteria were 26 and 28 of 35, and 29.5 judging only what the page does with the data it has. Much of the gap is the records: two thirds of people have no place of their own and only one voyage is dated.
 
-Left undone in the Atlas: the leads are not yet marked on the map itself; "Follow the journey" has captions only for a dated voyage; on a phone the last two country chips need a swipe. The voyage routes (round the Cape before 1914, through Panama after) are a convention drawn from general knowledge, not checked against a source.
+The voyage routes (round the Cape before 1914, through Panama after) are a convention drawn from general knowledge, not checked against a source.
 
 ## Not done
 

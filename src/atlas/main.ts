@@ -9,11 +9,11 @@ import type { AtlasData, AtlasPlace } from '../model/atlas-types.ts';
 import { buildLayout, LINES, type Layout, type LineName } from '../model/layout.ts';
 import { lifeLines } from '../model/kin.ts';
 import { ROUTE_LABEL, type LonLat } from '../model/geo.ts';
-import { windowText } from '../model/journey.ts';
+import { whereAt, windowText } from '../model/journey.ts';
 import { BEATS, SOFT_BREAKS } from '../casefile.ts';
 import { LINE_COLOUR, REGION_COLOUR } from '../river.ts';
 import { World, type Actor, type Scene } from './scene.ts';
-import { Stage, type Lands, type Pointer, type ViewKind } from './stage.ts';
+import { Stage, type Lands, type Pointer, type Star, type ViewKind } from './stage.ts';
 
 type Lens = 'surname' | 'place' | 'certainty';
 type View = ViewKind | 'both';
@@ -87,6 +87,7 @@ async function boot() {
     onPick: (person: string | null, site: string | null) => { if (person) select(person); else if (site) openPlace(site); else if (state.selected || state.focus || state.place) clearAll(); },
     onHover: hover,
     onCountry: (name: string) => openCountry(name),
+    onFinding: (id: string) => { if (state.finding !== id) openFinding(id); openSheet(true); },
     onUser: () => { state.follow = null; state.track = null; },
   };
   stages = [new Stage($<HTMLCanvasElement>('#view-a'), 'globe', world, lands, colourOf, ev), new Stage($<HTMLCanvasElement>('#view-b'), 'shores', world, lands, colourOf, ev)];
@@ -103,6 +104,7 @@ async function boot() {
   for (const s of stages) s.plan = { turn, ride };
 
   countries = world.countries();
+  buildStars();
   buildBeats();
   bindChrome();
   bindSearch();
@@ -133,7 +135,8 @@ function loop(now: number) {
     // following one person, only their own voyage slows the play
     const sailing = fol ? Boolean(lastScene?.lights.some((l) => l.actor === fol && l.moving)) : Boolean(lastScene?.ship);
     const reading = !fol && now < captionUntil;
-    const speed = sailing ? 0.18 : pendingBeat && reading ? 0.15 : reading ? 0.9 : fol ? 5 : playYear < 1650 ? 20 : 8;
+    const reading2 = now < captionUntil;
+    const speed = sailing ? 0.18 : pendingBeat && reading2 ? 0.15 : reading ? 0.9 : fol ? (reading2 ? 2.5 : 6) : playYear < 1650 ? 20 : 8;
     playYear += dt * speed;
     const end = fol ? Math.min(thisYear, fol.stays[fol.stays.length - 1].from + 2) : thisYear;
     if (playYear >= end) { playYear = end; setYear(playYear, true); stop(); } else setYear(playYear, true);
@@ -154,7 +157,26 @@ function draw(snap = false) {
   // which shore a phone should show when its sheet is open: the one the selection is on
   const where: LonLat | null = follow ?? (state.place ? world.ll(state.place) : state.country ? countries.find((c) => c.name === state.country)?.ll ?? null : null);
   if (where) for (const s of stages) s.focusSide = where[0] > 100 || where[0] < -30 ? 'nz' : 'gb';
-  for (const s of stages) if (!s.canvas.hidden) s.draw(sc, state.selected, { follow, snap: snap || reduceMotion, pointers });
+  for (const st of stars) st.on = state.finding === st.id;
+  for (const s of stages) if (!s.canvas.hidden) s.draw(sc, state.selected, { follow, snap: snap || reduceMotion, pointers, stars });
+}
+
+// ---------------------------------------------------------------- stars
+/** Findings that belong to one place are starred on the map itself, from the year they happen. */
+let stars: Star[] = [];
+const STARRED = /^a-(first-crossing|farthest|birthplace|silence|split-siblings|first-|same-year|doubt)/;
+function buildStars() {
+  for (const f of [...atlas.facts, ...atlas.leads]) {
+    if (!STARRED.test(f.id)) continue;
+    const a = f.people.map((id) => world.byId.get(id)).find(Boolean);
+    if (!a) continue;
+    // where that person is in the finding's year, or where they were last recorded by then
+    const y = Math.min(a.d - 0.01, Math.max(a.on, f.y + 0.5));
+    // a voyage's star sits where it ends, not in mid-ocean
+    const w = whereAt(a.stays, y);
+    const ll = w ? world.ll(w.b && w.sail ? w.b : w.a) : world.ll(a.stays[a.stays.length - 1].p);
+    stars.push({ id: f.id, ll, y: f.y });
+  }
 }
 
 // ---------------------------------------------------------------- countries
@@ -162,13 +184,14 @@ let countries: ReturnType<World['countries']> = [];
 let counts = new Map<string, number>();
 /** One chip per country the records name, with how many lights are lit there this year. */
 let chipsHtml = '';
+const SHORT: Record<string, string> = { England: 'Eng', 'New Zealand': 'NZ', Wales: 'Wal', Poland: 'Pol', 'United States': 'US', Ireland: 'Ire' };
 function renderCountries(year: number) {
   counts = new Map();
   // counted at the very moment the map is drawn, so a voyage on the water is at sea in the count too
   const at = state.playing ? playYear : year >= thisYear ? thisYear : Math.floor(year) + 0.5;
   for (const a of world.actors) { const c = world.countryOf(a, at); if (c) counts.set(c, (counts.get(c) ?? 0) + 1); }
   const sea = counts.get('sea') ?? 0;
-  const html = countries.map((c) => { const n = counts.get(c.name) ?? 0; return `<button data-country="${esc(c.name)}" aria-pressed="${state.country === c.name}" class="${n ? '' : 'none'}" title="${esc(c.name)}: ${n} lit in ${Math.floor(year)}, ${c.people.length} ${c.people.length === 1 ? 'person' : 'people'} in all">${esc(c.name)} <b>${n}</b></button>`; }).join('') + (sea ? `<span class="sea">At sea <b>${sea}</b></span>` : '');
+  const html = countries.map((c) => { const n = counts.get(c.name) ?? 0; return `<button data-country="${esc(c.name)}" aria-pressed="${state.country === c.name}" class="${n ? '' : 'none'}" aria-label="${esc(c.name)}: ${n} lit" title="${esc(c.name)}: ${n} lit in ${Math.floor(year)}, ${c.people.length} ${c.people.length === 1 ? 'person' : 'people'} in all"><span class="full">${esc(c.name)}</span><span class="short" aria-hidden="true">${SHORT[c.name] ?? esc(c.name)}</span> <b>${n}</b></button>`; }).join('') + (sea ? `<span class="sea">At sea <b>${sea}</b></span>` : '');
   if (html !== chipsHtml) { chipsHtml = html; $('#countries').innerHTML = html; }
 }
 function openCountry(name: string, moveYear = true) {
@@ -243,7 +266,9 @@ function play(follow: string | null = null) {
   if (!follow && state.year >= thisYear) setYear(trackMin + 20);
   state.playing = true; playYear = state.year; lastT = performance.now();
   // captions already behind us are not replayed
-  beatIdx = -1; for (let i = 0; i < beats.length; i++) if (beats[i].y < playYear) beatIdx = i;
+  followBeats = follow ? beatsFor(world.byId.get(follow)!) : null;
+  { const bs = followBeats ?? beats; beatIdx = -1; for (let i = 0; i < bs.length; i++) if (bs[i].y < playYear - 0.5) beatIdx = i; }
+  shownBeat = null;
   pendingBeat = false;
   document.body.classList.add('playing');
   $('#play').setAttribute('aria-label', 'Pause the timeline');
@@ -283,6 +308,7 @@ function childrenLine(ids: string[], y1: number, dest: string): string {
 }
 interface Beat { y: number; text: string; end?: boolean; sail?: boolean; ids?: string[] }
 let beats: Beat[] = [];
+let allBeats: Beat[] = [];
 function buildBeats() {
   // One caption per arrival: everyone who turns up in the same place in the same year is told together.
   interface Group { y0: number; y1: number; a0?: boolean; a1?: boolean; from: string; to: string; dest: string; sail: boolean; doubt?: string; assumed: boolean; dies: boolean; sameFrom: boolean; ids: string[] }
@@ -356,6 +382,7 @@ function buildBeats() {
   const firstGap = beats.find((b) => /^By /.test(b.text));
   if (firstGap) firstGap.text += ' Nobody wrote down when they went, or on what ship. The map shows only what the records say.';
   const lastDeath = Math.max(...world.actors.map((a) => a.d));
+  allBeats = beats;
   beats.push({ y: Math.min(thisYear, lastDeath), end: true, text: `The map goes dark here, but the family does not. ${atlas.meta.counts.living} living relatives carry on. They are not shown.` });
 }
 let shownBeat: Beat | null = null;
@@ -365,6 +392,19 @@ let captionUntil = 0;
 let pendingBeat = false;
 /** during play every caption gets its turn, in order: this is how far through them we are */
 let beatIdx = -1;
+/** when following one person, the captions are that person's own records in order */
+let followBeats: Beat[] | null = null;
+function beatsFor(a: Actor): Beat[] {
+  const out: Beat[] = [];
+  for (const st of a.stays) {
+    const lent = st.stops.every((x) => x.kind === 'borrowed');
+    const s0 = st.stops[0], where = placeName(st.p);
+    const what = [...new Set(st.stops.filter((x) => x.y === st.from).map((x) => x.why))].slice(0, 2).join('; ');
+    out.push({ y: st.from, ids: [a.id], text: lent ? `${where}: no record of ${a.p.given?.split(' ')[0] ?? 'their'} own. Drawn here with a relative.` : `${where}${s0.approx ? ', about then' : ''}: ${what}.` });
+  }
+  for (const l of a.legs) if (l.sail && l.km > 1500) out.push({ y: l.y0, sail: true, ids: [a.id], text: `${shortPlace(world.siteId(l.a))} to ${shortPlace(world.siteId(l.b))}: ${windowText(l, (id) => shortPlace(world.siteId(id)))}` });
+  return out.sort((x, y) => x.y - y.y || Number(Boolean(y.sail)) - Number(Boolean(x.sail)));
+}
 function showBeat(b: Beat | null) {
   shownBeat = b;
   const el = $('#caption'); el.classList.toggle('on', Boolean(b));
@@ -374,12 +414,13 @@ function caption(fromPlay: boolean) {
   if (!fromPlay || !state.playing) {
     // not playing: only the closing line, at the present day
     pendingBeat = false;
-    const end = state.year >= thisYear ? beats.find((x) => x.end) ?? null : null;
+    const end = state.year >= thisYear ? allBeats.find((x) => x.end) ?? null : null;
     if (end !== shownBeat) showBeat(end);
     return;
   }
   const y = playYear;
-  const mine = (b: Beat) => !state.follow || Boolean(b.ids?.includes(state.follow));
+  const beats = followBeats ?? allBeats;
+  const mine = (_b: Beat) => true;
   const now = performance.now();
   // a voyage under way is told while it is under way, whatever else is waiting
   const sailing = lastScene?.ship ? beats.findIndex((b) => Boolean(b.sail) && mine(b) && b.y <= y && y < b.y + 1.2) : -1;
@@ -408,7 +449,8 @@ function buildSpark() {
 function hover(person: string | null, site: string | null, x: number, y: number) {
   const tip = $('#tip');
   if (!person && !site) { tip.hidden = true; return; }
-  if (person) { const a = world.byId.get(person)!; tip.innerHTML = `<b>${esc(a.p.name)}</b><small>${esc(shortLife(a.p))}${a.hollow ? ' · no place of their own' : ''}</small>`; }
+  if (site?.startsWith('star:')) { const f = [...atlas.facts, ...atlas.leads].find((x) => x.id === site.slice(5)); tip.innerHTML = `<b>${esc(f?.title)}</b><small>A finding. Tap to read it.</small>`; }
+  else if (person) { const a = world.byId.get(person)!; tip.innerHTML = `<b>${esc(a.p.name)}</b><small>${esc(shortLife(a.p))}${a.hollow ? ' · no place of their own' : ''}</small>`; }
   else tip.innerHTML = `<b>${esc(placeName(site!))}</b><small>${world.atSite.get(site!)?.length ?? 0} people</small>`;
   tip.hidden = false; tip.style.left = Math.min(innerWidth - 270, x + 14) + 'px'; tip.style.top = y + 14 + 'px';
 }
@@ -627,6 +669,7 @@ function helpHtml(): string {
   <p><b>Lines are moves.</b> Solid: both ends are recorded within three years of each other, and the light travels. Dashed: the records leave a longer gap, so the light waits where it was last recorded, dimming, and appears at the new place in the year a record finds it there. Dotted red: the tree itself doubts the two records are the same person.</p>
   <p><b>Sea routes are custom, not record.</b> A voyage between Europe and New Zealand is drawn the way ships usually went: out round the Cape of Good Hope, and through Panama once the canal had opened in 1914. The tree names no ship and no route.</p>
   <p><b>Two ways to draw the Earth.</b> The globe stays with the family in Europe, crosses to New Zealand once, and stays there; drag it to look anywhere. Two shores is the flat map: Britain and New Zealand drawn large, with the ocean between them folded away. On a wide screen you can have both.</p>
+  <p><b>Stars are findings.</b> A star on the map marks something the records show when you count: the first of the family in New Zealand, the move that is in doubt, the longest silence. It appears in the year it happens. Tap it to read it.</p>
   <p><b>Tap the Key.</b> Each colour in the Key is a button: tap a family line, a region or a kind of certainty to light only those people.</p>
   <p><b>Every country is named.</b> The row of countries above the map counts the lights lit in each this year. On the globe, a country out of view is named at the rim, in the direction it lies. Tap either to go there and see who it was.</p>
   <p><b>Who is missing.</b> ${c.living} living relatives are not shown at all. ${c.unplaced} people have no place and no relative to borrow from. Most of the Polish lines are living or undated, which is why Poland is nearly dark.</p>

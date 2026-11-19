@@ -160,12 +160,12 @@ process.on('exit', () => server?.kill());
   await A(page, () => window.__atlas.setYear(1880));
 
   // 7c. every country the records name can be seen and reached
-  const chips = await page.locator('#countries [data-country]').allTextContents();
+  const chips = await page.evaluate(() => [...document.querySelectorAll('#countries [data-country]')].map((b) => b.querySelector('.full').textContent + ' ' + b.querySelector('b').textContent));
   check('every country in the records has a chip with its count for the year', ['England', 'New Zealand', 'Poland', 'Ireland', 'Wales', 'United States'].every((n) => chips.some((c) => c.startsWith(n))) && /England \d+/.test(chips.join('|')), chips.join(' | '));
   const sum = await A(page, () => { const c = window.__atlas.counts(); return [Object.values(c).reduce((a, b) => a + b, 0), window.__atlas.scene().alive]; });
   check('the counts add up to the lights that are lit', sum[0] === sum[1], sum.join(' vs '));
   await A(page, () => window.__atlas.setYear(1850));
-  check('before the first record there, New Zealand counts nobody', /New Zealand 0/.test((await page.locator('#countries [data-country="New Zealand"]').textContent()).replace(/\s+/g, ' ')) && (await A(page, () => window.__atlas.scene().lights.filter((l) => l.ll[0] > 100).length)) === 0);
+  check('before the first record there, New Zealand counts nobody', (await page.locator('#countries [data-country="New Zealand"] b').textContent()) === '0' && (await A(page, () => window.__atlas.scene().lights.filter((l) => l.ll[0] > 100).length)) === 0);
   await A(page, () => { window.__atlas.setYear(1862); window.__atlas.stages[0].resume(); window.__atlas.settle(); });
   const ptr = await A(page, () => { const s = window.__atlas.stages[0], q = s.pointerScreen('New Zealand'), r = s.canvas.getBoundingClientRect(); return q ? [r.left + q[0], r.top + q[1], s.pointerScreen('England') ? 1 : 0] : null; });
   check('from Europe, the globe points to New Zealand at its rim and not to England', ptr && ptr[2] === 0, JSON.stringify(ptr));
@@ -248,6 +248,26 @@ process.on('exit', () => server?.kill());
   let rode = false;
   for (let i = 0; i < 80 && !rode; i++) { await page.waitForTimeout(150); rode = await A(page, () => Boolean(window.__atlas.scene().ship)); }
   check('a finding about a dated voyage offers to sail it, and the ship sails', rode && (await A(page, () => window.__atlas.state.playing)));
+  await A(page, () => window.__atlas.stop());
+  await page.keyboard.press('Escape');
+  await A(page, () => window.__atlas.setYear(1880));
+
+  // 8c. findings are starred on the map; following anyone tells their records
+  await A(page, () => { window.__atlas.setView('shores'); window.__atlas.setYear(1850); window.__atlas.settle(); });
+  const before = await A(page, () => window.__atlas.stages[0].starScreen('a-first-crossing'));
+  await A(page, () => { window.__atlas.setYear(1856); window.__atlas.settle(); });
+  const star = await page.evaluate(() => { const s = window.__atlas.stages[0], q = s.starScreen('a-first-crossing'), r = s.canvas.getBoundingClientRect(); return q ? [r.left + q[0], r.top + q[1]] : null; });
+  check('a finding is starred on the map from the year it happens, not before', before === null && Array.isArray(star));
+  await page.mouse.click(star[0], star[1]);
+  check('tapping the star opens the finding', (await A(page, () => window.__atlas.state.finding)) === 'a-first-crossing' && (await page.locator('#panel-body .card.on').count()) === 1);
+  await page.keyboard.press('Escape');
+  await A(page, () => window.__atlas.setView('globe'));
+  const tf1 = await A(page, () => window.__atlas.world.actors.find((a) => a.p.name === 'Thomas Finch' && a.b === 1823).id);
+  await A(page, (id) => window.__atlas.select(id), tf1);
+  await page.locator('#record [data-act="follow"]').click();
+  const told = new Set();
+  for (let i = 0; i < 90; i++) { await page.waitForTimeout(150); if (await page.locator('#caption.on').count()) told.add(await page.locator('#caption').textContent()); if (!(await A(page, () => window.__atlas.state.playing))) break; }
+  check('following someone who never sails still tells their records, place by place', told.size >= 2 && [...told].some((t) => /Sproughton/.test(t)) && [...told].some((t) => /Howick/.test(t)) && ![...told].some((t) => /Edwin Watkins/.test(t)), [...told].map((t) => t.slice(0, 40)).join(' | '));
   await A(page, () => window.__atlas.stop());
   await page.keyboard.press('Escape');
   await A(page, () => window.__atlas.setYear(1880));
@@ -394,6 +414,8 @@ process.on('exit', () => server?.kill());
   const cz = await page.evaluate(() => { const c = document.querySelector('#caption').getBoundingClientRect(), z = document.querySelector('.zoom').getBoundingClientRect(); return [Math.round(c.right), Math.round(z.left), c.width > 150]; });
   check('on a phone the caption stays clear of the buttons', cz[0] <= cz[1] && cz[2], JSON.stringify(cz));
   await A(page, () => window.__atlas.setYear(1880));
+  const chipsIn = await page.evaluate(() => [...document.querySelectorAll('#countries [data-country]')].map((b) => { const r = b.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth; }));
+  check('on a phone every country chip is on screen without a swipe', chipsIn.length === 6 && chipsIn.every(Boolean), JSON.stringify(chipsIn));
   check('on a phone the Key opens', !(await page.locator('#legend.collapsed').count()) && /Hollow/.test(await page.locator('#legend').innerText()));
   await page.locator('#legend .key-toggle').tap();
   const hdr = await page.locator('.top').boundingBox();
