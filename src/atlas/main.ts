@@ -136,7 +136,9 @@ function loop(now: number) {
     const sailing = fol ? Boolean(lastScene?.lights.some((l) => l.actor === fol && l.moving)) : Boolean(lastScene?.ship);
     const reading = !fol && now < captionUntil;
     const reading2 = now < captionUntil;
-    const speed = sailing ? 0.18 : pendingBeat && reading2 ? 0.15 : reading ? 0.9 : fol ? (reading2 ? 2.5 : 6) : playYear < 1650 ? 20 : 8;
+    // a caption still being read just before a voyage: wait for it, so the voyage does not cut it short
+    const shipSoon = !fol && reading2 && allBeats.some((b) => b.sail && b.y - playYear > 0 && b.y - playYear < 0.6);
+    const speed = shipSoon ? 0.05 : sailing ? 0.18 : pendingBeat && reading2 ? 0.15 : reading ? 0.9 : fol ? (reading2 ? 2.5 : 6) : playYear < 1650 ? 20 : playYear > 1900 ? 5.5 : 8;
     playYear += dt * speed;
     const end = fol ? Math.min(thisYear, fol.stays[fol.stays.length - 1].from + 2) : thisYear;
     if (playYear >= end) { playYear = end; setYear(playYear, true); stop(); } else setYear(playYear, true);
@@ -268,7 +270,7 @@ function play(follow: string | null = null) {
   // captions already behind us are not replayed
   followBeats = follow ? beatsFor(world.byId.get(follow)!) : null;
   { const bs = followBeats ?? beats; beatIdx = -1; for (let i = 0; i < bs.length; i++) if (bs[i].y < playYear - 0.5) beatIdx = i; }
-  shownBeat = null;
+  showBeat(null); captionUntil = 0;
   pendingBeat = false;
   document.body.classList.add('playing');
   $('#play').setAttribute('aria-label', 'Pause the timeline');
@@ -306,7 +308,7 @@ function childrenLine(ids: string[], y1: number, dest: string): string {
   if (after > 1) return ` ${after} children are born in ${the}${country}.`;
   return '';
 }
-interface Beat { y: number; text: string; end?: boolean; sail?: boolean; ids?: string[] }
+interface Beat { y: number; text: string; end?: boolean; sail?: boolean; ids?: string[]; they?: string }
 let beats: Beat[] = [];
 let allBeats: Beat[] = [];
 function buildBeats() {
@@ -330,13 +332,16 @@ function buildBeats() {
   const vague = (name: string) => (name === 'New Zealand' || name === 'England' || name === 'Poland' ? `@@${name}` : name);
   const tidy = (t: string) => t.replace(/\bin @@/g, 'somewhere in ').replace(/@@/g, '');
   // an age only where the birth is a firm date
-  const age = (id: string, y: number) => { const a = world.byId.get(id)!; return a.p.b!.est || a.p.b!.approx ? '' : `, ${y - a.b},`; };
+  // an age only where the birth is a full date: from a bare year it could be a year out
+  const age = (id: string, y: number) => { const a = world.byId.get(id)!; return a.p.b!.est || a.p.b!.approx || !/[A-Za-z]/.test(a.p.b!.text) ? '' : `, ${y - a.b - 1} or ${y - a.b},`; };
   for (const g of groups.values()) {
     // oldest first, so parents are named before their children
     g.ids.sort((x, y) => world.byId.get(x)!.b - world.byId.get(y)!.b);
     const names = g.ids.map((id) => world.byId.get(id)!.p.name!);
     const who = names.length > 3 ? `${names[0]}, ${names[1]} and ${names.length - 2} others` : names.length === 3 ? `${names[0]}, ${names[1]} and ${names[2]}` : names.join(' and ');
     const to = vague(g.to), from = vague(g.from), many = names.length > 1, are = many ? 'are' : 'is';
+    const sex = world.byId.get(g.ids[0])!.p.sex;
+    const their = many ? 'their' : sex === 'F' ? 'her' : sex === 'M' ? 'his' : 'their', them = many ? 'them' : sex === 'F' ? 'her' : sex === 'M' ? 'him' : 'them', they = many ? 'they' : sex === 'F' ? 'she' : sex === 'M' ? 'he' : 'they';
     const last = g.sameFrom && !g.assumed ? ` Last recorded in ${from} in ${yr(g.a0, g.y0)}.` : '';
     let text: string;
     if (g.doubt) text = `A Francis Barlow is a father in ${to}. If he is the boy baptised at ${from}, he came 250 km and was fifteen. The tree doubts it.`;
@@ -347,13 +352,15 @@ function buildBeats() {
       // children with no record of their own who are drawn arriving with them
       const dsite = world.siteId(g.dest);
       const kids = world.actors.filter((a) => a.a.stops[0].kind === 'borrowed' && names.some((n) => a.a.stops[0].why.includes(`, ${n}`)) && a.legs.some((l) => l.follows && l.y1 === g.y1 && world.siteId(l.b) === dsite)).length;
-      const withKids = kids ? ` ${kids === 1 ? 'One of their children' : `${kids} of their children`}, not recorded in ${kids === 1 ? 'its' : 'their'} own right by then, ${kids === 1 ? 'is' : 'are'} drawn with them.` : '';
+      const withKids = kids ? ` ${kids === 1 ? `One of ${their} children` : `${kids} of ${their} children`}, not recorded in ${kids === 1 ? 'its' : 'their'} own right by then, ${kids === 1 ? 'is' : 'are'} drawn with ${them}.` : '';
       text = `By ${yr(g.a1, g.y1)} ${many ? who : names[0] + age(g.ids[0], g.y1)} ${are} in ${to}.${last}${withKids}${childrenLine(g.ids, g.y1, g.dest)}`;
     }
-    beats.push({ y: g.sail ? g.y0 : g.y1, sail: g.sail && !g.doubt, ids: g.ids, text: tidy(text) });
+    beats.push({ y: g.sail ? g.y0 : g.y1, sail: g.sail && !g.doubt, ids: g.ids, text: tidy(text), they });
   }
   // the first record in each other country
   for (const f of atlas.facts) if (/^a-first-(wales|ireland|united-states|poland)$/.test(f.id)) beats.push({ y: f.y, ids: f.people, text: `${f.title}. ${f.body}` });
+  // two findings that belong to a year are told when the year comes
+  for (const f of atlas.facts) if (f.id === 'a-split-siblings' || f.id === 'a-silence') beats.push({ y: f.id === 'a-silence' ? f.y : f.y + 1, ids: f.people, text: f.id === 'a-silence' ? `${f.title}. ${f.body.split('. ').slice(0, 1).join('. ')}.` : f.body.split('. ').slice(1, -1).join('. ') + '.' });
   // the quiet centuries have their own moments: the River's captions that belong to a place
   for (const b of BEATS) if (b.y >= 1700 && !beats.some((x) => Math.abs(x.y - b.y) < 2)) beats.push({ y: b.y, text: b.text });
   // when the balance tips, and when the last light this side goes out
@@ -372,15 +379,18 @@ function buildBeats() {
   }
   // the year New Zealand holds the most lights it ever will
   { let best = 0, at = 0; for (let y = 1855; y <= thisYear; y++) { const n = tally(y + 0.5)[1]; if (n > best) { best = n; at = y; } }
-    if (best && !beats.some((b) => Math.abs(b.y - at) < 3)) beats.push({ y: at, text: `In ${at} New Zealand holds ${best} of the family’s lights, the most it ever will on this map. From here they go out faster than new ones are named.` }); }
-  const bornNZ = (a: Actor) => world.places.get(a.stays[0].p)!.country === 'New Zealand' && !a.hollow;
-  for (let y = 1860; y <= thisYear; y++) { const lit = world.actors.filter((a) => !a.hollow && side(a, y + 0.5) === 'nz'); const born = lit.filter(bornNZ).length; if (lit.length >= 10 && born > lit.length / 2) { beats.push({ y, text: `From ${y} most of the recorded lights in New Zealand are people first recorded there: ${born} of ${lit.length}. The colony’s children have outnumbered the arrivals.` }); break; } }
-  const lastGB = [...world.actors].filter((a) => a.on < a.d && ['England', 'Wales'].includes(world.countryOf(a, a.d - 0.5) ?? '')).sort((x, y) => y.d - x.d)[0];
-  if (lastGB && lastGB !== lastEu && !lastGB.p.d!.est) beats.push({ y: lastGB.d, ids: [lastGB.id], text: `${lastGB.p.name} dies in ${lastGB.d}: the last light in Britain on this map. The family there goes on among the living, who are not shown.` });
+    if (best && !beats.some((b) => Math.abs(b.y - at) < 3)) beats.push({ y: at, text: `In ${at} New Zealand holds ${best} of the family’s lights, the most it ever will on this map.` }); }
+  // the last light in Britain: someone whose life, as far as the map knows, ended there
+  const inGB = (a: Actor) => ['England', 'Wales'].includes(world.places.get(a.stays[a.stays.length - 1].p)!.country);
+  const lastGB = [...world.actors].filter((a) => a.on < a.d && !a.p.d!.est && inGB(a)).sort((x, y) => y.d - x.d)[0];
+  if (lastGB && lastGB !== lastEu) {
+    const her = lastGB.p.sex === 'F' ? 'her' : lastGB.p.sex === 'M' ? 'him' : 'them';
+    beats.push({ y: lastGB.d, ids: [lastGB.id], text: `${lastGB.p.name} dies in ${lastGB.d}: the last light in Britain on this map.${lastGB.hollow ? ` It is a hollow one: no record gives ${her} a place, so ${lastGB.p.sex === 'F' ? 'she is' : lastGB.p.sex === 'M' ? 'he is' : 'they are'} drawn with a relative.` : ''} The family there goes on among the living, who are not shown.` });
+  }
   beats.sort((a, b) => a.y - b.y || Number(Boolean(b.sail)) - Number(Boolean(a.sail)));
   // say once what every later "by" means, on the first long gap
   const firstGap = beats.find((b) => /^By /.test(b.text));
-  if (firstGap) firstGap.text += ' Nobody wrote down when they went, or on what ship. The map shows only what the records say.';
+  if (firstGap) firstGap.text += ` Nobody wrote down when ${firstGap.they ?? 'they'} went, or on what ship. The map shows only what the records say.`;
   const lastDeath = Math.max(...world.actors.map((a) => a.d));
   allBeats = beats;
   beats.push({ y: Math.min(thisYear, lastDeath), end: true, text: `The map goes dark here, but the family does not. ${atlas.meta.counts.living} living relatives carry on. They are not shown.` });
@@ -635,7 +645,7 @@ function personHtml(a: Actor): string {
   const given = (p.given ?? p.name ?? '').split(' ')[0].replace(/\.$/, '');
   const vagueDeath = a.a.stops.find((x) => (x.kind === 'death' || x.kind === 'burial') && ['area', 'country'].includes(world.places.get(x.p)!.prec));
   const how = a.hollow ? `<span class="badge"><i style="border:1.5px solid ${CERT.borrowed}"></i>No place of their own</span>` : a.vague ? `<span class="badge"><i style="background:${CERT.vague}"></i>Place known only roughly</span>` : `<span class="badge"><i style="background:${CERT.record}"></i>Placed by a record${firstRec > a.b + 2 ? ` from ${about(firstRec)}${firstRec}` : ''}</span>`;
-  const stops = a.a.stops.map((s) => `<li class="${s.kind === 'borrowed' ? 'coarse' : ''}"><b>${s.est || s.approx ? 'c. ' : ''}${s.y}</b><span><button data-place="${esc(world.siteId(s.p))}">${esc(placeName(s.p))}</button><small>${esc(s.why)}${s.kind !== 'borrowed' && ['area', 'country'].includes(world.places.get(s.p)!.prec) ? ' · no closer place is given: drawn as a haze' : ''}${s.doubt ? ` · in doubt: ${esc(s.doubt)}` : ''}</small></span></li>`).join('');
+  const stops = a.a.stops.map((s) => `<li class="${s.kind === 'borrowed' ? 'coarse' : ''}"><b>${(s.kind === 'borrowed' ? p.b?.est && s.y === p.b.y : s.est || s.approx) ? 'c. ' : ''}${s.y}</b><span><button data-place="${esc(world.siteId(s.p))}">${esc(placeName(s.p))}</button><small>${esc(s.why)}${s.kind !== 'borrowed' && ['area', 'country'].includes(world.places.get(s.p)!.prec) ? ' · no closer place is given: drawn as a haze' : ''}${s.doubt ? ` · in doubt: ${esc(s.doubt)}` : ''}</small></span></li>`).join('');
   const kmText = (k: number) => (k >= 1000 ? (Math.round(k / 100) * 100).toLocaleString('en') : k >= 100 ? String(Math.round(k / 10) * 10) : String(Math.round(k)));
   const moves = a.legs.filter((l) => l.km > 3).map((l) => `<div class="move${l.doubt ? ' doubt' : l.sail ? ' sail' : ''}"><b>${esc(shortPlace(world.siteId(l.a)))} to ${esc(shortPlace(world.siteId(l.b)))}, ${kmText(l.km)} km.</b> ${esc(windowText(l, (id) => shortPlace(world.siteId(id))))}${l.kind !== 'direct' && !l.assumed ? ' ' + esc(l.sail ? ROUTE_LABEL[l.kind] : 'Drawn along a sea route usual in those years. The tree does not record the ship, the route or the year.') : ''}${l.doubt ? ` <b style="color:#FFB4A8">The tree doubts this: ${esc(l.doubt)}. If the two records are two people, this move never happened.</b>` : ''}</div>`).join('');
   return `<button class="back" data-act="back">← Back</button>
@@ -644,6 +654,7 @@ function personHtml(a: Actor): string {
   ${lines.length ? `<p class="lifelines">${esc(lines.join(' '))}</p>` : ''}
   ${a.hollow ? `<p>No record gives a place for ${esc((p.given ?? p.name ?? '').replace(/\.$/, ''))}. The hollow light is drawn in ${esc(placeName(a.stays[0].p))}, where ${lender ? `<button class="inline" data-go="${esc(lender.id)}">${esc(lender.name)}</button>` : 'a close relative'} was. ${moved ? `While a child it goes where that parent is next recorded, and after that it stays put, because nothing says where ${esc(given)} went.` : `It does not move, because nothing says where ${esc(given)} went.`}${a.a.seen ? ` It is not drawn before ${a.a.seen}, ${esc(a.a.seenWhy ?? 'the first year that relative is recorded')}.` : ''}</p>` : ''}
   <h3>${a.hollow ? 'Why the light is here' : 'Where ' + esc((p.given ?? p.name ?? '').split(' ')[0]) + ' is placed, and why'}</h3><ol class="stops">${stops}</ol>
+  ${a.a.stops.some((x) => x.kind === 'baptism' && a.a.stops.some((z) => z.kind === 'birth' && z.y === x.y + 1)) ? `<p class="fine">The baptism is listed a year before the birth because the record uses the old calendar, in which the year began on 25 March: “${esc(p.b?.text ?? '')}”.</p>` : ''}
   ${moves ? `<h3>Moves</h3>${moves}` : ''}
   ${a.on >= a.d ? `<p class="fine">The only record that places ${esc(given)} is a death or burial. There is no light on the map, only what is left from ${about(a.d)}${a.d}.</p>` : a.a.seen ? `<p class="fine">Nothing places ${esc(given)} before ${about(a.a.seen)}${a.a.seen}, so no light is drawn until then.</p>` : ''}
   ${p.d?.est ? `<p class="fine">No death is recorded. The light goes out seventy years after birth, and no ember is left.</p>` : !a.ember ? (vagueDeath ? `<p class="fine">${esc(given)} died in ${esc(placeName(vagueDeath.p))}. No closer place is recorded, so no ember is left on the map.</p>` : `<p class="fine">Where ${esc(given)} died is not recorded, so no ember is left on the map.</p>`) : ''}

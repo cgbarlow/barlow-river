@@ -428,6 +428,8 @@ export class Stage {
   private bind() {
     const cv = this.canvas;
     const local = (e: PointerEvent | WheelEvent) => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+    // a click on the map puts the keyboard there too, so the arrow keys step through people
+    cv.addEventListener('pointerdown', () => { (cv.parentElement as HTMLElement | null)?.focus({ preventScroll: true }); });
     cv.addEventListener('pointerdown', (e) => { this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY }); this.moved = false; this.pinch = 0; try { cv.setPointerCapture(e.pointerId); } catch { /* synthetic */ } });
     cv.addEventListener('pointermove', (e) => {
       const p = this.pointers.get(e.pointerId);

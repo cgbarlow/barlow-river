@@ -313,7 +313,7 @@ function findings(people: AtlasPerson[], P: Map<string, Person>, F: Map<string, 
   for (const [c, f] of firstIn) {
     if (c === 'England' || c === 'New Zealand') continue;
     facts.push({ id: 'a-first-' + c.toLowerCase().replace(/\W+/g, '-'), kind: 'places', y: f.y, people: [f.id], title: `${c === 'United States' ? 'The United States' : c}: first recorded ${f.approx ? 'about' : 'in'} ${f.y}`,
-      body: `${name(f.id)} ${f.born ? 'was born' : 'is recorded'} there${f.born || P.get(f.id)!.b!.est || P.get(f.id)!.b!.approx ? '' : `, aged ${f.y - yr(f.id)}`}.` });
+      body: `${name(f.id)} ${f.born ? 'was born' : 'is recorded'} there${f.born ? '' : ''}.` });
   }
 
   // ---- worth a second look ----
