@@ -28,6 +28,10 @@ body.kbd .views:focus { outline: 2px solid var(--amber); outline-offset: -2px; }
 .countries > * { pointer-events: auto; flex: none; }
 .countries button, .countries .sea { min-height: 32px; padding: 0 11px; border-radius: 16px; border: 1px solid var(--line); background: rgba(23,39,63,.92); color: var(--ink); font-size: 12.5px; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
 .countries .short { display: none; }
+/* when the full names do not fit, the short ones are used: set by the page when the row would overflow */
+.countries.tight .full { display: none; } .countries.tight .short { display: inline; }
+/* two shores has no zoom: the buttons would only sit on the map */
+.atlas[data-view='shores'] #zin, .atlas[data-view='shores'] #zout, .atlas[data-view='shores'] #zfit { display: none; }
 /* a toast informs; it must never sit in the way of a control */
 .atlas .toast, .toast { pointer-events: none; }
 .atlas .toast { top: auto; bottom: 150px; max-width: min(520px, calc(100% - 32px)); text-align: center; }

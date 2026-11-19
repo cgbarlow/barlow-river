@@ -136,6 +136,8 @@ The Council reviewed the plan, then three mockups, then the build over six round
 
 The last four outside passes checked the placement rules for every person in every year and found no violations. The final full test scored the Atlas 27.5 of 35 on the seven criteria, and 29.5 judging only what the page does with the data it has. Much of the gap is the records: about half the lights are borrowed and only one voyage is dated closely enough to draw sailing.
 
+Where no death is recorded (145 of the 322 people on the map) the light goes out seventy years after birth and leaves no ember. The guide says so.
+
 The voyage routes (round the Cape before 1914, through Panama after) are a convention drawn from general knowledge, not checked against a source.
 
 ## Not done

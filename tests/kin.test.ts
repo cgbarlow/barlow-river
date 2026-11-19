@@ -91,7 +91,7 @@ describe('lifeLines', () => {
     // bare years cannot say which side of a birthday: the age is given as either
     expect(a).toMatch(/Married at 23 or 24/);
     expect(a).toMatch(/One child on record, at 24 or 25/);
-    expect(a).toMatch(/Outlived X by 20 years/);
+    expect(a).toMatch(/Outlived X by 19 or 20 years/);
     expect(lifeLines(t, P.get('B')!).join(' ')).toMatch(/Died in early childhood/);
     expect(lifeLines(t, P.get('G1')!).join(' ')).toMatch(/Buried a child who did not reach 21/);
   });

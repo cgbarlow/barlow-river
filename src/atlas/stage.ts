@@ -135,7 +135,8 @@ export class Stage {
    */
   private autoGoal(sc: Scene, follow: LonLat | null): Goal | null {
     if (this.kind !== 'globe') return null;
-    if (follow) return { lon: follow[0], lat: follow[1], k: sc.ship ? 1.7 : 4 };
+    // with a phone's sheet open the globe is small: stand closer, so the person followed is not lost in a crowd
+    if (follow) return { lon: follow[0], lat: follow[1], k: sc.ship ? 1.7 : 4 * Math.max(1, (Math.min(this.W, this.H) * 0.44) / this.R) * (this.inset.bottom > 120 ? 1.6 : 1) };
     const ride = this.plan.ride;
     if (ride && sc.ship && sc.year >= ride[0] && sc.year < ride[1]) return { lon: sc.ship[0], lat: sc.ship[1], k: 1.7 };
     const nz = sc.year >= this.plan.turn;

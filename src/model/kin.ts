@@ -130,14 +130,15 @@ export function lifeLines(t: Tree, p: Person): string[] {
     for (const id of pf.partners) {
       const par = t.P.get(id)!;
       const pd = rec(par, 'd');
-      if (pd && pd.y >= b.y && pd.y - b.y < 12) { out.push(`Lost ${par.sex === 'M' ? 'a father' : par.sex === 'F' ? 'a mother' : 'a parent'} at about ${pd.y - b.y}.`); break; }
+      if (pd && pd.y >= b.y && pd.y - b.y < 12) { const at = ageBetween(b, pd); out.push(`Lost ${par.sex === 'M' ? 'a father' : par.sex === 'F' ? 'a mother' : 'a parent'} ${at === '0' ? 'in the first year of life' : /^\d+$/.test(at) || at.startsWith('about') ? `at ${at}` : `at about ${pd.y - b.y}`}.`); break; }
     }
   }
   const fams = p.fams.map((f) => t.F.get(f)!).filter(Boolean);
   const wed = fams.filter((f) => f.m && !f.m.est).sort((x, y) => x.m!.y - y.m!.y);
   if (b && wed.length) out.push(`Married at ${ageBetween(b, wed[0].m!)}${wed.length > 1 ? `, and again at ${wed.slice(1).map((f) => ageBetween(b, f.m!)).join(' and ')}` : ''}.`);
   const kids = fams.flatMap((f) => f.children).map((id) => t.P.get(id)!).filter(Boolean);
-  if (kids.length) {
+  // a count of children would count the living: say nothing unless every child has died
+  if (kids.length && kids.every((k) => !k.living)) {
     const dated = kids.map((k) => rec(k, 'b')).filter(Boolean).map((x) => x!).sort((x, y) => x.y - y.y);
     let s = `${kids.length === 1 ? 'One child' : `${kids.length} children`} on record`;
     if (b && dated.length) {
@@ -154,7 +155,7 @@ export function lifeLines(t: Tree, p: Person): string[] {
     for (const f of fams) {
       const sp = f.partners.map((id) => t.P.get(id)!).find((q) => q && q.id !== p.id && !q.living);
       const sd = sp ? rec(sp, 'd') : undefined;
-      if (sp && sd && d.y - sd.y >= 5) { out.push(`Outlived ${sp.name} by ${d.y - sd.y} years.`); break; }
+      if (sp && sd && d.y - sd.y >= 5) { out.push(`Outlived ${sp.name} by ${ageBetween(sd, d)} years.`); break; }
     }
   }
   if (b && d && d.y - b.y >= 0 && d.y - b.y < 6) out.push('Died in early childhood.');

@@ -88,7 +88,13 @@ export function buildAtlas(river: RiverData): AtlasBuild {
    * was last recorded. Never before the relative is recorded anywhere: `from` is the
    * first year the loan can start.
    */
-  const lend = (id: string | undefined, year: number): { p: string; from: number; waited: boolean } | null => {
+  /** a parent recorded in one country both before and after a year: the stronger of two parents to draw a child with */
+  const brackets = (id: string, year: number): boolean => {
+    const a = out.get(id); if (!a || a.borrowed) return false;
+    const recs = a.stops.filter((s) => s.kind !== 'borrowed'), c = (s: AtlasStop) => PLACE.get(s.p)!.country;
+    return recs.some((s) => s.y <= year && recs.some((t) => t.y >= year && t !== s && c(t) === c(s)));
+  };
+  const lend = (id: string | undefined, year: number): { p: string; from: number; waited: boolean; stale: number } | null => {
     const a = id ? out.get(id) : undefined;
     // only from someone with a record of their own: a borrowed place is never lent on
     if (!a || a.borrowed) return null;
@@ -101,7 +107,7 @@ export function buildAtlas(river: RiverData): AtlasBuild {
     const pid = lastKnown(stay(a.id), from);
     if (!pid) return null;
     const pl = PLACE.get(pid)!;
-    return { p: pl.town ?? pl.id, from, waited: first > year };
+    return { p: pl.town ?? pl.id, from, waited: first > year, stale: from - Math.max(...recs.filter((s) => s.y <= from).map((s) => s.y)) };
   };
   // ---- nobody is drawn before a record places them ----
   // Someone whose first record comes years after birth is shown hollow with a parent
@@ -113,11 +119,14 @@ export function buildAtlas(river: RiverData): AtlasBuild {
     // a record within two years of birth is close enough to place the child, unless it is the child's own burial
     if (a.stops.some((s) => s.kind === 'birth' || s.kind === 'baptism') || a.stops.some((s) => s.y <= p.b!.y + 2 && s.kind !== 'death' && s.kind !== 'burial')) continue;
     const par = p.parents ? F.get(p.parents) : undefined;
-    const ps = (par?.partners ?? []).map((id) => P.get(id)!).filter((q) => q && !q.living).sort((x, y) => (x.sex === 'F' ? 0 : 1) - (y.sex === 'F' ? 0 : 1));
+    const ps = (par?.partners ?? []).map((id) => P.get(id)!).filter((q) => q && !q.living).sort((x, y) => Number(brackets(y.id, p.b!.y)) - Number(brackets(x.id, p.b!.y)) || (x.sex === 'F' ? 0 : 1) - (y.sex === 'F' ? 0 : 1));
+    const ownFirst = sortStops(a.stops)[0];
     let done = false;
     for (const q of ps) {
       const l = lend(q.id, p.b!.y);
       if (!l || l.from >= firstY) continue;
+      // a record a generation old, in a country the person's own first record is not in, places nobody
+      if (l.stale > 20 && PLACE.get(l.p)!.country !== PLACE.get(ownFirst.p)!.country) continue;
       const late = l.from > p.b!.y + 2;
       a.stops = sortStops([{ y: l.from, p: l.p, kind: 'borrowed', why: `birthplace not recorded: shown with ${pron(p)} ${q.sex === 'F' ? 'mother' : 'father'}, ${q.name}${late ? `, from ${l.from}, the first year ${subj(q)} is recorded` : ''}`, est: true }, ...a.stops]);
       if (late) { a.seen = l.from; a.seenWhy = `the first year ${q.name} is recorded`; }
@@ -135,7 +144,7 @@ export function buildAtlas(river: RiverData): AtlasBuild {
     const tries: { how: How; l: ReturnType<typeof lend>; when: string }[] = [];
     const par = p.parents ? F.get(p.parents) : undefined;
     if (par) {
-      const ps = par.partners.map((id) => P.get(id)!).filter(Boolean).sort((a, b) => (a.sex === 'F' ? 0 : 1) - (b.sex === 'F' ? 0 : 1));
+      const ps = par.partners.map((id) => P.get(id)!).filter(Boolean).sort((a, b) => Number(brackets(b.id, y)) - Number(brackets(a.id, y)) || (a.sex === 'F' ? 0 : 1) - (b.sex === 'F' ? 0 : 1));
       for (const q of ps) tries.push({ how: { from: q.id, how: 'parent' }, l: lend(q.id, y), when: '' });
       for (const sid of par.children) if (sid !== p.id) tries.push({ how: { from: sid, how: 'sibling' }, l: lend(sid, Math.max(y, P.get(sid)?.b?.y ?? y)), when: `when ${P.get(sid)?.name ?? 'they'} was born` });
     }
@@ -147,7 +156,7 @@ export function buildAtlas(river: RiverData): AtlasBuild {
     }
     const order = ['parent', 'partner', 'sibling', 'child'];
     // the loan has to start while the person is alive
-    const hit = tries.filter((t) => t.l && t.l.from < end).sort((a, b) => order.indexOf(a.how.how) - order.indexOf(b.how.how) || a.l!.from - b.l!.from)[0];
+    const hit = tries.filter((t) => t.l && t.l.from < end).sort((a, b) => order.indexOf(a.how.how) - order.indexOf(b.how.how) || (a.how.how === 'parent' ? Number(brackets(b.how.from, y)) - Number(brackets(a.how.from, y)) : 0) || a.l!.from - b.l!.from)[0];
     if (!hit) continue;
     const lender = P.get(hit.how.from)!, l = hit.l!;
     const rel = hit.how.how === 'parent' ? (lender.sex === 'F' ? 'mother' : lender.sex === 'M' ? 'father' : 'parent') : hit.how.how === 'partner' ? (lender.sex === 'F' ? 'wife' : lender.sex === 'M' ? 'husband' : 'partner') : hit.how.how;
@@ -219,14 +228,14 @@ function findings(people: AtlasPerson[], P: Map<string, Person>, F: Map<string, 
     const c = crossings[0], sameYear = crossings.filter((x) => x.l.y1 === c.l.y1);
     facts.push({ id: 'a-first-crossing', kind: 'crossing', y: c.l.y1, people: sameYear.map((x) => x.id),
       title: `The first of the family is in New Zealand by ${abt(c.l.approx1, c.l.y1)}`,
-      body: `${sameYear.map((x) => name(x.id)).join(' and ')}: last recorded in ${place(c.l.a).name} in ${abt(c.l.approx0, c.l.y0)}, in ${place(c.l.b).name} by ${abt(c.l.approx1, c.l.y1)}. The tree does not name a ship.` });
+      body: `${sameYear.map((x) => name(x.id)).join(' and ')}: last recorded in ${place(c.l.ra).name} in ${abt(c.l.approx0, c.l.y0)}, in ${place(c.l.rb).name} by ${abt(c.l.approx1, c.l.y1)}. The tree does not name a ship.` });
     const ids = [...new Set(crossings.map((x) => x.id))];
     facts.push({ id: 'a-crossings', kind: 'crossing', y: crossings[Math.floor(crossings.length / 2)].l.y1, people: ids,
       title: `${ids.length} people are recorded on both sides of the world`,
       body: `Each was recorded in Europe and later in New Zealand. The earliest is there by ${crossings[0].l.y1}, the latest by ${crossings[crossings.length - 1].l.y1}. Many more must have made the voyage: these are the ones whose own records show both ends.` });
   }
   // farthest from birth
-  const far = all.filter((x) => x.st.length > 1).map((x) => ({ id: x.a.id, d: km(ll(place(x.st[0].p)), ll(place(x.st[x.st.length - 1].p))), from: x.st[0].p, to: x.st[x.st.length - 1].p })).sort((a, b) => b.d - a.d);
+  const far = all.filter((x) => x.st.length > 1).map((x) => ({ id: x.a.id, d: km(ll(place(x.st[0].p)), ll(place(x.st[x.st.length - 1].p))), from: x.st[0].stops[0].p, to: x.st[x.st.length - 1].stops[x.st[x.st.length - 1].stops.length - 1].p })).sort((a, b) => b.d - a.d);
   if (far.length) {
     const f = far[0];
     facts.push({ id: 'a-farthest', kind: 'distance', y: P.get(f.id)!.d!.y, people: [f.id], title: `${name(f.id)} ended ${(Math.round(f.d / 100) * 100).toLocaleString('en')} km from the start`,
@@ -308,7 +317,7 @@ function findings(people: AtlasPerson[], P: Map<string, Person>, F: Map<string, 
   if (gaps.length && gaps[0].l.y1 - gaps[0].l.y0 >= 30) {
     const g = gaps[0];
     facts.push({ id: 'a-silence', kind: 'places', y: g.l.y1, people: [g.id], title: `${name(g.id)}: ${g.l.approx0 || g.l.approx1 ? 'about ' : ''}${g.l.y1 - g.l.y0} years with no record`,
-      body: `Recorded in ${place(g.l.a).name} in ${abt(g.l.approx0, g.l.y0)}, and not again until ${place(g.l.b).name} in ${abt(g.l.approx1, g.l.y1)}. It is the longest silence between two places in the tree. On the map the light waits where it was last seen, growing dim.` });
+      body: `Recorded in ${place(g.l.ra).name} in ${abt(g.l.approx0, g.l.y0)}, and not again until ${place(g.l.rb).name} in ${abt(g.l.approx1, g.l.y1)}. It is the longest silence between two places in the tree. On the map the light waits where it was last seen, growing dim.` });
   }
   for (const [c, f] of firstIn) {
     if (c === 'England' || c === 'New Zealand') continue;
@@ -329,13 +338,24 @@ function findings(people: AtlasPerson[], P: Map<string, Person>, F: Map<string, 
       const key = `a-same-year-${l.y1}-${l.a}-${l.b}`;
       const had = leads.find((x) => x.id === key);
       if (had) { had.people.push(a.id); had.title = `${had.people.map(name).join(' and ')}: both sides of the world in ${l.y1}`; continue; }
+      // the full dates, where the tree has them: two records in one year can be months apart
+      const pa = P.get(a.id)!, fams = pa.fams.map((f) => F.get(f)!).filter(Boolean), full = (d?: { text: string; est?: boolean }) => Boolean(d && !d.est && /^\d{1,2} [A-Za-z]{3}/.test(d.text));
+      const MON = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'], mon = (t: string) => MON.indexOf(/[A-Za-z]{3}/.exec(t)![0].toLowerCase());
+      const dated = a.stops.filter((s) => s.y === l.y1 && (s.kind === 'marriage' || s.kind === 'child')).map((s) => {
+        if (s.kind === 'marriage') { const f = fams.find((x) => x.m?.y === s.y && full(x.m)); return f ? { m: mon(f.m!.text), t: `married on ${f.m!.text} in ${place(s.p).name}` } : null; }
+        const k = fams.flatMap((x) => x.children).map((id) => P.get(id)!).find((c) => c && !c.living && c.b?.y === s.y && full(c.b) && s.why.includes((c.given ?? c.name ?? '').split(' ')[0]));
+        return k ? { m: mon(k.b!.text), t: `${(k.given ?? k.name ?? '').split(' ')[0]} born on ${k.b!.text} in ${place(s.p).name}` } : null;
+      }).filter(Boolean).sort((x, y) => x!.m - y!.m) as { m: number; t: string }[];
+      const gap = dated.length >= 2 ? dated[dated.length - 1].m - dated[0].m : -1;
       leads.push({ id: key, kind: 'same-year', y: l.y1, people: [a.id], title: `${name(a.id)}: both sides of the world in ${l.y1}`,
-        body: `Recorded in ${place(l.a).name} and in ${place(l.b).name} in the same year. The voyage took two to three months, so it is possible, just. Worth checking both dates.` });
+        body: gap >= 0
+          ? `${dated[0].t.replace(/^m/, 'M')}; ${dated[dated.length - 1].t}. ${gap >= 4 ? `About ${['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven'][gap]} months apart, and the voyage took two to three: the dates fit.` : 'The voyage took two to three months, so the dates are tight. Worth checking both.'} The tree names no ship and no sailing date.`
+          : `Recorded in ${place(l.ra).name} and in ${place(l.rb).name} in the same year. The voyage took two to three months, so it is possible if the two records are months apart. The tree gives no fuller dates to check.` });
     }
   }
   for (const { a, legs } of all) for (const l of legs) if (l.doubt) {
-    leads.push({ id: 'a-doubt-' + a.id, kind: 'doubt', y: l.y1, people: [a.id], title: `The oldest move on the map is the one in doubt`,
-      body: `${name(a.id)}: recorded as a child in ${place(l.a).name} in ${l.y0}, a father in ${place(l.b).name} by ${l.y1}. ${Math.round(km(ll(place(l.a)), ll(place(l.b))) / 10) * 10} km, and he would have been about ${l.y1 - yr(a.id)}. The tree itself says: ${l.doubt}. If these are two men, this journey never happened.` });
+    leads.push({ id: 'a-doubt-' + a.id, kind: 'doubt', y: l.y1, people: [a.id], title: `A move the tree itself doubts`,
+      body: `${name(a.id)}: recorded as a child in ${place(l.ra).name} in ${l.y0}, a father in ${place(l.rb).name} by ${l.y1}. ${Math.round(km(ll(place(l.a)), ll(place(l.b))) / 10) * 10} km, and he would have been about ${l.y1 - yr(a.id)}. The tree itself says: ${l.doubt}. If these are two men, this journey never happened.` });
   }
   return { facts, leads };
 }

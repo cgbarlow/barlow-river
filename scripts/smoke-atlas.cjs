@@ -552,6 +552,22 @@ process.on('exit', () => server?.kill());
   check('sail with: the first caption carries a whole year and stays long enough to read', Boolean(first17) && /^\d{4}\|/.test(first17) && held17 >= 2000, `${first17} held17 ${held17} ms`);
   await A(page, () => window.__atlas.stop()); void fb;
   await page.close();
+  // a window of middling width: the chips shorten to fit; Esc from help returns to the ? button; the family message goes when a country opens
+  page = await open('#y=1880', { width: 901, height: 700 });
+  await A(page, () => window.__atlas.stop());
+  const mid = await page.evaluate(() => { const r = document.querySelector('#countries'); return [r.scrollWidth <= r.clientWidth + 1, [...r.children].every((c) => { const b = c.getBoundingClientRect(); return b.left >= 0 && b.right <= innerWidth; })]; });
+  check('at 901 wide every country chip fits on screen', mid[0] && mid[1], JSON.stringify(mid));
+  await page.keyboard.press('Tab');
+  await page.locator('#help').focus(); await page.keyboard.press('Enter'); await page.waitForTimeout(120); await page.keyboard.press('Escape'); await page.waitForTimeout(120);
+  check('Esc from help puts the keyboard back on the ? button', (await page.evaluate(() => document.activeElement?.id)) === 'help');
+  await A(page, () => { const A_ = window.__atlas; A_.select(A_.world.actors.find((a) => a.p.name === 'Thomas Finch' && a.b === 1823).id, false); });
+  await page.locator('#record [data-act="family"]').click(); await page.waitForTimeout(100);
+  await page.locator('#countries [data-country="England"]').click(); await page.waitForTimeout(100);
+  check('the family message does not stay over a country panel', (await page.locator('.toast').count()) === 0);
+  await page.keyboard.press('Escape');
+  await A(page, () => window.__atlas.setView('shores'));
+  check('two shores, which cannot zoom, shows no zoom buttons', (await page.locator('#zin').isHidden()) && (await page.locator('#zout').isHidden()));
+  await page.close();
   // phones: every country chip on screen while someone is at sea; the caption under the lower map
   page = await open('#y=1874', { width: 390, height: 800 }, { hasTouch: true, isMobile: true });
   await A(page, () => { window.__atlas.stop(); window.__atlas.setYear(1874); window.__atlas.settle(); });

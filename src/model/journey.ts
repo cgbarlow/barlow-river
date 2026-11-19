@@ -14,7 +14,7 @@ import { km, type LonLat } from './geo.ts';
 export const SAIL_MAX = 3;
 
 export interface Stay { p: string; from: number; to: number; stops: AtlasStop[]; /** a closer place inside the vaguer one before it (New Zealand, then Carterton): the same stay known better, not a move */ within?: boolean }
-export interface Leg { a: string; b: string; y0: number; y1: number; km: number; sail: boolean; /** rests on a disputed identity: the words from the record */ doubt?: string; /** not a move: one end is the county or country that holds the other */ within?: boolean; /** starts from a borrowed place, so it is an inference and not a recorded move */ assumed?: boolean; /** both ends are borrowed: a child drawn with a parent, going where the parent is next recorded */ follows?: boolean; /** the year at that end is only approximate in the record */ approx0?: boolean; approx1?: boolean }
+export interface Leg { a: string; b: string; /** the places as the records at each end name them: a stay is kept at the closest place ever recorded, which a given year's record may not name */ ra: string; rb: string; y0: number; y1: number; km: number; sail: boolean; /** rests on a disputed identity: the words from the record */ doubt?: string; /** not a move: one end is the county or country that holds the other */ within?: boolean; /** starts from a borrowed place, so it is an inference and not a recorded move */ assumed?: boolean; /** both ends are borrowed: a child drawn with a parent, going where the parent is next recorded */ follows?: boolean; /** the year at that end is only approximate in the record */ approx0?: boolean; approx1?: boolean }
 
 const ORDER: Record<string, number> = { borrowed: 0, birth: 1, baptism: 1, census: 2, event: 2, marriage: 2, child: 2, death: 8, burial: 9 };
 
@@ -74,7 +74,8 @@ export function legsOf(stays: Stay[], place: (id: string) => AtlasPlace): Leg[] 
     const ap0 = stays[i - 1].stops.some((x) => x.y === y0 && x.approx) && !stays[i - 1].stops.some((x) => x.y === y0 && !x.approx);
     const ap1 = stays[i].stops.some((x) => x.y === y1 && x.approx) && !stays[i].stops.some((x) => x.y === y1 && !x.approx);
     // a voyage is only drawn sailing when both ends are firm dates
-    out.push({ a: a.id, b: b.id, y0, y1, km: km(ll(a), ll(b)), sail: y1 - y0 <= SAIL_MAX && !assumed && !within && !ap0 && !ap1, ...(ap0 ? { approx0: true } : {}), ...(ap1 ? { approx1: true } : {}), ...(assumed ? { assumed } : {}), ...(follows ? { follows } : {}), ...(within ? { within } : {}), ...(doubt && stays[i - 1].stops.every((s) => s.doubt) !== stays[i].stops.every((s) => s.doubt) ? { doubt } : {}) });
+    const ra = [...stays[i - 1].stops].reverse().find((x) => x.y === y0)?.p ?? stays[i - 1].stops[stays[i - 1].stops.length - 1].p, rb = (stays[i].stops.find((x) => x.y === y1) ?? stays[i].stops[0]).p;
+    out.push({ a: a.id, b: b.id, ra, rb, y0, y1, km: km(ll(a), ll(b)), sail: y1 - y0 <= SAIL_MAX && !assumed && !within && !ap0 && !ap1, ...(ap0 ? { approx0: true } : {}), ...(ap1 ? { approx1: true } : {}), ...(assumed ? { assumed } : {}), ...(follows ? { follows } : {}), ...(within ? { within } : {}), ...(doubt && stays[i - 1].stops.every((s) => s.doubt) !== stays[i].stops.every((s) => s.doubt) ? { doubt } : {}) });
   }
   return out;
 }

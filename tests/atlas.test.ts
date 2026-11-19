@@ -308,6 +308,23 @@ describe('the published atlas', () => {
   it('is what the pipeline builds from the published river', () => {
     expect(file).toEqual(JSON.parse(JSON.stringify(atlas)));
   });
+  it('claims no more than the records in its findings', () => {
+    const all = [...file.facts, ...file.leads];
+    // a superlative that an older, shorter move disproves
+    expect(all.some((f) => /oldest move/i.test(f.title))).toBe(false);
+    // two records in one year are quoted with their full dates, and no doubt is made up when they are months apart
+    const same = all.find((f) => f.id.startsWith('a-same-year'))!;
+    expect(same.body).toMatch(/3 Feb 1874/); expect(same.body).toMatch(/9 Nov 1874/); expect(same.body).not.toMatch(/just/);
+    // a place is named as the record of that year names it, not as a later record does
+    expect(all.find((f) => f.id.startsWith('a-doubt'))!.body).not.toMatch(/St Benedict/);
+    expect(all.find((f) => f.id === 'a-farthest')!.body).toMatch(/First recorded in London,/);
+  });
+  it('draws nobody across an ocean on a parent\'s record a generation old when the other parent is recorded either side of the birth', () => {
+    const byName = (n: string) => file.people.find((a) => river.people.find((p) => p.id === a.id)?.name === n)!;
+    const pl = (id: string) => file.places.find((p) => p.id === id)!;
+    expect(pl(byName('Amy May Finch').stops[0].p).country).toBe('New Zealand');
+    expect(pl(byName('Bethia Crawford Caffin').stops[0].p).country).toBe('England');
+  });
   it('accounts for every deceased person exactly once', () => {
     const c = file.meta.counts;
     expect(c.recorded + c.borrowed + c.unplaced).toBe(c.deceased);
