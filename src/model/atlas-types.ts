@@ -31,6 +31,8 @@ export interface AtlasStop {
   why: string;
   /** the full date as the tree gives it, when it gives more than a year: "9 Nov 1874" */
   date?: string;
+  /** a village the record names that is not placed on this map: the stop is drawn at its county */
+  named?: string;
   /** the year is estimated, not recorded */
   est?: boolean;
   /** the record itself gives the year loosely: "c. 1823", "after 1808" */

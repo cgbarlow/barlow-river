@@ -1,51 +1,56 @@
-# Council report: the Atlas, round 10
+# Council report: the Atlas, round 11
 
-Subject: the fourth full outside test in a row (commit `149aa64`, a fresh tester), and what was done.
+Subject: the fifth full outside test in a row (commit `196551f`, a fresh tester on a different model), and what was done.
 
 ## What the tester found
 
-Verdict on `149aa64`: **no**, on two points.
+Verdict on `196551f`: **no**, on four points, all false statements or breaches of the page's own stated rules. None is a crash.
 
-- The owner's four requests: met. The fourth, a remnant after a light goes out, "yes, but faint".
-- Rules A1 to A10, by the tester's own checker: **no violations** in 437 paused years and 9,881 play frames. One false sentence under A9.
-- All sixteen points from round 9: fifteen fixed, one unchanged ("Lost a father at about 11", hedged and not false).
-- Every count the tester could recount matched.
-- Scores: 26.5 of 35 overall, 28 as a build.
+- The owner's four requests: met. The remnant "with a reservation": on the last frame the globe stands so far back that the marks are small.
+- The globe-blanking bug: fixed, across 49 scenarios. No console error in any run.
+- Rules A1 to A9 by the tester's checker: no violations. A10 broken for one person.
+- Everything from round 10 fixed or mostly fixed.
+- Scores: 28.5 of 35 overall, 28 as a build.
 
 Blocking:
-1. **D1, a real bug.** Play for a while, press Home, and the globe goes blank for good. The first two years have no light; the camera then worked out a centre from an empty list and got not-a-number.
-2. **D2.** One finding still ended "The tree does not name a ship."
-
-Minor: a solid line resting on a country-only record (D3); three rings outside the area the death record names (D4); remnants faint, and counted on the last frame only for countries out of view (D8); a label collision on a phone (D6).
+1. **N1.** William Barlow (1606) shown "born" at Mucklestone. His record says Betley, a baptism, with Mucklestone only in a note about doubt. The place matcher read the note.
+2. **N2.** Once a long-gap move was over, its line was drawn solid. The Key says solid means known to within three years. 59 of 78 solid lines in 1950 were not.
+3. **N3.** "No closer place is given" was false for three records that name a village (Milton, Gratton, Harton) the map could not place.
+4. **N4.** A move's window opened at a record naming only the country or county, making it too narrow ("Last known in New Zealand in 1888 … those 2 years" for a man last placed in Auckland in 1883).
 
 ## The Council
 
-**Cat.** D1 is the first crash-class bug any tester has found, in round ten. It was reachable by one ordinary key. Our own checks never pressed Home after playing. Add that check, and guard the function itself, not only its one caller.
+**Cat.** N2 is the largest thing any tester has found since round 7 and it was in plain sight: most of the long lines on the map contradicted the Key. Five testers looked at the same lines. The lesson is to test the Key against the drawing, not only the drawing against the data.
 
-**Owl.** Two blockers, both small. Fix, add the checks, test again. Do not widen the round.
+**Owl.** Four fixes, each one place in the code. N1 is an ordering of two patterns. N2 is one condition. N3 is carrying the village name through. N4 is where the window opens.
 
-**Bear.** The owner asked for the remnant. "Barely readable on the globe" is not delivering it. Make the rings and embers bigger and stronger, and count them for every country on the last frame.
+**Rabbit.** For N3, do not guess where Gratton or Harton is. Carry the name the record gives and say the map could not place it.
 
-**Rabbit.** D4 is a fair catch. A death record that names only a country is still the last thing the records say. Put the ring there, not at the town before.
+**Bear.** The last frame is the owner's remnant in its final form and the tester calls it small. That is taste and it is the owner's to call; list it for him.
 
-**Wolf.** D3 is the same lesson as last round: a country-only record does not date a departure from a town.
+**Wolf.** The owner has said he hopes this is the last round. He should get the truth: five testers, five "no", each on fewer and smaller points, and no rule violation in any.
 
-**Puppy.** Every recount matched. Fifteen of sixteen fixed. The camera crossed once, again.
+**Puppy.** D1 held under 49 attempts to break it.
 
-**Simon.** Consensus: fix D1 to D4, D6 and D8, and test again from scratch. D5 (reading "with wife, 6 children" as placing seven more people) is an inference the Council will not make without the owner. D7 (stars over label ends) and the taste list stay.
+**Simon.** Consensus: fix the four, add a test for each, and test again. Report the trend to the owner plainly and let him decide when it is enough.
 
 ## What was done
 
 | # | Point | Fix |
 |---|---|---|
-| D1 | Globe blank after Home | With no light on its side the camera takes the home view; the centring function returns the current view for an empty list. A browser check plays, presses Home, and looks for a drawn globe and no errors. |
-| D2 | "The tree does not name a ship" | "No ship is named for this crossing." |
-| D3 | Solid line from a country-only record | A last record that names only the county or country does not date a departure: no travelling light, dashed line. |
-| D4 | Rings outside the death record's area | The ring sits at the last place the records give, including a death record that names only a county or country. |
-| D6 | Phone label collision on the last frame | Shorter label on a phone. |
-| D8 | Remnants faint; counted only out of view | Rings and embers are larger and stronger. On the last frame every country chip counts what it remembers. |
+| N1 | Betley record placed at Mucklestone as a birth | A place string that begins "Betley" is Betley; a record marked as a baptism is shown as one. |
+| N2 | Long-gap lines solid once over | They stay dashed. Only a move known to within three years is solid. |
+| N3 | "No closer place is given" where a village is named | The stop carries the village name; the panel says the record names it and the map could not place it. The county's panel lists such villages. |
+| N4 | Window opened at a country-only record | The window opens at the last record that names the place being left. The number of years is counted from full dates where both are known. |
+| N5 | Ember-only person selected but off-screen | The camera goes to the ember. |
 
-92 unit tests, the River's 59 browser checks and the Atlas's 157 pass.
+93 unit tests, the River's 59 browser checks and the Atlas's 157 pass.
+
+## Left for the owner
+
+- The last frame stands far back, so the remnants are small.
+- Hollow lights and "last placed here" rings are both open circles.
+- The 1883 note says "with wife, 6 children"; only the man himself is placed by it.
 
 ## Next
 

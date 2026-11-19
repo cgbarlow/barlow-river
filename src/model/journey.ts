@@ -9,6 +9,7 @@
 
 import type { AtlasPerson, AtlasPlace, AtlasStop } from './atlas-types.ts';
 import { km, type LonLat } from './geo.ts';
+import { ageBetween } from './kin.ts';
 
 /** A window of this many years or fewer is drawn as a voyage. */
 export const SAIL_MAX = 3;
@@ -68,14 +69,15 @@ export function legsOf(stays: Stay[], place: (id: string) => AtlasPlace): Leg[] 
   const out: Leg[] = [];
   for (let i = 1; i < stays.length; i++) {
     const a = place(stays[i - 1].p), b = place(stays[i].p);
-    const y0 = stays[i - 1].to, y1 = stays[i].from;
+    // the window opens at the last record that names the place being left: one that names only its county or country does not
+    const y0 = Math.max(-Infinity, ...stays[i - 1].stops.filter((x) => !contains(place(x.p), a)).map((x) => x.y)) > -Infinity ? Math.max(...stays[i - 1].stops.filter((x) => !contains(place(x.p), a)).map((x) => x.y)) : stays[i - 1].to, y1 = stays[i].from;
     const doubt = [...stays[i - 1].stops, ...stays[i].stops].find((s) => s.doubt)?.doubt;
     // a record that names only the county or country of the place before it (or the reverse) is the same place known better or worse, not a move
     const assumed = lent(stays[i - 1]), within = Boolean(stays[i].within) || contains(a, b) || contains(b, a), follows = assumed && lent(stays[i]);
     const ap0 = stays[i - 1].stops.some((x) => x.y === y0 && x.approx) && !stays[i - 1].stops.some((x) => x.y === y0 && !x.approx);
     const ap1 = stays[i].stops.some((x) => x.y === y1 && x.approx) && !stays[i].stops.some((x) => x.y === y1 && !x.approx);
     // a voyage is only drawn sailing when both ends are firm dates
-    const s0 = [...stays[i - 1].stops].reverse().find((x) => x.y === y0) ?? stays[i - 1].stops[stays[i - 1].stops.length - 1], s1 = stays[i].stops.find((x) => x.y === y1) ?? stays[i].stops[0];
+    const s0 = [...stays[i - 1].stops].reverse().find((x) => x.y === y0 && !contains(place(x.p), a)) ?? [...stays[i - 1].stops].reverse().find((x) => x.y === y0) ?? stays[i - 1].stops[stays[i - 1].stops.length - 1], s1 = stays[i].stops.find((x) => x.y === y1) ?? stays[i].stops[0];
     const ra = s0.p, rb = s1.p;
     const burial = y0 === y1 && s0.kind === 'death' && stays[i].stops.every((x) => x.kind === 'burial');
     out.push({ a: a.id, b: b.id, ra, rb, ...(s0.date ? { d0: s0.date } : {}), ...(s1.date ? { d1: s1.date } : {}), ...(burial ? { burial } : {}), y0, y1, km: km(ll(a), ll(b)), sail: y1 - y0 <= SAIL_MAX && !assumed && !within && !ap0 && !ap1 && !burial && !stays[i - 1].toVague, ...(ap0 ? { approx0: true } : {}), ...(ap1 ? { approx1: true } : {}), ...(assumed ? { assumed } : {}), ...(follows ? { follows } : {}), ...(within ? { within } : {}), ...(doubt && stays[i - 1].stops.every((s) => s.doubt) !== stays[i].stops.every((s) => s.doubt) ? { doubt } : {}) });
@@ -141,6 +143,7 @@ export function windowText(leg: Leg, name: (id: string) => string): string {
   if (leg.assumed) return `No record gives a place before ${leg.y1}: ${a} is where a parent was. First recorded in ${b} in ${leg.y1}.`;
   const y0 = `${leg.approx0 ? 'about ' : ''}${leg.y0}`, y1 = `${leg.approx1 ? 'about ' : ''}${leg.y1}`;
   if (leg.y1 === leg.y0) return leg.km > 1500 ? `In ${a} and in ${b} in ${y0}.` : `In ${a} and in ${b} in ${y0}. The records do not say which came first.`;
-  const n = leg.y1 - leg.y0;
-  return `Last known in ${a} in ${y0}. In ${b} by ${y1}. The move was some time in ${n === 1 ? 'that year' : `those ${leg.approx0 || leg.approx1 ? 'roughly ' : ''}${n} years`}.`;
+  // counted from the full dates where the tree has both
+  const n = leg.d0 && leg.d1 && !leg.approx0 && !leg.approx1 ? Number(ageBetween({ y: leg.y0, text: leg.d0 }, { y: leg.y1, text: leg.d1 })) || leg.y1 - leg.y0 : leg.y1 - leg.y0;
+  return `Last known in ${a} in ${y0}. In ${b} by ${y1}. The move was some time in ${n <= 1 ? 'that year' : `those ${leg.approx0 || leg.approx1 ? 'roughly ' : ''}${n} years`}.`;
 }

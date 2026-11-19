@@ -325,6 +325,22 @@ describe('the published atlas', () => {
     expect(pl(byName('Amy May Finch').stops[0].p).country).toBe('New Zealand');
     expect(pl(byName('Bethia Crawford Caffin').stops[0].p).country).toBe('England');
   });
+  it('holds the four points of the fifth outside test', () => {
+    const stops = (id: string) => file.people.find((a) => a.id === id)!.stops;
+    // a record that says Betley, with Mucklestone only in a note, is placed at Betley, as a baptism
+    expect(stops('I900109')[0]).toMatchObject({ p: 'betley', kind: 'baptism' });
+    // a village the record names but the map cannot place is carried, not denied
+    expect(stops('I500034').find((s) => s.y === 1806)!.named).toBe('Harton');
+    // a move's window opens at the last record that names the place left, not one naming only its country
+    const pl = (id: string) => file.places.find((p) => p.id === id)!;
+    const a67 = file.people.find((a) => a.id === 'I67')!, legs = legsOf(staysOf(a67, pl), pl);
+    const north = legs.find((l) => l.b === 'northland')!;
+    expect(north.y0).toBe(1883); expect(north.sail).toBe(false);
+    // once a long-gap move is over its line stays dashed
+    const w = new World(river, file), actor = w.byId.get('I82')!, long = actor.legs.find((l) => l.y1 - l.y0 > 3 && !l.assumed && !l.within && l.km > 3)!;
+    const tr = w.scene(1950, null, null).traces.find((t) => t.actor === actor && t.leg === long)!;
+    expect(tr.style).toBe('fade');
+  });
   it('accounts for every deceased person exactly once', () => {
     const c = file.meta.counts;
     expect(c.recorded + c.borrowed + c.unplaced).toBe(c.deceased);

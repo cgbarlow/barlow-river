@@ -142,7 +142,7 @@ const RULES: [RegExp, string][] = [
   [/woolwich/, 'woolwich'], [/bexley/, 'bexley'], [/lambeth|stockwell|kenni(ng|gt)/, 'lambeth'], [/camberwell/, 'camberwell'], [/streatham/, 'streatham'],
   [/london/, 'london'], [/\bkent\b/, 'kent'],
   // the rest
-  [/mucklestone/, 'mucklestone'], [/betley/, 'betley'], [/ludlow|gaolford|goulford|stanton lacy/, 'ludlow'], [/wistans(l|t)ow/, 'wistanstow'], [/\bwem\b/, 'wem'],
+  [/^betley/, 'betley'], [/mucklestone/, 'mucklestone'], [/betley/, 'betley'], [/ludlow|gaolford|goulford|stanton lacy/, 'ludlow'], [/wistans(l|t)ow/, 'wistanstow'], [/\bwem\b/, 'wem'],
   [/leominster/, 'leominster'], [/birmingham/, 'birmingham'], [/chichester/, 'chichester'], [/thorncombe/, 'thorncombe'], [/kingswood/, 'kingswood'],
   [/st\.? martin in meneage/, 'st-martin-meneage'], [/mawgan in meneage/, 'mawgan-meneage'], [/helston/, 'helston'], [/constantine/, 'constantine'], [/illogan/, 'illogan'],
   [/gellifelen|llanelly/, 'gellifelen'], [/trevethin/, 'trevethin'],

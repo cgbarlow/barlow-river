@@ -50,10 +50,15 @@ export function buildAtlas(river: RiverData): AtlasBuild {
       if (seen.has(key)) return;
       seen.add(key);
       const full = date && !est && !approx && /[A-Za-z]{3}/.test(date) && date.includes(String(y)) ? date : undefined;
-      stops.push({ y, p: pl.id, kind, why, ...(full ? { date: full } : {}), ...(est ? { est: true } : {}), ...(approx && !est ? { approx: true } : {}), ...(disputed && (kind === 'birth' || kind === 'baptism') ? { doubt: disputed } : {}) });
+      // the record names somewhere closer than the county it could be placed at
+      const part = (raw ?? '').split(',')[0].replace(/\(.*$/, '').trim(), county = pl.name.split(',')[0].toLowerCase().slice(0, 6);
+      const head = part.toLowerCase().includes(county) ? part.slice(0, part.toLowerCase().indexOf(county)).trim() : part;
+      const named = pl.prec === 'area' && head && !/^\d/.test(head) && !pl.name.toLowerCase().includes(head.toLowerCase()) && !head.toLowerCase().includes(pl.name.toLowerCase().split(',')[0]) ? head : undefined;
+      stops.push({ y, p: pl.id, kind, why, ...(named ? { named } : {}), ...(full ? { date: full } : {}), ...(est ? { est: true } : {}), ...(approx && !est ? { approx: true } : {}), ...(disputed && (kind === 'birth' || kind === 'baptism') ? { doubt: disputed } : {}) });
     };
     const b = p.b!, d = p.d!;
-    add(b.place, b.y, b.kind === 'bap' ? 'baptism' : 'birth', b.kind === 'bap' ? 'baptised' : 'born', Boolean(b.est), Boolean(b.approx), b.text);
+    const bap = b.kind === 'bap' || /\(baptism\b/i.test(b.place ?? '');
+    add(b.place, b.y, bap ? 'baptism' : 'birth', bap ? 'baptised' : 'born', Boolean(b.est), Boolean(b.approx), b.text);
     for (const e of p.events ?? []) {
       if (!e.place) {
         // an arrival the tree dates and gives a destination for, in its own words: "Arrives from England … to Auckland, New Zealand"

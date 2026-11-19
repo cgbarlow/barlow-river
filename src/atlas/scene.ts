@@ -128,7 +128,7 @@ export class World {
       for (let j = 0; j < a.legs.length; j++) {
         const l = a.legs[j];
         if (l.km <= 3 || l.within) continue;
-        if (j < idx) traces.push({ actor: a, leg: l, style: l.doubt ? 'doubt' : l.assumed ? 'fade' : 'done', alpha: (sel ? 0.95 : finale ? 0.4 : dead ? 0.2 : 0.42) * dim });
+        if (j < idx) traces.push({ actor: a, leg: l, style: l.doubt ? 'doubt' : l.assumed || !l.sail ? 'fade' : 'done', alpha: (sel ? 0.95 : finale ? 0.4 : dead ? 0.2 : 0.42) * dim });
         else if (sel && (dead || j > idx || !whereAt(a.stays, year)!.b)) traces.push({ actor: a, leg: l, style: 'ahead', alpha: 0.35 });
       }
       const s = a.stays[idx], here = this.ll(s.p), site = this.siteId(s.p);

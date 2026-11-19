@@ -555,10 +555,13 @@ function select(id: string | null, _moveYear = true) {
   state.selected = id; state.place = null; state.focus = null; state.finding = null; state.follow = null; state.country = null; renderCountries(state.year);
   // a person not alive in the chosen year is shown in the year they are first recorded
   // someone placed only by a death or burial has no light, only an ember: go to the year it appears
-  if (a.on >= a.d) { if (moveYear || state.year < a.d) setYear(Math.min(thisYear, a.d)); }
+  // no light to follow: the ember, or the place of the one record, is brought into view below
+  const noLight = a.on >= a.d;
+  if (noLight) { if (moveYear || state.year < a.d) setYear(Math.min(thisYear, a.d)); }
   else if (state.year < a.on || state.year >= a.d) setYear(Math.min(a.d - 1, Math.max(a.on, a.stays[0].from)));
   // the camera stays with them as the year moves, until the user drags it away
   state.track = id; for (const s of stages) s.resume();
+  if (noLight) for (const s of stages) s.frame([world.ll(a.stays[a.stays.length - 1].p)]);
   remember('person', id);
   openRecord('person', personHtml(a));
   writeHash(); kick();
@@ -725,7 +728,7 @@ function personHtml(a: Actor): string {
   const given = (p.given ?? p.name ?? '').split(' ')[0].replace(/\.$/, '');
   const vagueDeath = a.a.stops.find((x) => (x.kind === 'death' || x.kind === 'burial') && ['area', 'country'].includes(world.places.get(x.p)!.prec));
   const how = a.hollow ? `<span class="badge"><i style="border:1.5px solid ${CERT.borrowed}"></i>No place of their own</span>` : a.vague ? `<span class="badge"><i style="background:${CERT.vague}"></i>Place known only roughly</span>` : `<span class="badge"><i style="background:${CERT.record}"></i>Placed by a record${firstRec > a.b + 2 || a.a.stops.some((x) => x.kind === 'borrowed' && x.y < firstRec) ? ` from ${about(firstRec)}${firstRec}` : ''}</span>`;
-  const stops = a.a.stops.map((s) => `<li class="${s.kind === 'borrowed' ? 'coarse' : ''}"><b>${(s.kind === 'borrowed' ? p.b?.est && s.y === p.b.y : s.est || s.approx) ? 'c. ' : ''}${s.y}</b><span><button data-place="${esc(world.siteId(s.p))}">${esc(placeName(s.p))}</button><small>${esc(s.why)}${s.kind !== 'borrowed' && ['area', 'country'].includes(world.places.get(s.p)!.prec) ? ' · no closer place is given: drawn as a haze' : ''}${s.doubt ? ` · in doubt: ${esc(s.doubt)}` : ''}</small></span></li>`).join('');
+  const stops = a.a.stops.map((s) => `<li class="${s.kind === 'borrowed' ? 'coarse' : ''}"><b>${(s.kind === 'borrowed' ? p.b?.est && s.y === p.b.y : s.est || s.approx) ? 'c. ' : ''}${s.y}</b><span><button data-place="${esc(world.siteId(s.p))}">${esc(placeName(s.p))}</button><small>${esc(s.why)}${s.kind !== 'borrowed' && ['area', 'country'].includes(world.places.get(s.p)!.prec) ? (s.named ? ` · the record names ${esc(s.named)}, which is not placed on this map: drawn as a haze over the county` : ' · no closer place is given: drawn as a haze') : ''}${s.doubt ? ` · in doubt: ${esc(s.doubt)}` : ''}</small></span></li>`).join('');
   const kmText = (k: number) => (k >= 1000 ? (Math.round(k / 100) * 100).toLocaleString('en') : k >= 100 ? String(Math.round(k / 10) * 10) : String(Math.round(k)));
   // a country or a county is not a point: no distance is given to or from one
   const noKm = (l: Leg) => [l.a, l.b].some((id) => ['country', 'area'].includes(world.places.get(id)!.prec));
@@ -748,7 +751,7 @@ function placeHtml(site: string): string {
   const list = (title: string, as: Actor[]) => (as.length ? `<h3>${title} (${as.length})</h3><div class="who">${as.sort((x, y) => x.b - y.b).map((a) => chip(a.id)).join('')}</div>` : '');
   return `<button class="back" data-act="back">← Back</button><div class="rec"><div class="kicker">${esc(pl.country)}</div><h2>${esc(pl.name)}</h2>
   <div class="life">${isFinite(s.y0) ? (s.y0 === s.y1 ? `Recorded in ${s.abt(s.y0)}${s.y0}` : `Recorded from ${s.abt(s.y0)}${s.y0} to ${s.abt(s.y1)}${s.y1}`) : 'No record of its own'}</div>
-  <p>${PREC[pl.prec]}${parishes.length ? ` Includes ${esc(parishes.join(', '))}.` : ''}</p>
+  <p>${PREC[pl.prec]}${(() => { const v = [...new Set(s.people.flatMap((a) => a.a.stops.filter((x) => x.p === site && x.named).map((x) => x.named!)))]; return v.length ? ` Some records here name a village that is not placed on this map (${esc(v.join(', '))}); they are drawn here too.` : ''; })()}${parishes.length ? ` Includes ${esc(parishes.join(', '))}.` : ''}</p>
   ${list('Born or baptised here', s.born)}${list('Died or buried here', s.died)}${list('Recorded here', s.here)}${list('Drawn here with a relative', s.lent)}
   <div class="actions">${isFinite(s.y0) ? `<button class="btn quiet" data-act="goyear" data-y="${s.y0}">Go to ${s.abt(s.y0)}${s.y0}</button>` : ''}</div></div>`;
 }
