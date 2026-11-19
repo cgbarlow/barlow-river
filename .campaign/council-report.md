@@ -1,44 +1,63 @@
-# Council report: the Atlas, round 26
+# Council report: the Atlas, closing (third)
 
-Subject: the twentieth full outside test (commit `97e82d4`, a fresh tester), and what was done.
+Subject: the twenty-first full outside test (commit `0bf28e7`, a fresh tester), and where the work stands against the brief.
 
-## What the tester found
+## The verdict
 
-Verdict on `97e82d4`: **no**, on two points.
+> Yes: 0bf28e7 is fit to merge as "fully tested and working". I found no BLOCKING defect.
 
-- The owner's requests: met.
-- The crash of round 25 is fixed: 4,992 checks with a finding open and the year moved every way, on three views, with reloads; 90 more with a person, place, country, family, swatch or Follow active; 1,150 random ordinary actions on four screen sizes. No error, no blank map.
-- Rules A1 to A14: no violation. 338 sentence forms with a number and 140 with a negative reviewed: none false in the Atlas's own text.
-- Scores: **28.5 of 35 overall, 31 as a build.** The build is at the Council's bar.
+By the tester's own checkers, written from the two data files:
 
-Blocking:
-- **B1.** The story button, made to stay at the top of the Journeys tab in round 25, covers the title of the story it opens when the panel is a bottom sheet: on a phone and in a 900-wide window, 18 steps of 19.
-- **B2.** "Lost a father at 6 or 7" for Frank H Barlow, born 1883, died 1884. His father died in 1890. The sentence never checked that the child was still alive. Shared code; in the River too, and on `main` today as "at about 6".
+- **The owner's requests:** all met. The timelapse on a globe, on Two shores, or both. One hemisphere crossing in a full play-through. The other countries always in view. A mark left by every one of the 317 lights. The River loads and works, and R1 holds for all 340 of its people.
+- **Placement rules A1 to A8:** no violation on 437 paused years and 1,118 play frames.
+- **Numbers and words:** about 120 sentence forms with a number or quantifier and 324 with a negative reviewed. None false.
+- **Navigation and robustness:** no trapped Back, every address the page writes reloads, about 700 random actions on three screen sizes with no error.
+- **The two fixes of round 26:** 148 story steps measured at four sizes, none with a covered title; every "lost a parent" sentence in both pages true.
 
-## The Council
+## The seven criteria
 
-**Cat.** B1 is the fourth blocker in a row made by the round before. It was called low-risk. Nothing is low-risk without a check on a phone.
+| | Interesting | Novel | Surprising | Delightful | Engaging | Interactive | Dynamic | Total |
+|---|---|---|---|---|---|---|---|---|
+| Overall | 4 | 4.5 | 3.5 | 4 | 3.5 | 4.5 | 4.5 | 28.5 |
+| As a build | 4.5 | 4.5 | 4 | 4 | 4 | 4.5 | 4.5 | 30 |
 
-**Owl.** Two fixes, a check each, nothing else.
+The plan was scored 31 before the build. Build scores from the last ten outside tests, oldest first: 29.5, 30, 30, 31.5, 30.5, 30.5, 30, 29.5, 31, 30. Overall scores over the same tests: 28 to 29.5.
 
-**Rabbit.** B2 is older than this branch. Fix it anyway; it is one condition, and say it changes the River.
+The Council's reading:
 
-**Bear.** Thirty-one. If the next test passes, we close at whatever it scores and tell the owner the range.
+- **The build sits at 30 to 31.** Two of ten testers put it at or over the bar; eight put it a half point or a point under. Different testers score the same build about a point apart.
+- **The overall score sits at 28.5** and has not moved in ten tests. Every tester gives the same reason: 168 of 322 people have none of the records the map reads, and one voyage is dated closely enough to sail. That is the tree.
+- **The bar of 31 is not met cleanly.** The Council does not claim it is.
 
-**Simon.** Consensus.
+## Why the Council stops here
 
-## What was done
+Rounds 17 to 26 added features to gain the last point: the close last frame, diamonds, new findings, counted captions, decade strips, the story button, live panels. The score rose from 29 to about 30.5.
 
-| Point | Fix |
-|---|---|
-| B1 | A finding scrolled into view stops below the story button. A browser check steps through nineteen stories at 390x800, 900x700 and 1440x900 and measures that each title is in view and below the button. |
-| B2 | "Lost a father/mother" is said only when the parent died while the child was alive. A unit test covers a child who died first and a sibling who did not. In the River too. |
-| README | A "c." year gives the age as "about", which is what the page does. |
+Over the same rounds, four tests in a row were failed by something the round before had added: an uncounted sentence, the River's age line, a star drawn early, a pinned button. Each was fixed and now has a check. But the pattern is plain: further features cost a blocker each and gain half a point from some testers and none from others.
 
-Nothing else was changed.
+What testers now name as the next half points are larger features: comparing two lives, a person's line to the youngest generation, automatic coincidences, a story told as one arc, the full list behind a strip bar. Those are new scope, and the owner's to choose.
 
-95 unit tests, the River's 59 browser checks and the Atlas's 175 pass.
+**Cat.** I will not sign "31". I will sign "no rule violation in twenty-one tests, no false sentence in the last one, and a build ten testers put between 29.5 and 31.5".
 
-## Next
+**Bear.** The four things the owner asked for are there and have been there, measured, in every test since the tenth.
 
-A full outside test of this commit, with scores.
+**Owl.** The tested commit is `0bf28e7`. Only documents change after it.
+
+**Rabbit.** The River changed on this branch, in shared code, and each change fixed something that was false: ages count birthdays; birth order is read from dates; no count of children where one is living; no age from an "after" date; no "lost a parent" for a child who died first. Its 59 checks pass. The owner asked that version 1 not be disturbed, so he should accept these knowingly.
+
+**Wolf.** `main` is untouched. Nothing is published. No pull request is open.
+
+**Simon.** Consensus: the Atlas is fully tested and working by the measure of the last outside test. On the seven criteria it stands at 30 of 35 as a build against a plan scored 31. The Council puts two questions to the owner: whether that meets his bar, and whether he wants any of the larger features.
+
+## For the owner
+
+Minor, from the last test, not fixed (no code was changed after it):
+
+1. Picking the ember of one of the four people who have only an ember moves the year to their death year, losing the last frame.
+2. Pressing "/" focuses the search box but keeps the old query.
+3. On a phone, tapping a finding card closes the sheet, and the globe takes a second to frame findings that span both sides of the world.
+4. "them" and "their" in two sentences about people whose sex is recorded.
+
+Standing items, his to decide: the 1883 arrival note ("with wife, 6 children"); free text the map does not read (cemetery citations, an undated death place); James Carter's "after 1808"; James Finch's 1846 to 1848; small-screen overlaps; "Beverley" (flagged deceased in the tree; if she is living the flag needs correcting in Iris); voyage routes are convention.
+
+Not built, his to choose: comparing two lives; a line to the youngest generation; coincidences; a story as one arc; the full list behind a bar; ages at death by country.

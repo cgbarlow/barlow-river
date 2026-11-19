@@ -133,13 +133,13 @@ Nothing is published. The built site has been tested served from a `/barlow-rive
 
 ## How the Atlas was reviewed
 
-The Council reviewed the plan, then three mockups, then the build over sixteen rounds. The build was tested by eleven outside testers in a row. Each wrote its own checker from the two data files, none had seen the others' reports, and each test was followed by fixes and a fresh test of the new commit. The reports are in `.campaign/council-report-atlas-*.md`; the last is `council-report-atlas-closing-2.md`.
+The Council reviewed the plan, then three mockups, then the build over twenty-six rounds. The build was tested by twenty-one outside testers in a row. Each wrote its own checker from the two data files, none had seen the others' reports, and each test was followed by fixes and a fresh test of the new commit. The reports are in `.campaign/council-report-atlas-*.md`; the last is `council-report-atlas-closing-3.md`.
 
-Blocking points found per test: ten, ten, five, two, four, one, one, one, one, two, none. The eleventh test, of commit `d24dec7`, found no blocking defect and judged it fit to merge. The placement rules had no violation in any of the eleven. One bug that blanked the globe was found in the fourth test, fixed, and is now covered by a browser check. From the sixth test on, every blocker was a sentence that said more than the map's records do.
+The twenty-first test, of commit `0bf28e7`, found no blocking defect and judged it fit to merge. The placement rules had no violation in any of the twenty-one tests. The blockers along the way were of four kinds: sentences that said more than the map's records do; three bugs (a blank globe after Home, a trapped Back button, a crash with a finding open); layout on small screens; and, in the shared code, ages and family sentences in the River that were wrong. Each now has a unit test or a browser check.
 
-The last test scored the Atlas 28 of 35 on the seven criteria, and 29 judging only what the page does with the data it has. The plan was scored 31 before the build. The gap is mostly the records: about half the lights are borrowed and only one voyage is dated closely enough to draw sailing.
+On the seven criteria the last test scored the Atlas 28.5 of 35 overall and 30 judging only what the page does with the data it has. The plan was scored 31 before the build. Over the last ten tests the build scored between 29.5 and 31.5, and the overall score between 28 and 29.5. The overall gap is the records: about half the people have none that the map reads, and only one voyage is dated closely enough to draw sailing.
 
-The River's shared code changed on this branch: ages count birthdays, birth order is read from dates, and a count of children is not shown where any child is living.
+The River's shared code changed on this branch: ages count birthdays, birth order is read from dates, a count of children is not shown where any child is living, no age is given from an "after" date, and "lost a parent" is said only where the parent died first.
 
 Where the map reads no dated death (145 of the 322 people on the map) the light goes out seventy years after birth and leaves no ember. The guide says so.
 
