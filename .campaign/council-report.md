@@ -1,48 +1,39 @@
-# Council report: the Atlas, round 20
+# Council report: the Atlas, round 21
 
-Subject: the fourteenth full outside test (commit `09fdda4`, a fresh tester), and what was done.
+Subject: the fifteenth full outside test (commit `7d80523`, a fresh tester), and what was done.
 
 ## What the tester found
 
-Verdict on `09fdda4`: **yes**, fit to merge. No blocking defect.
+Verdict on `7d80523`: **no**, "not quite", on one line.
 
 - The owner's four requests: met.
-- Rules A1 to A12: no violation, including at four points in every year, not only whole years.
-- **Every number and every quantifier on the page recounted:** 277 sentence forms with a number or a "most/all/first/last", and 404 with a negative. None false.
-- Everything added in round 19 recounted exactly.
-- Scores: **28.5 of 35 overall, 30 as a build.** The same as the test before. The bar is 31.
+- Rules A1 to A12 for the Atlas: no violation. Every bar of every decade strip (6 countries, 73 places) recounted from the drawn frames and found exact. All 18 findings, all 38 captions and 172 quantifier forms recount true.
+- Scores: **28.5 of 35 overall, 31.5 as a build.** The build is over the Council's bar of 31 for the first time.
 
-Minor: the River's "Aged about N" is one year high in 21 records, not the three reported earlier; a counted caption can stay on screen twenty years after its year; a title clipped in the Poland inset on a phone; the longer Key needs scrolling on a sideways phone.
+Blocking:
+- **D1.** In the River, James Carter's record box said "Died after 1808 … Aged about 35", beside a son born in 1816. The age line added last round treated an "after" date like a "c." date. The life-summary code already refuses such dates; the new line did not.
 
-What the tester said would add half a point: a presence-over-time strip in each place and country panel; captions for the long middle (1700 to 1850); retiring a counted caption once its year is well past. And three larger features: comparing two lives, a person's line to the youngest generation, and automatic coincidences.
+Minor: a decade strip said "Most in the 1960s: 1" when several decades were level (27 of 57 strips); two small-screen overlaps; one keyboard path where Esc left focus on the page body.
 
 ## The Council
 
-**Owl.** Two tests at thirty. The first three items are small and each maps to a criterion. Do those. The three larger features are new scope: put them to the owner.
+**Cat.** A fix to version 1 broke version 1 for one man. The owner asked that the River not be disturbed. Every change to shared code now gets a River check of its own.
 
-**Cat.** The River's age line is version 1's own code and it is wrong in 21 records. We have the function that gets it right. Use it. Tell the owner the River changes.
+**Owl.** One line and one wording. Add a browser check for each.
 
-**Bear.** Agreed. And say plainly that the score may stay at thirty: two testers in a row put the overall at 28.5 because of the records.
+**Bear.** 31.5. The bar is met on the build. It is not met on a commit a tester has passed. Fix, test, and only then say so.
 
-**Simon.** Consensus as Owl says.
+**Simon.** Consensus as Owl and Bear say.
 
 ## What was done
 
-| For | Change |
+| Point | Fix |
 |---|---|
-| Interesting | Every place panel and country panel has a strip of bars: how many lights stand there at the middle of each decade, with the peak decade and its count. |
-| Engaging | Captions for the first dated record the map reads in Cornwall (1757) and Kent (1773), and in Staffordshire (1592), where no other caption is near. |
-| Dynamic | A counted caption leaves the screen once its year is more than six years past. |
-| River | "Aged N" is counted from the full dates, "N or N+1" from bare years, "under one year" for an infant. |
-| Minor | The inset title on the last frame shows the count alone, so it fits. |
+| D1 | The River gives no age at death when either date is "after" or "before". A browser check opens James Carter in the River and looks for it; another checks Peter Barlow reads "Aged 85". |
+| Tied peaks | A strip with several level decades says "Never more than N, first in the Xs." A browser check counts the bars from the scene and checks the wording. |
+| Interactive | A bar in a decade strip can be tapped to go to that decade. |
 
-94 unit tests, the River's 59 browser checks and the Atlas's 160 pass.
-
-## Put to the owner, not built
-
-- Compare two lives side by side on the map.
-- A person's line down to the youngest generation, drawn on the map.
-- Coincidences flagged automatically (relatives in one town in one year).
+94 unit tests, the River's 59 browser checks and the Atlas's 164 pass. One River check failed once in a full run and passed on two reruns; it reads the current year off the screen and is sensitive to timing.
 
 ## Next
 

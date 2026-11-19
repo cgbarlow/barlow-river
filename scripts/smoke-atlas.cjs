@@ -608,6 +608,21 @@ process.on('exit', () => server?.kill());
   check('on the last frame the chips count what each country remembers, and they add up to the marks drawn', fin.every((t) => /remembered$/.test(t)) && fin.reduce((n, t) => n + Number(/: (\d+)/.exec(t)[1]), 0) === finSum && finSum > 300, JSON.stringify(fin) + ' ' + finSum);
   check('no finding says the tree names no ship', !/does not name a ship|names no ship/.test(await A(page, () => JSON.stringify([window.__atlas.atlas.facts, window.__atlas.atlas.leads]))));
   await page.close();
+  // the River's age line: none from an "after" date; exact from full dates
+  page = await open('#y=1800');
+  await page.goto(base + 'index.html#p=M91M-176'); await page.reload(); await page.waitForSelector('#record:not([hidden]) h2');
+  const jc = await page.locator('#record').textContent();
+  check('the River gives no age at death from an "after" date', /after 1808/.test(jc) && !/Aged/.test(jc), (jc.match(/Died[^]{0,80}/) || [''])[0]);
+  await page.goto(base + 'index.html#p=I11'); await page.reload(); await page.waitForSelector('#record:not([hidden]) h2');
+  check('and counts birthdays where both dates are full: Peter Barlow, 13 Oct 1776 to 1 Mar 1862, aged 85', /Aged 85(?! or)/.test(await page.locator('#record').textContent()));
+  // a decade strip: its bars are counted from the scene, a tied peak is not called the most, and a bar goes to its decade
+  await page.goto(base + 'atlas.html#y=1855'); await page.waitForFunction(() => window.__atlas);
+  const st17 = await A(page, () => { const A_ = window.__atlas, w = A_.world; A_.stop(); const out = []; for (const c of ['New Zealand', 'Poland']) { A_.openCountry(c); if (A_.state.country !== c) A_.openCountry(c); const f = document.querySelector('#record .strip'); const bars = [...f.querySelectorAll('rect')].map((r) => [Number(r.dataset.y), Number(r.querySelector('title').textContent.split(': ')[1])]); const ok = bars.every(([y, n]) => w.actors.filter((a) => w.countryOf(a, y + 0.5) === c).length === n); const top = Math.max(...bars.map((b) => b[1])), tied = bars.filter((b) => b[1] === top).length > 1; out.push([c, bars.length, ok, tied, /Most in the/.test(f.textContent), /Never more than/.test(f.textContent)]); } return out; });
+  check('decade strips count the lights drawn, and a tied peak is not called the most', st17.every((r) => r[1] > 0 && r[2] && r[3] === r[5] && r[3] !== r[4]), JSON.stringify(st17));
+  await A(page, () => { window.__atlas.openCountry('New Zealand'); if (window.__atlas.state.country !== 'New Zealand') window.__atlas.openCountry('New Zealand'); });
+  const barY = await page.evaluate(() => { const r = [...document.querySelectorAll('#record .strip rect')].pop(); r.dispatchEvent(new MouseEvent('click', { bubbles: true })); return Number(r.dataset.y); });
+  check('tapping a bar goes to that decade', (await A(page, () => window.__atlas.state.year)) === barY, String(barY));
+  await page.close();
   // phones: every country chip on screen while someone is at sea; the caption under the lower map
   page = await open('#y=1874', { width: 390, height: 800 }, { hasTouch: true, isMobile: true });
   await A(page, () => { window.__atlas.stop(); window.__atlas.setYear(1874); window.__atlas.settle(); });

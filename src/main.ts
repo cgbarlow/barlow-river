@@ -537,7 +537,7 @@ function personHtml(p: Person): string {
   const fams = p.fams.map((fid) => F.get(fid)!);
   const kv: string[] = [];
   if (p.b) kv.push(`<dt>${p.b.kind === 'bap' ? 'Baptised' : 'Born'}</dt><dd>${p.b.est ? `About ${p.b.y}<small>Not recorded. Estimated from relatives.</small>` : esc(p.b.text)}${p.b.place ? `<small>${esc(p.b.place)}</small>` : ''}</dd>`);
-  if (p.d && !p.d.est) kv.push(`<dt>${p.d.kind === 'bur' ? 'Buried' : 'Died'}</dt><dd>${esc(p.d.text)}${p.d.place ? `<small>${esc(p.d.place)}</small>` : ''}${p.b && !p.b.est && p.d.y >= p.b.y ? `<small>${ageBetween(p.b, p.d) === '0' ? 'Aged under one year' : `Aged ${ageBetween(p.b, p.d)}`}</small>` : ''}</dd>`);
+  if (p.d && !p.d.est) kv.push(`<dt>${p.d.kind === 'bur' ? 'Buried' : 'Died'}</dt><dd>${esc(p.d.text)}${p.d.place ? `<small>${esc(p.d.place)}</small>` : ''}${p.b && !p.b.est && p.d.y >= p.b.y && !/^(after|before)/i.test(p.d.text) && !/^(after|before)/i.test(p.b.text) ? `<small>${ageBetween(p.b, p.d) === '0' ? 'Aged under one year' : `Aged ${ageBetween(p.b, p.d)}`}</small>` : ''}</dd>`);
   else kv.push(`<dt>Died</dt><dd><small>Not recorded</small></dd>`);
   if (p.occupation) kv.push(`<dt>Work</dt><dd>${esc(p.occupation)}</dd>`);
   if (p.married?.length) kv.push(`<dt>Married name</dt><dd>${esc(p.married.join(', '))}</dd>`);

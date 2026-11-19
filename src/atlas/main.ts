@@ -259,9 +259,11 @@ function strip(here: (a: Actor, y: number) => boolean, what: string): string {
   for (let d = d0; d < thisYear; d += 10) { const y = Math.min(thisYear - 1, d + 5) + 0.5; rows.push([d, world.actors.filter((a) => here(a, y)).length]); }
   const top = Math.max(...rows.map((r) => r[1]));
   if (!top) return '';
-  const lit = rows.filter((r) => r[1]), peak = rows.find((r) => r[1] === top)!;
-  const bars = rows.map(([d, n], i) => (n ? `<rect x="${i + 0.1}" y="${20 - (n / top) * 20}" width="0.8" height="${(n / top) * 20}" rx="0.15"><title>${d}s: ${n}</title></rect>` : '')).join('');
-  return `<figure class="strip" aria-label="Lights ${esc(what)} by decade, from the ${lit[0][0]}s to the ${lit[lit.length - 1][0]}s, the most in the ${peak[0]}s."><svg viewBox="0 0 ${rows.length} 20" preserveAspectRatio="none">${bars}</svg><figcaption><span>${d0}</span><span>Lights ${esc(what)} at the middle of each decade, hollow lights included. Most in the ${peak[0]}s: ${top}.</span><span>${Math.floor((thisYear - 1) / 10) * 10}</span></figcaption></figure>`;
+  const lit = rows.filter((r) => r[1]), peaks = rows.filter((r) => r[1] === top), peak = peaks[0];
+  // one decade holds the most, or several are level: say which
+  const most = peaks.length === 1 ? `Most in the ${peak[0]}s: ${top}.` : `Never more than ${top}, first in the ${peak[0]}s.`;
+  const bars = rows.map(([d, n], i) => (n ? `<rect data-act="goyear" data-y="${Math.min(thisYear - 1, d + 5)}" x="${i + 0.1}" y="${20 - (n / top) * 20}" width="0.8" height="${(n / top) * 20}" rx="0.15"><title>${d}s: ${n}</title></rect>` : '')).join('');
+  return `<figure class="strip" aria-label="Lights ${esc(what)} by decade, from the ${lit[0][0]}s to the ${lit[lit.length - 1][0]}s. ${most}"><svg viewBox="0 0 ${rows.length} 20" preserveAspectRatio="none">${bars}</svg><figcaption><span>${d0}</span><span>Lights ${esc(what)} at the middle of each decade, hollow lights included. ${most} Tap a bar to go to that decade.</span><span>${Math.floor((thisYear - 1) / 10) * 10}</span></figcaption></figure>`;
 }
 function countryHtml(c: (typeof countries)[number]): string {
   const here = (id: string) => world.places.get(id)!.country === c.name;
