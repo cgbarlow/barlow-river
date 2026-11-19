@@ -4,7 +4,7 @@ import { ancestorLabel, buildLayout, LINES, type Layout, type Stream } from './m
 import { LINE_COLOUR, REGION_COLOUR, River, TIER_COLOUR, TIER_LABEL, type Lens } from './river.ts';
 import { BEATS, CARDS, CASE, SOFT_BREAKS, STATUS_LABEL, TESTS, type EvidenceCard, type Status } from './casefile.ts';
 import { changeRequest, loadDrafts, saveDrafts, type Draft } from './evidence.ts';
-import { chain, kinship, lifeLines, namesakes, restsOn } from './model/kin.ts';
+import { ageBetween, chain, kinship, lifeLines, namesakes, restsOn } from './model/kin.ts';
 
 const $ = <T extends HTMLElement = HTMLElement>(sel: string) => document.querySelector(sel) as T;
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
@@ -175,6 +175,9 @@ function setYear(y: number, fromPlay = false) {
   document.querySelectorAll<SVGRectElement>('#spark rect').forEach((r) => r.classList.toggle('past', Number(r.dataset.y) <= state.year));
   caption(fromPlay);
   writeHash();
+  // keep the link to the Atlas on the year being shown, so a copied link is right too
+  const toAtlas = document.querySelector<HTMLAnchorElement>('a.mode-link');
+  if (toAtlas && P) toAtlas.href = atlasHref();
 }
 function play(keepHint = false) {
   if (state.playing) return;
@@ -534,7 +537,7 @@ function personHtml(p: Person): string {
   const fams = p.fams.map((fid) => F.get(fid)!);
   const kv: string[] = [];
   if (p.b) kv.push(`<dt>${p.b.kind === 'bap' ? 'Baptised' : 'Born'}</dt><dd>${p.b.est ? `About ${p.b.y}<small>Not recorded. Estimated from relatives.</small>` : esc(p.b.text)}${p.b.place ? `<small>${esc(p.b.place)}</small>` : ''}</dd>`);
-  if (p.d && !p.d.est) kv.push(`<dt>${p.d.kind === 'bur' ? 'Buried' : 'Died'}</dt><dd>${esc(p.d.text)}${p.d.place ? `<small>${esc(p.d.place)}</small>` : ''}${p.b && !p.b.est && p.d.y >= p.b.y ? `<small>Aged about ${p.d.y - p.b.y}</small>` : ''}</dd>`);
+  if (p.d && !p.d.est) kv.push(`<dt>${p.d.kind === 'bur' ? 'Buried' : 'Died'}</dt><dd>${esc(p.d.text)}${p.d.place ? `<small>${esc(p.d.place)}</small>` : ''}${p.b && !p.b.est && p.d.y >= p.b.y && !/^(after|before)/i.test(p.d.text) && !/^(after|before)/i.test(p.b.text) ? `<small>${ageBetween(p.b, p.d) === '0' ? 'Aged under one year' : `Aged ${ageBetween(p.b, p.d)}`}</small>` : ''}</dd>`);
   else kv.push(`<dt>Died</dt><dd><small>Not recorded</small></dd>`);
   if (p.occupation) kv.push(`<dt>Work</dt><dd>${esc(p.occupation)}</dd>`);
   if (p.married?.length) kv.push(`<dt>Married name</dt><dd>${esc(p.married.join(', '))}</dd>`);
@@ -560,6 +563,7 @@ function personHtml(p: Person): string {
       ${L.route(p.id).length > 1 ? '<button class="btn solid" data-act="follow">Follow the water</button>' : '<span class="badge">This water does not reach the river</span>'}
       <button class="btn quiet" data-act="goyear" data-y="${p.b?.y}">Go to ${p.b?.y}</button>
       <button class="btn quiet" data-act="relate">Related to…</button>
+      <a class="btn quiet" id="see-map" href="./atlas.html#p=${encodeURIComponent(p.id)}${state.year < data.meta.thisYear ? `&y=${state.year}` : ''}">See on the map</a>
     </div>
     <h3>Record</h3>
     <dl class="kv">${kv.join('')}</dl>
@@ -906,6 +910,10 @@ function bindChrome() {
   $('#record').addEventListener('input', () => { if (state.composing) { readCompose(); keepCompose(); } });
   $('#record').addEventListener('change', (e) => { if (state.composing && (e.target as HTMLElement).matches('select')) syncCompose(); });
   document.addEventListener('pointerdown', () => document.body.classList.remove('kbd'), true);
+  for (const ev of ['pointerdown', 'focusin'] as const) document.addEventListener(ev, (e) => {
+    const a = (e.target as HTMLElement).closest?.('a.mode-link, a#see-map') as HTMLAnchorElement | null;
+    if (a) a.href = atlasHref(a.id === 'see-map' && state.selected ? state.selected : undefined);
+  }, true);
   document.addEventListener('keydown', (e) => {
     const t = e.target as HTMLElement;
     if (e.key === 'Tab') document.body.classList.add('kbd');
@@ -1045,7 +1053,18 @@ function writeHash() {
     if (state.line) q.set('line', state.line);
     const s = q.toString();
     history.replaceState(null, '', s ? '#' + s : location.pathname + location.search);
+    // the Atlas opens on the same year and person
+    const sel = state.selected && !P.get(state.selected)?.living ? state.selected : null;
+    const to = new URLSearchParams({ ...(state.year < data.meta.thisYear ? { y: String(state.year) } : {}), ...(sel ? { p: sel } : {}) }).toString();
+    const link = document.querySelector<HTMLAnchorElement>('a.mode-link');
+    if (link) link.href = './atlas.html' + (to ? '#' + to : '');
   }, 250);
+}
+/** The link to the Atlas is worked out at the moment it is pressed, so it carries the year on screen even mid-play. */
+function atlasHref(person?: string): string {
+  const sel = person ?? (state.selected && !P.get(state.selected)?.living ? state.selected : null);
+  const to = new URLSearchParams({ ...(state.year < data.meta.thisYear ? { y: String(state.year) } : {}), ...(sel ? { p: sel } : {}) }).toString();
+  return './atlas.html' + (to ? '#' + to : '');
 }
 function readHash(): boolean {
   const q = new URLSearchParams(location.hash.slice(1));

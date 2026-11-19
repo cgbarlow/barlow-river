@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { chain, kinTerm, kinship, lifeLines, namesakes, restsOn } from '../src/model/kin.ts';
+import { ageBetween, chain, kinTerm, kinship, lifeLines, namesakes, restsOn } from '../src/model/kin.ts';
 import type { Family, Person, RiverData } from '../src/model/types.ts';
 
 describe('kinTerm', () => {
@@ -67,14 +67,57 @@ describe('chain', () => {
   });
 });
 
+describe('ageBetween', () => {
+  const d = (text: string, approx = false) => ({ y: Number(/\d{4}/.exec(text)![0]), text, ...(approx ? { approx } : {}) });
+  it('counts birthdays, not calendar years', () => {
+    expect(ageBetween(d('13 Oct 1776'), d('10 May 1812'))).toBe('35');
+    expect(ageBetween(d('10 Dec 1821'), d('Jun 1843'))).toBe('21');
+    expect(ageBetween(d('1 Jun 1814'), d('1 Jun 1855'))).toBe('41');
+    expect(ageBetween(d('2 Jun 1814'), d('1 Jun 1855'))).toBe('40');
+    expect(ageBetween(d('5 Mar 1800'), d('Nov 1830'))).toBe('30');
+  });
+  it('says so when the dates cannot settle it', () => {
+    expect(ageBetween(d('1800'), d('1830'))).toBe('29 or 30');
+    expect(ageBetween(d('Mar 1800'), d('12 Mar 1830'))).toBe('29 or 30');
+    expect(ageBetween(d('c. 1800', true), d('4 May 1830'))).toBe('about 30');
+  });
+});
+
+describe('losing a parent', () => {
+  it('is not said of a child who died before the parent did', () => {
+    const dad = { id: 'D', living: false, fams: ['FY'], name: 'D', sex: 'M', b: { y: 1846, text: '1846' }, d: { y: 1890, text: '1890' } } as Person;
+    const kid = { id: 'K', living: false, fams: [], parents: 'FY', name: 'K', b: { y: 1883, text: '1883' }, d: { y: 1884, text: '1884' } } as Person;
+    const sib = { id: 'S', living: false, fams: [], parents: 'FY', name: 'S', b: { y: 1880, text: '1880' }, d: { y: 1950, text: '1950' } } as Person;
+    const tr = { P: new Map([dad, kid, sib].map((p) => [p.id, p])), F: new Map([['FY', { id: 'FY', partners: ['D'], children: ['S', 'K'] } as unknown as Family]]) };
+    expect(lifeLines(tr, kid).join(' ')).not.toMatch(/Lost a/);
+    expect(lifeLines(tr, sib).join(' ')).toMatch(/Lost a father at 9 or 10/);
+  });
+});
+
+describe('birth order', () => {
+  const mkd = (id: string, text: string, living = false): Person => ({ id, living, fams: [], parents: 'FX', name: id, b: { y: Number(/\d{4}/.exec(text)![0]), text }, d: { y: 1990, text: '1990' } } as Person);
+  const tree = (kids: Person[]) => ({ P: new Map(kids.map((k) => [k.id, k])), F: new Map([['FX', { id: 'FX', partners: [], children: kids.map((k) => k.id) } as unknown as Family]]) });
+  it('is read from the dates, not from the order the children are listed in', () => {
+    const kids = [mkd('late', '21 Jul 1910'), mkd('first', '1902'), mkd('mid', '1905')];
+    const tr = tree(kids);
+    expect(lifeLines(tr, kids[0]).join(' ')).toMatch(/youngest of 3/);
+    expect(lifeLines(tr, kids[1]).join(' ')).toMatch(/eldest of 3/);
+  });
+  it('says nothing when two bare years tie', () => {
+    const kids = [mkd('a', '1902'), mkd('b', '1902')];
+    expect(lifeLines(tree(kids), kids[0]).join(' ')).not.toMatch(/elder|younger/);
+  });
+});
+
 describe('lifeLines', () => {
   it('tells a life from the family around it', () => {
     const a = lifeLines(t, P.get('A')!).join(' ');
     expect(a).toMatch(/elder of two children/);
-    expect(a).toMatch(/Lost a mother at about 8/);
-    expect(a).toMatch(/Married at 24/);
-    expect(a).toMatch(/One child on record, at 25/);
-    expect(a).toMatch(/Outlived X by 20 years/);
+    expect(a).toMatch(/Lost a mother at 7 or 8/);
+    // bare years cannot say which side of a birthday: the age is given as either
+    expect(a).toMatch(/Married at 23 or 24/);
+    expect(a).toMatch(/One child on record, at 24 or 25/);
+    expect(a).toMatch(/Outlived X by 19 or 20 years/);
     expect(lifeLines(t, P.get('B')!).join(' ')).toMatch(/Died in early childhood/);
     expect(lifeLines(t, P.get('G1')!).join(' ')).toMatch(/Buried a child who did not reach 21/);
   });

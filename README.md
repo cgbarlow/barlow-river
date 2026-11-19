@@ -36,6 +36,30 @@ On a wide screen, play starts close on the headwaters and pulls back as the rive
 
 ![The case file open on the family that was ruled out](docs/screenshots/case-file.png)
 
+## The Atlas: the same tree on the Earth
+
+A second mode, at `atlas.html`. The River shows time and doubt. The Atlas adds place. Brief: `BRIEF-ATLAS.md`.
+
+1. **Press play.** A light comes on where each person was born and goes out when they die. Where a death place is recorded, an ember stays. The camera follows the family, and turns to the other side of the world when it goes there.
+2. **Two ways to draw the Earth, or both.** A globe, and two shores: Britain and New Zealand drawn large with the ocean folded away, and small insets for Poland and the United States. On a wide screen, globe and shores side by side (keys G, S, B). The globe's camera stays with the family in Europe, crosses to New Zealand once, with the one voyage the records date closely, and stays there.
+3. **Tap a light.** The places the records put that person, in order, each with the evidence: born, baptised, census, married, the birth of a child, buried. Then each move, with the years it could have happened in. "Follow the journey" plays that one life.
+4. **Tap a place.** Who was born there, who died there, who is only recorded there, and from when to when.
+5. **See every country.** A row above the map names each country in the records and counts the lights lit there that year: England, New Zealand, Wales, Poland, Ireland, the United States, and anyone at sea. On the globe, a country out of view is named at the rim in the direction it lies. Tap either to go there and see who it was.
+6. **Switch the lens.** By surname, by the first place each person is drawn, or by how well the place is known.
+7. **Stars on the map.** A finding that belongs to a place is starred there from the year it happens. Tap it to read it.
+8. **Read the findings.** The first of the family in New Zealand, the life that ended farthest from where it began, a couple recorded on both sides of the world in one year, and a move the tree itself doubts.
+
+What it will not pretend to know:
+
+- **A solid light has a record.** It is never drawn anywhere before a record puts the person there, and it dims the longer it is since the last one. A hollow light has no dated, placed record of the kind the map reads: the person is drawn where a close relative with a record of their own was last recorded, never earlier than that relative's first record. A child drawn with a parent goes where that parent is next recorded, until sixteen; otherwise a hollow light never moves. A haze is a place known only to a county or country; a country is drawn just offshore, marked "somewhere in". Eighteen people have none of the records the map reads, and no relative the map could draw them with while they were alive. They are listed, not drawn.
+- **A loose year stays loose.** Where the record says "c. 1823", the page says "about 1823", gives the age as "about", and never draws a voyage as sailing on it.
+- **When a move happened is almost never recorded.** Where the records pin it to within three years, the light travels. Otherwise it stays where it was last recorded and appears at the new place only in the year a record finds it there.
+- **Sea routes are custom, not record.** A voyage to New Zealand is drawn the way ships went at the time: out round the Cape of Good Hope, and through Panama once the canal had opened. The line is not the course of any one ship; where a note in the tree names a ship, it is in that person's record in the River.
+- **What stays after a light goes out.** Where a death or burial names a town or parish, an ember. Otherwise a small open diamond at the last place the map has for the person, which does not say they died there.
+- **Living people are not on the map.** No light, no place.
+
+How it is made: `pipeline/gazetteer.ts` places every place name in the tree by hand, so no family data is sent to a geocoding service. `pipeline/atlas.ts` builds `public/data/atlas.json` from the published `river.json`, never from the raw export, so the Atlas cannot publish anything the River does not. Anyone who died from 1950 on is shown to the town only. The basemap is Natural Earth, bundled (`scripts/build-land.ts` writes it, coarse for the world and detailed for Britain, Ireland and New Zealand); nothing is fetched from a map service.
+
 ## How the river is drawn
 
 This replaces the mockup's illustrative joins with real ones.
@@ -74,7 +98,7 @@ npm run data
 npm test
 ```
 
-3. Commit `public/data/river.json`.
+3. Commit `public/data/river.json` and `public/data/atlas.json`. `npm run data` builds both. If a record in the tree has a place name the gazetteer does not know, the build stops and lists it: add it to `pipeline/gazetteer.ts`. A place named only in a person's free-text description is skipped when it cannot be placed.
 
 The case file cards in `src/casefile.ts` are written by hand from the Iris document "Hypothesis: the original Barlow village". When that document changes, update the cards. A test fails if a card points at someone who is no longer in the tree.
 
@@ -91,16 +115,37 @@ The case file cards in `src/casefile.ts` are written by hand from the Iris docum
 | `src/casefile.ts` | The open case: evidence cards, tests, story captions |
 | `src/evidence.ts` | Draft evidence and the Iris change request |
 | `tests/` | Unit tests. `npm test` |
-| `scripts/smoke.cjs` | End-to-end test in a real browser. `npm run verify` runs the unit tests, builds, serves the build and runs this against it |
+| `scripts/smoke.cjs`, `scripts/smoke-atlas.cjs` | End-to-end tests in a real browser, one per mode. `npm run verify` runs the unit tests, builds, serves the build and runs both |
+| `BRIEF-ATLAS.md` | The brief for the Atlas |
+| `pipeline/gazetteer.ts`, `pipeline/atlas.ts` | Places set by hand; stops, borrowed places and findings for the Atlas |
+| `src/model/journey.ts`, `src/model/geo.ts` | Where a person was in a year; distances and sea routes |
+| `src/atlas/` | The Atlas page: `scene.ts` (what is lit), `stage.ts` (globe and two shores), `main.ts` (the page) |
+| `mockup/atlas/` | Three working mockups made to choose the Atlas's direction. A and C were built; B, the flat world map, was dropped |
 | `pipeline/facts.ts`, `pipeline/leads.ts` | The findings |
 | `docs/data-sources.md` | Where the data lives in Iris and what shape it is in |
 | `docs/council-report.md` | The Council review that chose this concept |
-| `.campaign/` | The three Council reviews of this build: the plan, the first build, the iterated build |
+| `.campaign/` | The Council reviews: five for the River, and those for the Atlas (`council-report-atlas-*.md`) |
 | `mockup/` | The original static mockup |
 
 ## Publishing
 
 Nothing is published. The built site has been tested served from a `/barlow-river/` sub-path, the way GitHub Pages serves it, and passes every browser check there. `.github/workflows/publish.yml` builds the site and puts it on GitHub Pages, but only when someone presses "Run workflow" on the Actions tab (Pages must be switched on for the repository first, with GitHub Actions as the source). Read the Privacy section before pressing it.
+
+## How the Atlas was reviewed
+
+The Council reviewed the plan, then three mockups, then the build over twenty-six rounds. The build was tested by twenty-one outside testers in a row. Each wrote its own checker from the two data files, none had seen the others' reports, and each test was followed by fixes and a fresh test of the new commit. The reports are in `.campaign/council-report-atlas-*.md`; the last is `council-report-atlas-closing-3.md`.
+
+The twenty-first test, of commit `0bf28e7`, found no blocking defect and judged it fit to merge. The placement rules had no violation in any of the twenty-one tests. The blockers along the way were of four kinds: sentences that said more than the map's records do; three bugs (a blank globe after Home, a trapped Back button, a crash with a finding open); layout on small screens; and, in the shared code, ages and family sentences in the River that were wrong. Each now has a unit test or a browser check.
+
+On the seven criteria the last test scored the Atlas 28.5 of 35 overall and 30 judging only what the page does with the data it has. The plan was scored 31 before the build. Over the last ten tests the build scored between 29.5 and 31.5, and the overall score between 28 and 29.5. The overall gap is the records: about half the people have none that the map reads, and only one voyage is dated closely enough to draw sailing.
+
+The River's shared code changed on this branch: ages count birthdays, birth order is read from dates, a count of children is not shown where any child is living, no age is given from an "after" date, and "lost a parent" is said only where the parent died first.
+
+Where the map reads no dated death (145 of the 322 people on the map) the light goes out seventy years after birth and leaves no ember. The guide says so.
+
+The map reads the tree's dated, placed records and nothing else: births, baptisms, censuses, marriages, children's births, deaths, burials, events and arrivals the tree gives a year and a place, and an emigration or baptism that a person's description states with a date and a place. Where the page says the map reads no record, it means none of those. Free-text notes are in each person's record in the River.
+
+The voyage routes (round the Cape before 1914, through Panama after) are a convention drawn from general knowledge, not checked against a source.
 
 ## Not done
 

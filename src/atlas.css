@@ -1,0 +1,162 @@
+/* The Atlas. Everything shared with the River comes from style.css. */
+.views { position: absolute; inset: 0; }
+.views canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; user-select: none; cursor: grab; }
+.views canvas[hidden] { display: none; }
+.views.both canvas { width: 50%; }
+.views.both #view-b { left: 50%; border-left: 1px solid var(--line); }
+.views:focus { outline: none; }
+body.kbd .views:focus { outline: 2px solid var(--amber); outline-offset: -2px; }
+.atlas .tools { justify-content: flex-end; }
+.atlas .legend i.ring { border-style: solid; }
+.legend i.haze { width: 16px; height: 16px; background: radial-gradient(#F2B54499, #F2B54400) !important; border: 1px dashed #F2B544; }
+.legend i.em { width: 5px; height: 5px; background: #a8834a; }
+.legend i.wring { width: 8px; height: 8px; border: 1.4px solid #fff; background: none; border-radius: 50%; }
+.legend i.star { width: auto; height: auto; background: none; color: #F2B544; font-style: normal; font-size: 11px; line-height: 1; }
+.legend .swatch small { opacity: .6; font: 500 10.5px var(--mono); margin-left: 2px; }
+.legend i.rest { width: 6px; height: 6px; border: 1px solid #a8834a; background: none; border-radius: 0; transform: rotate(45deg); opacity: .8; }
+.legend i.ln { width: 22px; height: 0; border-radius: 0; border-top: 2px solid var(--ink-2); }
+.legend i.ln.d { border-top-style: dashed; }
+.legend i.ln.q { border-top: 2px dotted #FF8A7A; }
+.legend button.swatch { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); text-decoration: none; font-size: inherit; min-height: 28px; padding: 0 6px; margin: 0 -6px; border-radius: 6px; white-space: nowrap; }
+.legend button.swatch:hover { background: var(--panel-2); color: var(--ink); }
+.legend button.swatch[aria-pressed='true'] { background: var(--amber); color: var(--amber-ink); font-weight: 600; }
+.legend .key-toggle { font-weight: 600; text-decoration: none; color: var(--ink); }
+.legend.collapsed > :not(.key-toggle) { display: none; }
+/* the River's phone rule hides everything and draws its own label; the Atlas keeps a real button */
+.atlas .legend.collapsed::before { content: none; }
+.atlas .legend.collapsed > .key-toggle { display: inline-flex; }
+.atlas .legend .key-toggle { min-height: 36px; padding: 0 8px; align-items: center; }
+.atlas .legend { max-height: calc(100% - 120px); overflow-y: auto; }
+.countries { position: absolute; right: 16px; left: 16px; top: 8px; z-index: 2; display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; pointer-events: none; }
+.countries > :first-child { margin-left: auto; }
+.countries > * { pointer-events: auto; flex: none; }
+.countries button, .countries .sea { min-height: 32px; padding: 0 11px; border-radius: 16px; border: 1px solid var(--line); background: rgba(23,39,63,.92); color: var(--ink); font-size: 12.5px; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+.countries .short { display: none; }
+/* when the full names do not fit, the short ones are used: set by the page when the row would overflow */
+.countries.tight .full { display: none; } .countries.tight .short { display: inline; }
+/* two shores has no zoom: the buttons would only sit on the map */
+.atlas[data-view='shores'] #zin, .atlas[data-view='shores'] #zout, .atlas[data-view='shores'] #zfit { display: none; }
+/* a toast informs; it must never sit in the way of a control */
+.atlas .toast, .toast { pointer-events: none; }
+.atlas .toast { top: auto; bottom: 150px; max-width: min(520px, calc(100% - 32px)); text-align: center; }
+.countries b { font: 500 12px var(--mono); color: var(--amber); }
+.countries button.none { color: var(--ink-3); } .countries button.none b { color: var(--ink-3); }
+.countries button:hover { border-color: #4A6186; }
+.countries button[aria-pressed='true'] { background: var(--amber); border-color: var(--amber); color: var(--amber-ink); font-weight: 600; } .countries button[aria-pressed='true'] b { color: var(--amber-ink); }
+.countries .sea { border-style: dashed; color: var(--ink-2); }
+/* the caption sits at the bottom like a subtitle, clear of the countries and the globe's rim pointers */
+.atlas .caption { top: auto; bottom: 26px; left: 50%; margin-left: 0; transform: translate(-50%, 6px); width: max-content; max-width: min(620px, calc(100% - 220px)); text-align: center; pointer-events: none; }
+.atlas .caption.on { transform: translate(-50%, 0); }
+.atlas .year-read { width: 150px; }
+.atlas #alive { white-space: nowrap; }
+.tip img.face { float: left; width: 38px; height: 38px; border-radius: 50%; object-fit: cover; margin: 0 9px 2px 0; border: 1px solid var(--line); }
+.stops { list-style: none; margin: 8px 0 0; padding: 0; }
+.stops li { display: grid; grid-template-columns: 52px 1fr; gap: 10px; padding: 8px 0; border-top: 1px solid #22344f; font-size: 13.5px; line-height: 1.4; }
+.stops li b { font: 500 12.5px var(--mono); color: var(--amber); padding-top: 1px; }
+.stops li small { display: block; color: var(--ink-3); font-size: 12px; }
+.stops li button { background: none; border: 0; padding: 0; color: var(--ink); text-align: left; text-decoration: underline; text-decoration-color: #3A506F; text-underline-offset: 3px; font-size: 13.5px; }
+.stops li button:hover { color: var(--amber); }
+.stops li.coarse { opacity: .7; }
+.move { background: var(--bg); border-radius: 10px; padding: 10px 12px; font-size: 13px; line-height: 1.45; color: var(--ink-2); margin-top: 8px; border-left: 3px solid #3A506F; }
+.move.sail { border-left-color: var(--amber); }
+.move.doubt { border-left-color: #FF8A7A; }
+.move b { color: var(--ink); font-weight: 600; }
+.plist { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.plist button { display: grid; grid-template-columns: 14px 1fr auto; gap: 8px; align-items: center; width: 100%; text-align: left; background: none; border: 0; border-radius: 8px; padding: 8px 8px; font-size: 13.5px; min-height: 40px; }
+.plist button:hover { background: var(--bg); }
+.plist button i { width: 9px; height: 9px; border-radius: 50%; display: block; }
+.plist button i.hollow { background: none !important; border: 1.5px solid; }
+.plist button small { color: var(--ink-3); font: 400 12px var(--mono); white-space: nowrap; }
+.plist button span small { display: block; font: 400 12px var(--sans); white-space: normal; }
+.counts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 0 0 16px; }
+.counts div { background: var(--bg); border-radius: 10px; padding: 10px 12px; font-size: 12.5px; line-height: 1.35; color: var(--ink-2); }
+.counts b { display: block; font: 600 22px var(--serif); color: var(--ink); }
+.filter { width: 100%; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; color: var(--ink); font: 400 14px var(--sans); padding: 10px 12px; margin-bottom: 10px; }
+@media (max-width: 1250px) { .atlas .lens button { padding: 0 10px; } .atlas .search input { width: 120px; } }
+@media (max-width: 900px) and (max-aspect-ratio: 13/10) {
+  /* a phone: title and search on one row, both switches on the next, so the map gets the screen */
+  .atlas .top { flex-wrap: wrap; row-gap: 6px; column-gap: 6px; padding: 8px 12px 6px; }
+  .atlas .brand { flex: 1 1 calc(100% - 70px); min-width: 0; }
+  .atlas .tools { display: contents; }
+  .atlas .search { order: 1; flex: none; min-height: 44px; padding: 0 12px; }
+  .atlas .search input { width: 0; min-width: 0; padding: 0; }
+  .atlas .search:focus-within { position: absolute; left: 12px; right: 12px; z-index: 31; }
+  .atlas .search:focus-within input { width: 100%; }
+  .atlas .lens { padding: 3px; }
+  .atlas .lens.view { order: 2; flex: 2 1 0; width: auto; }
+  .atlas #lens { order: 3; flex: 3 1 0; }
+  .atlas .lens button { padding: 0 4px; min-height: 40px; font-size: 12.5px; }
+  .atlas #lens button { font-size: 0; }
+  .atlas #lens button::before { font-size: 12.5px; }
+  .atlas #lens [data-lens='surname']::before { content: 'Name'; }
+  .atlas #lens [data-lens='place']::before { content: 'Place'; }
+  .atlas #lens [data-lens='certainty']::before { content: 'Sure?'; }
+  .atlas .lens.view button[data-view='both'] { display: none; }
+  .countries { left: 8px; right: 0; top: 4px; padding: 0 28px 2px 0; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); }
+  .countries > :first-child { margin-left: 0; }
+  .countries button, .countries .sea { min-height: 36px; padding: 0 9px; }
+  /* short names, so every country fits without a swipe */
+  .countries .full { display: none; } .countries .short { display: inline; }
+  .countries { -webkit-mask-image: none; mask-image: none; padding-right: 8px; }
+  /* clear of the zoom column on the right */
+  .atlas .caption { bottom: 84px; left: 12px; right: 68px; width: auto; max-width: none; transform: translateY(6px); text-align: left; font-size: 14px; }
+  .atlas .caption.on { transform: none; }
+  /* on two shores the caption goes between the Key and the zoom buttons, under the lower map */
+  .atlas[data-view='shores'] .caption { bottom: 22px; left: 76px; right: 68px; font-size: 13.5px; }
+  .countries { gap: 4px; }
+  .countries button, .countries .sea { padding: 0 7px; }
+  .atlas .time { gap: 8px; }
+  .atlas .year-read { width: 104px; }
+  .atlas #alive { font-size: 10.5px; }
+}
+@media (max-height: 520px) and (min-aspect-ratio: 13/10) {
+  /* a phone on its side: everything in the header must fit beside the panel, in one row */
+  .atlas .top { padding: 6px 10px 4px; gap: 6px; flex-wrap: nowrap; align-items: center; }
+  .atlas .brand .eyebrow { display: none; }
+  .atlas h1 { font-size: 18px; white-space: nowrap; }
+  .atlas .mode-link { font-size: 0; margin-left: 6px; }
+  .atlas .mode-link::after { content: 'River →'; font-size: 11px; }
+  .atlas .brand { flex: none; }
+  .atlas .tools { flex-wrap: nowrap; gap: 6px; min-width: 0; flex: 1; justify-content: flex-end; }
+  .atlas .search { min-height: 40px; padding: 0 8px; }
+  .atlas .search input { width: 0; min-width: 0; padding: 0; }
+  .atlas .search:focus-within { position: absolute; left: 10px; right: calc(var(--panel-w) + 10px); z-index: 31; }
+  .atlas .search input:focus { width: 100%; }
+  .atlas .lens { padding: 3px; }
+  .atlas .lens button { min-height: 40px; padding: 0 6px; font-size: 12px; }
+  .atlas .view [data-view='shores'] { font-size: 0; }
+  .atlas .view [data-view='shores']::before { content: 'Shores'; font-size: 12px; }
+  .atlas #lens button { font-size: 0; }
+  .atlas #lens button::before { font-size: 12px; }
+  .atlas #lens [data-lens='surname']::before { content: 'Name'; }
+  .atlas #lens [data-lens='place']::before { content: 'Place'; }
+  .atlas #lens [data-lens='certainty']::before { content: 'Sure?'; }
+  .atlas .lens.view button[data-view='both'] { display: none; }
+  .countries { left: 8px; right: 0; top: 4px; padding-right: 20px; }
+  .countries > :first-child { margin-left: 0; }
+  .countries button, .countries .sea { min-height: 30px; font-size: 11.5px; padding: 0 8px; }
+  .countries .full { display: none; } .countries .short { display: inline; }
+  .atlas .caption { bottom: 8px; font-size: 13px; max-width: calc(100% - 150px); }
+  /* no room for zoom buttons beside a map this small: pinch instead */
+  .atlas #zin, .atlas #zout { display: none; }
+}
+
+/* two maps side by side need room: below this width Both is not offered */
+@media (max-width: 1099px) { .atlas .lens.view button[data-view='both'] { display: none; } }
+
+/* lights by decade, in a place or country panel */
+.strip { margin: 10px 0 4px; }
+.strip svg { display: block; width: 100%; height: 34px; }
+.strip rect.bar { fill: var(--amber); opacity: .85; pointer-events: none; }
+.strip rect.hit { fill: transparent; cursor: pointer; outline: none; }
+.strip rect.hit:hover { fill: rgba(242,181,68,.22); }
+.strip rect.hit:focus-visible { fill: rgba(255,255,255,.18); stroke: #fff; stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.strip rect.now { fill: #fff; opacity: .9; pointer-events: none; }
+.strip figcaption { display: flex; justify-content: space-between; gap: 10px; font: 500 10.5px var(--mono); color: var(--ink-3); margin-top: 3px; }
+.strip figcaption span:nth-child(2) { font: 400 12px/1.35 Inter, system-ui, sans-serif; color: var(--ink-2); text-align: center; }
+
+/* the story button stays in reach while the findings scroll under it */
+.panel-body .actions:has([data-act='nextstory']) { position: sticky; top: 0; z-index: 2; background: var(--panel, #17273F); padding: 8px 0; margin: 0 !important; }
+
+/* a finding scrolled into view stops below the story button, not under it */
+#panel-body .card { scroll-margin-top: 64px; }

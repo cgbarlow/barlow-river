@@ -2,11 +2,28 @@
 // are related, a life told in a few plain sentences, who shares a name, and
 // what rests on a link. Recorded dates only. The living are counted, never named.
 
-import type { Family, Person } from './types.ts';
+import type { DateInfo, Family, Person } from './types.ts';
 
 export interface Tree { P: Map<string, Person>; F: Map<string, Family> }
 
 const rec = (p: Person | undefined, k: 'b' | 'd') => (p && !p.living && p[k] && !p[k]!.est && !/^(after|before)/.test(p[k]!.text) ? p[k]! : undefined);
+const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+const when = (d: DateInfo) => { const m = /(?:(\d{1,2}) )?([A-Za-z]{3})[a-z]* \d{4}/.exec(d.text); const mo = m ? MONTHS.indexOf(m[2].toLowerCase()) : -1; return { mo, day: m && m[1] && mo >= 0 ? Number(m[1]) : 0 }; };
+/**
+ * An age in whole years, as far as the two dates allow. Two bare years can be a year
+ * apart either way round a birthday, so they give "35 or 36"; a year marked "c." gives "about 36".
+ */
+export function ageBetween(b: DateInfo, e: DateInfo): string {
+  const n = e.y - b.y;
+  if (b.approx || e.approx) return `about ${n}`;
+  const x = when(b), y = when(e);
+  if (n <= 0) return String(Math.max(0, n));
+  if (x.mo >= 0 && y.mo >= 0) {
+    if (y.mo !== x.mo) return String(y.mo > x.mo ? n : n - 1);
+    if (x.day && y.day) return String(y.day >= x.day ? n : n - 1);
+  }
+  return `${n - 1} or ${n}`;
+}
 const parentsOf = (t: Tree, id: string): string[] => { const f = t.P.get(id)?.parents; return f ? t.F.get(f)?.partners ?? [] : []; };
 
 /** Every ancestor of a person with how many generations up, self included at 0. */
@@ -104,28 +121,41 @@ export function lifeLines(t: Tree, p: Person): string[] {
   const out: string[] = [];
   const b = rec(p, 'b'), d = rec(p, 'd');
   const pf = p.parents ? t.F.get(p.parents) : undefined;
-  // birth order is only stated among siblings who have all died: it would otherwise place the living
+  // birth order is only stated among siblings who have all died: it would otherwise place the living.
+  // It is read from the dates, not from the order the tree lists the children in, and only when the dates settle it.
   if (pf && pf.children.length > 1 && pf.children.every((id) => !t.P.get(id)?.living)) {
-    const i = pf.children.indexOf(p.id) + 1, n = pf.children.length;
-    out.push(n === 2 ? `The ${i === 1 ? 'elder' : 'younger'} of two children on record.` : `The ${i === 1 ? 'eldest' : i === n ? 'youngest' : ord(i)} of ${n} children on record.`);
+    const sibs = pf.children.map((id) => t.P.get(id)!), n = sibs.length;
+    const key = (q: Person) => { const r = rec(q, 'b'); if (!r || r.approx) return null; const w = when(r); return { y: r.y, mo: w.mo, day: w.day }; };
+    const keys = sibs.map(key), me = keys[sibs.indexOf(p)];
+    // before, after, or cannot tell
+    const cmp = (x: NonNullable<typeof me>, y: NonNullable<typeof me>): number | null => (x.y !== y.y ? x.y - y.y : x.mo < 0 || y.mo < 0 ? null : x.mo !== y.mo ? x.mo - y.mo : x.day && y.day && x.day !== y.day ? x.day - y.day : null);
+    if (me && keys.every(Boolean)) {
+      const rel = keys.map((k, j) => (sibs[j] === p ? 0 : cmp(k!, me)));
+      if (rel.every((r) => r !== null)) {
+        const i = rel.filter((r) => r! < 0).length + 1;
+        out.push(n === 2 ? `The ${i === 1 ? 'elder' : 'younger'} of two children on record.` : `The ${i === 1 ? 'eldest' : i === n ? 'youngest' : ord(i)} of ${n} children on record.`);
+      }
+    }
   }
   if (b && pf) {
     for (const id of pf.partners) {
       const par = t.P.get(id)!;
       const pd = rec(par, 'd');
-      if (pd && pd.y >= b.y && pd.y - b.y < 12) { out.push(`Lost ${par.sex === 'M' ? 'a father' : par.sex === 'F' ? 'a mother' : 'a parent'} at about ${pd.y - b.y}.`); break; }
+      // only a parent who died while the child was alive: a child who died first did not lose them
+      if (pd && pd.y >= b.y && pd.y - b.y < 12 && (!d || pd.y < d.y)) { const at = ageBetween(b, pd); out.push(`Lost ${par.sex === 'M' ? 'a father' : par.sex === 'F' ? 'a mother' : 'a parent'} ${at === '0' ? 'in the first year of life' : `at ${at}`}.`); break; }
     }
   }
   const fams = p.fams.map((f) => t.F.get(f)!).filter(Boolean);
   const wed = fams.filter((f) => f.m && !f.m.est).sort((x, y) => x.m!.y - y.m!.y);
-  if (b && wed.length) out.push(`Married at ${wed[0].m!.y - b.y}${wed.length > 1 ? `, and again at ${wed.slice(1).map((f) => f.m!.y - b.y).join(' and ')}` : ''}.`);
+  if (b && wed.length) out.push(`Married at ${ageBetween(b, wed[0].m!)}${wed.length > 1 ? `, and again at ${wed.slice(1).map((f) => ageBetween(b, f.m!)).join(' and ')}` : ''}.`);
   const kids = fams.flatMap((f) => f.children).map((id) => t.P.get(id)!).filter(Boolean);
-  if (kids.length) {
-    const dated = kids.map((k) => rec(k, 'b')).filter(Boolean).map((x) => x!.y).sort((x, y) => x - y);
+  // a count of children would count the living: say nothing unless every child has died
+  if (kids.length && kids.every((k) => !k.living)) {
+    const dated = kids.map((k) => rec(k, 'b')).filter(Boolean).map((x) => x!).sort((x, y) => x.y - y.y);
     let s = `${kids.length === 1 ? 'One child' : `${kids.length} children`} on record`;
     if (b && dated.length) {
-      const first = dated[0] - b.y, last = dated[dated.length - 1] - b.y;
-      if (first >= 12 && first < 80) s += dated.length > 1 && last !== first ? `, the first at ${first} and the last at ${last}` : `, at ${first}`;
+      const first = dated[0].y - b.y, last = dated[dated.length - 1].y - b.y;
+      if (first >= 12 && first < 80) { const some = dated.length < kids.length ? ' with a recorded date' : ''; s += dated.length > 1 && last !== first ? `, the first${some} at ${ageBetween(b, dated[0])} and the last at ${ageBetween(b, dated[dated.length - 1])}` : dated.length < kids.length ? `, the one${some} at ${ageBetween(b, dated[0])}` : `, at ${ageBetween(b, dated[0])}`; }
     }
     out.push(s + '.');
     if (d) {
@@ -137,7 +167,7 @@ export function lifeLines(t: Tree, p: Person): string[] {
     for (const f of fams) {
       const sp = f.partners.map((id) => t.P.get(id)!).find((q) => q && q.id !== p.id && !q.living);
       const sd = sp ? rec(sp, 'd') : undefined;
-      if (sp && sd && d.y - sd.y >= 5) { out.push(`Outlived ${sp.name} by ${d.y - sd.y} years.`); break; }
+      if (sp && sd && d.y - sd.y >= 5) { out.push(`Outlived ${sp.name} by ${ageBetween(sd, d)} years.`); break; }
     }
   }
   if (b && d && d.y - b.y >= 0 && d.y - b.y < 6) out.push('Died in early childhood.');
