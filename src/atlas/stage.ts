@@ -232,7 +232,8 @@ export class Stage {
       while (taken.some((t) => Math.abs(t[0] - x) < 22 && Math.abs(t[1] - y) < 13)) x += 22;
       taken.push([x, y]);
       const fresh = sc.year - s.y;
-      if (fresh < 3) { c.globalAlpha = 1 - fresh / 3; c.strokeStyle = '#F2B544'; c.lineWidth = 1.5; c.beginPath(); c.arc(x, y, 7 + fresh * 6, 0, 7); c.stroke(); }
+      // the ring is for the years just after the finding's own: an open finding shown before its year has none
+      if (fresh >= 0 && fresh < 3) { c.globalAlpha = 1 - fresh / 3; c.strokeStyle = '#F2B544'; c.lineWidth = 1.5; c.beginPath(); c.arc(x, y, 7 + fresh * 6, 0, 7); c.stroke(); }
       c.globalAlpha = 1;
       c.fillStyle = s.on ? '#fff' : '#F2B544'; c.strokeStyle = 'rgba(10,20,34,.9)'; c.lineWidth = 2;
       c.beginPath();

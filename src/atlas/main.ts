@@ -1060,7 +1060,8 @@ function bindChrome() {
   });
   let rt = 0;
   addEventListener('resize', () => { clearTimeout(rt); rt = window.setTimeout(() => { if (state.view === 'both' && (isSmall() || isSideways() || tooNarrowForBoth())) setView('globe'); for (const s of stages) s.resize(); fitChips(); syncInset(); draw(true); }, 80); });
-  addEventListener('popstate', () => applyHash());
+  // a message belongs to the view it was shown over: going Back or Forward clears it
+  addEventListener('popstate', () => { clearToast(); family = null; applyHash(); });
 }
 
 // ---------------------------------------------------------------- deep links

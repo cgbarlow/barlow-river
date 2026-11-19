@@ -648,6 +648,19 @@ process.on('exit', () => server?.kill());
   const ys = await A(page, (ids) => ids.map((id) => [...window.__atlas.atlas.facts, ...window.__atlas.atlas.leads].find((f) => f.id === id).y), story.slice(0, 18));
   check('the story button walks all eighteen findings in the order of their years, then starts again', new Set(story.slice(0, 18)).size === 18 && ys.every((y, i) => i === 0 || y >= ys[i - 1]) && story[18] === story[0], JSON.stringify(ys));
   await page.close();
+  // with any finding open, the year can go anywhere: before its own year, the first year, the last, and reload
+  page = await open('#y=1855');
+  await A(page, () => window.__atlas.stop());
+  const e0 = errors.length;
+  const fids = await A(page, () => [...window.__atlas.atlas.facts, ...window.__atlas.atlas.leads].map((f) => [f.id, f.y]));
+  for (const [id, y] of fids) for (const v of ['globe', 'shores']) await A(page, (o) => { const A_ = window.__atlas; A_.setView(o.v); if (A_.state.finding !== o.id) A_.openFinding(o.id); for (const yy of [o.y - 1, o.y - 2, o.y - 5, 1590, 1700, 2026, o.y + 1, o.y]) { A_.setYear(yy); A_.settle(); } }, { id, y, v });
+  await A(page, () => window.__atlas.setView('globe'));
+  check('with each finding open the year can be moved anywhere without an error', fids.length >= 18 && errors.length === e0, errors.slice(e0, e0 + 2).join(' | '));
+  await page.goto(base + 'atlas.html#f=a-silence&y=1700'); await page.waitForTimeout(900);
+  check('a link to a finding at a year long before its own loads', (await page.evaluate(() => Boolean(window.__atlas) && !/could not be loaded/.test(document.body.textContent))) && errors.length === e0 && (await inked(page)) > 300, errors.slice(e0, e0 + 1).join());
+  await page.keyboard.press('ArrowLeft'); await page.keyboard.press('ArrowLeft'); await page.keyboard.press('Home'); await page.waitForTimeout(300);
+  check('and arrow keys and Home with it open leave the map drawing', errors.length === e0 && (await A(page, () => isFinite(window.__atlas.stages[0].cam.k))) && (await inked(page)) > 300);
+  await page.close();
   // phones: every country chip on screen while someone is at sea; the caption under the lower map
   page = await open('#y=1874', { width: 390, height: 800 }, { hasTouch: true, isMobile: true });
   await A(page, () => { window.__atlas.stop(); window.__atlas.setYear(1874); window.__atlas.settle(); });

@@ -1,42 +1,44 @@
-# Council report: the Atlas, round 24
+# Council report: the Atlas, round 25
 
-Subject: the eighteenth full outside test (commit `ea63f62`, a fresh tester), and what was done.
+Subject: the nineteenth full outside test (commit `8e5566b`, a fresh tester), and what was done.
 
 ## What the tester found
 
-Verdict on `ea63f62`: **no**, on one defect, and it is a real one.
+Verdict on `8e5566b`: **no**, on one defect introduced in round 24.
 
-- The owner's requests: met. No false statement. No rule violation. No privacy leak. Everything added in round 23 recounted exactly (1,141 samples of the open panel's count against the chip; 21 bar messages).
-- Scores: **28.5 of 35 overall, 30 as a build.**
+- The owner's requests: met. The Back trap is fixed in every case tried: seven River-to-Atlas-and-back cases on desktop and phone, 31 deep links, a nine-step chain inside the Atlas, reload at each step.
+- Every count and sentence recounted true. Rules A1 to A12 and R1: no violation.
+- Scores: **27.5 of 35 overall, 29.5 as a build**, marked down on Interactive for the crash.
 
 Blocking:
-- **D1, the Back button.** Open a person in the River with the year outside their life, press "See on the map", then press Back: the browser stays on the Atlas, however many times Back is pressed. On arrival the Atlas moved the year into the person's life and recorded that as a new step; going Back to the arrival address did the same again. It has been there since the two pages were first linked. Seventeen testers went back and forth between the pages and did not hit it, because they started from a year inside the life.
+- **D1, a crash.** Round 24 let an open finding show its star a year before its own year. The star's "new" ring has a radius worked out from how long ago the finding's year was. More than a year before, the radius is negative and the drawing call throws on every frame: stars, pointers and labels vanish, and reloading that address fails. Open a finding and press the left arrow twice.
 
-Minor: the family message could be a year stale and was not renewed in play; a bar message said "at New Zealand"; the story button on a phone closed the sheet that holds the story; a story could open a year before its own star was drawn; the guide said a solid line always means the light travels.
+Minor: a message can stay for a few seconds after Back; the panel's own Back button adds a history entry; opening a finding replaces an entry instead of adding one.
 
 ## The Council
 
-**Cat.** Eighteen tests to find a trap on the way back to version 1. The owner asked that version 1 not be disturbed; a visitor who cannot get back to it is disturbed. Fix it at the cause: restoring a view from an address is not a step, so it must not record one.
+**Cat.** Three rounds running, the blocker was something added the round before to gain half a point: an uncounted sentence, an age line, a star. We are now breaking the build faster than we are improving it.
 
-**Owl.** And two checks: one Back from the Atlas returns to the River; inside the Atlas each Back undoes one step.
+**Owl.** Then this round adds nothing. One guard, one check that opens every finding and moves the year everywhere, and two small things that cannot break anything.
 
-**Bear.** The score has sat at 30 to 31.5 for five tests. We keep taking the tester's column, but we tell the owner the number is where it is.
+**Bear.** Agreed. And we stop chasing the last half point after this. If the next test passes, the Council reports the scores as they are.
 
-**Simon.** Consensus.
+**Wolf.** The owner should be told that plainly.
+
+**Simon.** Consensus: fix, guard, test. No new features.
 
 ## What was done
 
 | Point | Fix |
 |---|---|
-| D1 | Restoring a view from the address bar or from Back no longer adds a history entry. Two browser checks: River → "See on the map" (year outside the life) → one Back returns to the River; inside the Atlas, two Backs undo two steps. |
-| Family message | One message for the year on screen: how many of the family are lit, and how many are on the other side. Renewed whenever the year moves, cleared when play starts, renewed on pause. |
-| Bar message | "in" for a county or country. It names up to three of those new there since ten years before. |
-| Story button | Walks all eighteen findings that have someone on the map, in the order of their years. On a phone the sheet stays open at the story. An open finding shows its star even a year early. |
-| Guide | A solid line is a move known to within three years, or a death and burial in one year, where no light travels. |
-| Finding title | "168 of the 322 people on the map have none of the records the map reads and are drawn with a relative; the share is highest for those born in the 1900s". |
+| D1 | The ring is drawn only in the years after a finding's own. A browser check opens each of the eighteen findings, on the globe and on Two shores, and sets the year to one, two and five years before its own, to 1590, 1700, 2026 and back; another loads a finding's address at a year long before its own and presses the arrow keys and Home. |
+| Messages after Back | Going Back or Forward clears any message. |
+| Story button | Stays at the top of the Journeys tab while the findings scroll. |
 
-94 unit tests, the River's 59 browser checks and the Atlas's 169 pass.
+Nothing else was changed.
+
+94 unit tests, the River's 59 browser checks and the Atlas's 172 pass.
 
 ## Next
 
-A full outside test of this commit, with scores.
+A full outside test of this commit, with scores. After it the Council will report the scores as they stand and put the question of the bar to the owner.
