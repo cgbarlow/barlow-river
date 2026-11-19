@@ -141,7 +141,7 @@ export class Stage {
     if (ride && sc.ship && sc.year >= ride[0] && sc.year < ride[1]) return { lon: sc.ship[0], lat: sc.ship[1], k: 1.7 };
     const nz = sc.year >= this.plan.turn;
     // when the last named light has gone out, stand back and show the whole of this side of the Earth
-    if (!sc.lights.length && (sc.embers.length || sc.rests.length)) return nz ? { lon: 150, lat: -20, k: 1.25 } : { lon: 5, lat: 45, k: 1.6 };
+    if (!sc.lights.length && (sc.embers.length || sc.rests.length)) return nz ? { lon: 173.2, lat: -40.9, k: 3.6 } : { lon: -1.2, lat: 53, k: 4.4 };
     const mine = sc.lights.filter((l) => !l.moving && l.ll[0] > -30 && (l.ll[0] > 100) === nz);
     // with only a handful of lights left, hold a steady view: chasing them makes the zoom pump
     if (mine.length < 12 && (nz || this.kFloor >= 6)) { if (!nz) this.kFloor = 6; return nz ? { lon: 174.2, lat: -40.6, k: 5.4 } : { lon: -0.6, lat: 52.6, k: 6 }; }
@@ -317,17 +317,17 @@ export class Stage {
       if (slot > 0) { const o = spiral(slot, gap); q[0] += o[0]; q[1] += o[1]; }
       return q;
     };
-    // where a light was last drawn: a small open ring, fainter than an ember
+    // the last place the map has for someone: a small open diamond, fainter than an ember and unlike a hollow light
     c.lineWidth = 1;
     for (const r of sc.rests) {
       const q = at(r.ll, r.slot); if (!q) continue;
-      c.globalAlpha = (r.bright ? 0.7 : 0.5) * r.alpha * (r.hollow ? 0.8 : 1); c.strokeStyle = this.colourOf(r.actor); c.beginPath(); c.arc(q[0], q[1], r.bright ? 2.4 : 2.2, 0, 7); c.stroke();
+      const d = r.bright ? 3.4 : 2.7; c.globalAlpha = (r.bright ? 0.85 : 0.55) * r.alpha * (r.hollow ? 0.8 : 1); c.strokeStyle = this.colourOf(r.actor); c.beginPath(); c.moveTo(q[0], q[1] - d); c.lineTo(q[0] + d, q[1]); c.lineTo(q[0], q[1] + d); c.lineTo(q[0] - d, q[1]); c.closePath(); c.stroke();
     }
     c.globalAlpha = 1;
     for (const e of sc.embers) {
       const q = at(e.ll, e.slot); if (!q) continue;
       if (e.bright) { c.globalAlpha = 0.5 * e.alpha; c.drawImage(glow(this.colourOf(e.actor), true), q[0] - 9, q[1] - 9, 18, 18); }
-      c.globalAlpha = (e.bright ? 0.95 : 0.7) * e.alpha; c.fillStyle = this.colourOf(e.actor); c.beginPath(); c.arc(q[0], q[1], e.bright ? 2 : 1.7, 0, 7); c.fill();
+      c.globalAlpha = (e.bright ? 0.95 : 0.7) * e.alpha; c.fillStyle = this.colourOf(e.actor); c.beginPath(); c.arc(q[0], q[1], e.bright ? 2.6 : 1.8, 0, 7); c.fill();
     }
     c.globalCompositeOperation = 'lighter';
     for (const l of sc.lights) {
@@ -419,6 +419,8 @@ export class Stage {
       }
     }
     const local: Scene = { ...sc, lights: sc.lights.filter((l) => !l.moving || !sc.traces.some((t) => t.actor === l.actor && t.style === 'sail' && crossing(t))) };
+    // at the present day each shore says how many it remembers
+    if (!sc.lights.length && (sc.embers.length || sc.rests.length)) for (const p of ps) { const n = [...sc.embers, ...sc.rests].filter((m) => !p.vis || p.vis(m.ll)).length, r = p.rect!; if (!n) continue; c.font = '500 11px "IBM Plex Mono", ui-monospace, Menlo, monospace'; c.textBaseline = 'alphabetic'; const tw = c.measureText(p.title!.toUpperCase()).width; c.fillStyle = '#F2B544'; c.fillText(`· ${n} REMEMBERED`, r[0] + 8 + tw + 8, p.small ? r[1] + 16 : r[1] - 7); }
     for (const p of ps) { this.traces(p, sc, (t) => !crossing(t)); this.marks(p, local, selected, p.small ? 5 : 7, p.small ? 3 : 14); }
     if (!tall) { c.save(); c.translate(this.W / 2, this.H / 2); c.rotate(-Math.PI / 2); c.fillStyle = '#6E8099'; c.font = 'italic 13px Newsreader, Georgia, serif'; c.textAlign = 'center'; c.fillText('about 19,000 km of sea, folded away', 0, 4); c.restore(); }
   }

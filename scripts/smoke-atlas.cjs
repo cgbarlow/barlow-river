@@ -149,7 +149,7 @@ process.on('exit', () => server?.kill());
   check('it crosses to New Zealand once and never swings back', firstNz > 0 && sides.slice(firstNz).every((x) => x === 'nz') && sides.slice(0, firstNz).every((x) => x !== 'nz'), `turn ${cams.plan.turn}, ride ${JSON.stringify(cams.plan.ride)}`);
   let jump = 0; for (let i = 1; i < cams.out.length; i++) if (sides[i] === sides[i - 1] && cams.out[i][3] && cams.out[i - 1][3]) jump = Math.max(jump, Math.abs(cams.out[i][1] - cams.out[i - 1][1]));
   const lastCam = cams.out[cams.out.length - 1];
-  check('when the last light is out it stands back on the same side, without crossing again', lastCam[3] === 0 ? lastCam[1] > 100 && lastCam[2] < 2 : true, JSON.stringify(lastCam));
+  check('when the last light is out it stays on the same side, close enough to see what is remembered', lastCam[3] === 0 ? lastCam[1] > 100 && lastCam[2] > 2.5 && lastCam[2] < 5 : true, JSON.stringify(lastCam));
   check('between times it holds steady', jump <= 4, `largest move in five years: ${jump} degrees`);
   await A(page, () => { window.__atlas.setYear(1868); window.__atlas.stages[0].resume(); window.__atlas.settle(); window.__atlas.play(); });
   const seen = [];

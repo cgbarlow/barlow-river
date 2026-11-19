@@ -148,7 +148,7 @@ export function buildAtlas(river: RiverData): AtlasBuild {
       // a record a generation old, in a country the person's own first record is not in, places nobody
       if (l.stale > 20 && PLACE.get(l.p)!.country !== PLACE.get(ownFirst.p)!.country) continue;
       const late = l.from > p.b!.y + 2;
-      a.stops = sortStops([{ y: l.from, p: l.p, kind: 'borrowed', why: `no placed birth record: shown with ${pron(p)} ${q.sex === 'F' ? 'mother' : 'father'}, ${q.name}${late ? `, from ${l.from}, the first year ${subj(q)} is recorded` : ''}`, est: true }, ...a.stops]);
+      a.stops = sortStops([{ y: l.from, p: l.p, kind: 'borrowed', why: `the map reads no placed birth record: shown with ${pron(p)} ${q.sex === 'F' ? 'mother' : 'father'}, ${q.name}${late ? `, from ${l.from}, the first year ${subj(q)} is recorded` : ''}`, est: true }, ...a.stops]);
       if (late) { a.seen = l.from; a.seenWhy = `the first year ${q.name} is recorded`; }
       stays.delete(p.id); done = true; break;
     }
@@ -182,7 +182,7 @@ export function buildAtlas(river: RiverData): AtlasBuild {
     const rel = hit.how.how === 'parent' ? (lender.sex === 'F' ? 'mother' : lender.sex === 'M' ? 'father' : 'parent') : hit.how.how === 'partner' ? (lender.sex === 'F' ? 'wife' : lender.sex === 'M' ? 'husband' : 'partner') : hit.how.how;
     const late = l.from > y + 2;
     const seenWhy = l.waited ? `the first year ${lender.name} is recorded` : hit.when || `the first year ${lender.name} is recorded`;
-    round.push({ id: p.id, borrowed: hit.how, ...(late ? { seen: l.from, seenWhy } : {}), stops: [{ y: late ? l.from : y, p: l.p, kind: 'borrowed', why: `no placed record: shown with ${pron(p)} ${rel}, ${lender.name}${late ? `, from ${l.from}` : ''}`, est: true }] });
+    round.push({ id: p.id, borrowed: hit.how, ...(late ? { seen: l.from, seenWhy } : {}), stops: [{ y: late ? l.from : y, p: l.p, kind: 'borrowed', why: `the map reads no placed record: shown with ${pron(p)} ${rel}, ${lender.name}${late ? `, from ${l.from}` : ''}`, est: true }] });
   }
   for (const a of round) out.set(a.id, a);
 
@@ -338,6 +338,39 @@ function findings(people: AtlasPerson[], P: Map<string, Person>, F: Map<string, 
     const g = gaps[0];
     facts.push({ id: 'a-silence', kind: 'places', y: g.l.y1, people: [g.id], title: `${name(g.id)}: ${ageBetween({ y: g.l.y0, text: g.l.d0 ?? String(g.l.y0), approx: g.l.approx0 }, { y: g.l.y1, text: g.l.d1 ?? String(g.l.y1), approx: g.l.approx1 })} years between records`,
       body: `Recorded in ${place(g.l.ra).name} in ${abt(g.l.approx0, g.l.y0)}, and not again until ${place(g.l.rb).name} in ${abt(g.l.approx1, g.l.y1)}${g.l.d0 && g.l.d1 ? ` (${g.l.d0} to ${g.l.d1})` : ''}. It is the longest silence between two places in the tree. On the map the light waits where it was last seen, growing dim.` });
+  }
+  // ---- three more things the records show when counted ----
+  // parents whose children's births are recorded on both sides of the world
+  {
+    const sides = all.map((x) => { const kids = x.a.stops.filter((q) => q.kind === 'child'); return { id: x.a.id, nz: kids.filter((q) => place(q.p).country === 'New Zealand').length, eu: kids.filter((q) => place(q.p).country !== 'New Zealand'), first: Math.min(Infinity, ...kids.filter((q) => place(q.p).country === 'New Zealand').map((q) => q.y)) }; }).filter((x) => x.nz && x.eu.length);
+    if (sides.length) {
+      const line = (x: (typeof sides)[number]) => `${name(x.id)}: ${x.eu.length} in ${[...new Set(x.eu.map((q) => place(q.p).country))].join(' and ')}, ${x.nz} in New Zealand.`;
+      facts.push({ id: 'a-both-sides-families', kind: 'crossing', y: Math.min(...sides.map((x) => x.first)), people: sides.map((x) => x.id),
+        title: `${sides.length === 1 ? 'One parent has' : `${sides.length} parents have`} children’s births recorded on both sides of the world`,
+        body: `Counted from the births and baptisms of children that the map reads, by where each names. ${sides.map(line).join(' ')} Brothers and sisters who began life nineteen thousand kilometres apart.` });
+    }
+  }
+  // the oldest and youngest of those placed on both sides of the world, at their first record in New Zealand that is not their own death
+  {
+    const firstNZ = new Map<string, number>();
+    for (const x of all) { if (!crossings.some((c) => c.id === x.a.id && !c.l.assumed && !c.l.within) || P.get(x.a.id)!.b!.est) continue; const s = x.a.stops.find((q) => q.kind !== 'borrowed' && q.kind !== 'death' && q.kind !== 'burial' && !q.approx && place(q.p).country === 'New Zealand'); if (s) firstNZ.set(x.a.id, s.y); }
+    const ages = [...firstNZ].map(([id, y]) => ({ id, y, age: y - yr(id) })).sort((a, b) => b.age - a.age);
+    if (ages.length >= 3) {
+      const old = ages[0], young = ages[ages.length - 1], him = (id: string) => (P.get(id)!.sex === 'F' ? 'her' : P.get(id)!.sex === 'M' ? 'him' : 'them');
+      facts.push({ id: 'a-oldest-crosser', kind: 'crossing', y: old.y, people: [old.id, young.id],
+        title: `${name(old.id)} was about ${old.age} when first placed in New Zealand`,
+        body: `Born ${P.get(old.id)!.b!.approx ? 'about ' : 'in '}${yr(old.id)}, and placed in New Zealand in ${old.y} by a record made in ${him(old.id) === 'them' ? 'their' : him(old.id) === 'her' ? 'her' : 'his'} lifetime. Of the ${ages.length} people on the map whom such a record places there after a record in Europe, that makes ${him(old.id)} the oldest at the time. The youngest, ${name(young.id)}, was about ${young.age}. The voyage itself may have been years before the record.` });
+    }
+  }
+  // the most of one person's own records in one place
+  {
+    const runs = all.flatMap((x) => { const by = new Map<string, number[]>(); for (const q of x.a.stops) if (q.kind !== 'borrowed' && !q.est && !['area', 'country'].includes(place(q.p).prec)) { const t = place(q.p).town ?? q.p; by.set(t, [...(by.get(t) ?? []), q.y]); } return [...by].map(([p, ys]) => ({ id: x.a.id, p, n: ys.length, y0: Math.min(...ys), y1: Math.max(...ys) })); }).sort((a, b) => b.n - a.n || b.y1 - b.y0 - (a.y1 - a.y0));
+    if (runs.length && runs[0].n >= 5) {
+      const r = runs[0], same = runs.filter((q) => q.n === r.n && q !== r), his = P.get(r.id)!.sex === 'F' ? 'her' : P.get(r.id)!.sex === 'M' ? 'his' : 'their', him = P.get(r.id)!.sex === 'F' ? 'her' : P.get(r.id)!.sex === 'M' ? 'him' : 'them';
+      facts.push({ id: 'a-longest-stay', kind: 'places', y: r.y0, people: [r.id, ...same.map((q) => q.id)],
+        title: `${name(r.id)}: ${r.n} records in ${place(r.p).name.split(',')[0]} across ${r.y1 - r.y0} years`,
+        body: `${r.n} of ${his} own records that the map reads place ${him} in ${place(r.p).name}, the first in ${r.y0} and the last in ${r.y1}. No one on the map has more records in one place${same.length ? `; ${same.map((q) => `${name(q.id)} has as many in ${place(q.p).name.split(',')[0]}, over ${q.y1 - q.y0} years`).join(', and ')}` : ''}. Most lives here are two or three records. This one stayed long enough to be seen staying.` });
+    }
   }
   for (const [c, f] of firstIn) {
     if (c === 'England' || c === 'New Zealand') continue;

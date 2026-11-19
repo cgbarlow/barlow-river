@@ -143,7 +143,7 @@ describe('placing people', () => {
     const kid = a.people.find((p) => p.id === 'kid')!;
     expect(kid.borrowed).toEqual({ from: 'ma', how: 'parent' });
     // lent to the town, not the parish: the parish is the mother's, not known to be the child's
-    expect(kid.stops).toEqual([{ y: 1825, p: 'norwich', kind: 'borrowed', why: 'no placed record: shown with her mother, Ann Finch', est: true }]);
+    expect(kid.stops).toEqual([{ y: 1825, p: 'norwich', kind: 'borrowed', why: 'the map reads no placed record: shown with her mother, Ann Finch', est: true }]);
     expect(a.unplaced).toEqual(['stranger']);
   });
   it('keeps a record that names only a country: a haze there from that year, then the closer place when one is recorded', () => {

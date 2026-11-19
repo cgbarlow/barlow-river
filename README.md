@@ -55,7 +55,7 @@ What it will not pretend to know:
 - **A loose year stays loose.** Where the record says "c. 1823", the page says "about 1823", gives no age, and never draws a voyage as sailing on it.
 - **When a move happened is almost never recorded.** Where the records pin it to within three years, the light travels. Otherwise it stays where it was last recorded and appears at the new place only in the year a record finds it there.
 - **Sea routes are custom, not record.** A voyage to New Zealand is drawn the way ships went at the time: out round the Cape of Good Hope, and through Panama once the canal had opened. The line is not the course of any one ship; where a note in the tree names a ship, it is in that person's record in the River.
-- **What stays after a light goes out.** Where a death or burial names a town or parish, an ember. Otherwise a fainter open ring where the light was last placed, which says only that the map last had the person there.
+- **What stays after a light goes out.** Where a death or burial names a town or parish, an ember. Otherwise a small open diamond at the last place the map has for the person, which does not say they died there.
 - **Living people are not on the map.** No light, no place.
 
 How it is made: `pipeline/gazetteer.ts` places every place name in the tree by hand, so no family data is sent to a geocoding service. `pipeline/atlas.ts` builds `public/data/atlas.json` from the published `river.json`, never from the raw export, so the Atlas cannot publish anything the River does not. Anyone who died from 1950 on is shown to the town only. The basemap is Natural Earth, bundled (`scripts/build-land.ts` writes it, coarse for the world and detailed for Britain, Ireland and New Zealand); nothing is fetched from a map service.
