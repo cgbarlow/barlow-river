@@ -112,7 +112,7 @@ process.on('exit', () => server?.kill());
   const hollow = await A(page, () => window.__atlas.world.actors.find((a) => a.hollow).id);
   await A(page, (id) => window.__atlas.select(id), hollow);
   const hText = await page.locator('#record').textContent();
-  check('a hollow light says it is borrowed and from whom', /No record gives a place/.test(hText) && /No place of their own/.test(hText) && (await page.locator('#record [data-act="follow"]').count()) === 0);
+  check('a hollow light says it is borrowed and from whom', /records the map reads gives a place/.test(hText) && /No place of their own/.test(hText) && (await page.locator('#record [data-act="follow"]').count()) === 0);
   await page.locator('#record .back').click();
 
   // 7. two ways to draw the Earth, or both

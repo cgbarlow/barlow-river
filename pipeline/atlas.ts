@@ -72,6 +72,14 @@ export function buildAtlas(river: RiverData): AtlasBuild {
       else if (e.tag === 'MARR') add(e.place, e.y, 'marriage', 'married', false, false, e.date);
       else if (e.y != null && e.y >= b.y && e.y <= d.y) add(e.place, e.y, 'event', /accomplish/i.test(e.label) ? 'an achievement the tree dates to that year and places here' : `in the record for that year: ${e.label.toLowerCase()}`);
     }
+    // two things the tree's own description of a person states with a date and a place: a baptism and an emigration
+    for (const sent of (p.desc ?? '').split(/(?<=\.)\s+/)) {
+      const bp = /^Baptised (\d{1,2} [A-Z][a-z]{2} (\d{4})) at ([^.]+)\.$/.exec(sent), em = /^Emigrated to ([A-Z][^.]*?) in (\d{4})\.$/.exec(sent);
+      const at = bp ? bp[3] : em ? em[1] : '', hit = at ? locate(at) : null;
+      if (!hit || hit === 'ignore') continue;
+      if (bp) add(at, Number(bp[2]), 'baptism', 'baptised', false, false, bp[1]);
+      else if (em && Number(em[2]) >= b.y && Number(em[2]) <= d.y) add(at, Number(em[2]), 'event', 'emigrated, in the tree’s description');
+    }
     if (!d.est) add(d.place, d.y, d.kind === 'bur' ? 'burial' : 'death', d.kind === 'bur' ? 'buried' : 'died', false, Boolean(d.approx), d.text);
     for (const fid of p.fams) {
       const f = F.get(fid);
@@ -140,7 +148,7 @@ export function buildAtlas(river: RiverData): AtlasBuild {
       // a record a generation old, in a country the person's own first record is not in, places nobody
       if (l.stale > 20 && PLACE.get(l.p)!.country !== PLACE.get(ownFirst.p)!.country) continue;
       const late = l.from > p.b!.y + 2;
-      a.stops = sortStops([{ y: l.from, p: l.p, kind: 'borrowed', why: `birthplace not recorded: shown with ${pron(p)} ${q.sex === 'F' ? 'mother' : 'father'}, ${q.name}${late ? `, from ${l.from}, the first year ${subj(q)} is recorded` : ''}`, est: true }, ...a.stops]);
+      a.stops = sortStops([{ y: l.from, p: l.p, kind: 'borrowed', why: `no placed birth record: shown with ${pron(p)} ${q.sex === 'F' ? 'mother' : 'father'}, ${q.name}${late ? `, from ${l.from}, the first year ${subj(q)} is recorded` : ''}`, est: true }, ...a.stops]);
       if (late) { a.seen = l.from; a.seenWhy = `the first year ${q.name} is recorded`; }
       stays.delete(p.id); done = true; break;
     }
@@ -174,7 +182,7 @@ export function buildAtlas(river: RiverData): AtlasBuild {
     const rel = hit.how.how === 'parent' ? (lender.sex === 'F' ? 'mother' : lender.sex === 'M' ? 'father' : 'parent') : hit.how.how === 'partner' ? (lender.sex === 'F' ? 'wife' : lender.sex === 'M' ? 'husband' : 'partner') : hit.how.how;
     const late = l.from > y + 2;
     const seenWhy = l.waited ? `the first year ${lender.name} is recorded` : hit.when || `the first year ${lender.name} is recorded`;
-    round.push({ id: p.id, borrowed: hit.how, ...(late ? { seen: l.from, seenWhy } : {}), stops: [{ y: late ? l.from : y, p: l.p, kind: 'borrowed', why: `no place recorded: shown with ${pron(p)} ${rel}, ${lender.name}${late ? `, from ${l.from}` : ''}`, est: true }] });
+    round.push({ id: p.id, borrowed: hit.how, ...(late ? { seen: l.from, seenWhy } : {}), stops: [{ y: late ? l.from : y, p: l.p, kind: 'borrowed', why: `no placed record: shown with ${pron(p)} ${rel}, ${lender.name}${late ? `, from ${l.from}` : ''}`, est: true }] });
   }
   for (const a of round) out.set(a.id, a);
 

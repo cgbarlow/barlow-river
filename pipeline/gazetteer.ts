@@ -69,8 +69,8 @@ const ROWS: Row[] = [
   // A record that names only a country is drawn just offshore, so it cannot be mistaken for a town
   ['england', 'England', 53.45, 1.70, 'country', 'England', 'Elsewhere in England'],
   // Wales, Ireland, America
-  ['gellifelen', 'Clydach Works, Llanelly, Breconshire', 51.807, -3.126, 'town', 'Wales', 'Elsewhere in England'],
-  ['trevethin', 'Trevethin, Monmouthshire', 51.712, -3.045, 'town', 'Wales', 'Elsewhere in England'],
+  ['gellifelen', 'Clydach Works, Llanelly, Breconshire', 51.807, -3.126, 'town', 'Wales', 'Elsewhere'],
+  ['trevethin', 'Trevethin, Monmouthshire', 51.712, -3.045, 'town', 'Wales', 'Elsewhere'],
   ['ireland', 'Ireland', 51.55, -6.30, 'country', 'Ireland', 'Elsewhere'],
   ['new-york', 'New York', 40.71, -74.01, 'town', 'United States', 'Elsewhere'],
   // New Zealand

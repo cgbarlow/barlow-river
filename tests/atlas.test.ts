@@ -143,7 +143,7 @@ describe('placing people', () => {
     const kid = a.people.find((p) => p.id === 'kid')!;
     expect(kid.borrowed).toEqual({ from: 'ma', how: 'parent' });
     // lent to the town, not the parish: the parish is the mother's, not known to be the child's
-    expect(kid.stops).toEqual([{ y: 1825, p: 'norwich', kind: 'borrowed', why: 'no place recorded: shown with her mother, Ann Finch', est: true }]);
+    expect(kid.stops).toEqual([{ y: 1825, p: 'norwich', kind: 'borrowed', why: 'no placed record: shown with her mother, Ann Finch', est: true }]);
     expect(a.unplaced).toEqual(['stranger']);
   });
   it('keeps a record that names only a country: a haze there from that year, then the closer place when one is recorded', () => {
@@ -340,6 +340,13 @@ describe('the published atlas', () => {
     const w = new World(river, file), actor = w.byId.get('I82')!, long = actor.legs.find((l) => l.y1 - l.y0 > 3 && !l.assumed && !l.within && l.km > 3)!;
     const tr = w.scene(1950, null, null).traces.find((t) => t.actor === actor && t.leg === long)!;
     expect(tr.style).toBe('fade');
+  });
+  it('reads the dated baptism and emigration the tree\'s descriptions state', () => {
+    const stops = (id: string) => file.people.find((a) => a.id === id)!.stops;
+    expect(stops('K8VS-P96')[0]).toMatchObject({ y: 1815, p: 'westfield', kind: 'baptism' });
+    expect(stops('L5KW-4FV').find((s) => s.y === 1857)).toMatchObject({ p: 'wellington', kind: 'event' });
+    // and no reason on the map says outright that nothing is recorded
+    for (const a of file.people) for (const s of a.stops) expect(s.why).not.toMatch(/not recorded|no place recorded/);
   });
   it('accounts for every deceased person exactly once', () => {
     const c = file.meta.counts;

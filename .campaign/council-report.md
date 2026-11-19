@@ -1,52 +1,49 @@
-# Council report: the Atlas, round 12
+# Council report: the Atlas, round 13
 
-Subject: the sixth full outside test in a row (commit `cea294e`, a fresh tester), and what was done.
+Subject: the seventh full outside test in a row (commit `0dde5e1`, a fresh tester), and what was done.
 
 ## What the tester found
 
-Verdict on `cea294e`: **no, though it is close.** One blocker, one sentence.
+Verdict on `0dde5e1`: **no**, on one point, with a caveat the tester stated itself.
 
 - The owner's four requests: met.
-- Every point from round 11 (N1 to N7): fixed. All 122 place strings were put through the gazetteer and read: none lets a later word win. Every solid line has a window of three years or less. All 79 "last known" sentences open at the last record that names the place.
-- Rules A1 to A8, by the tester's own checker, every year and every frame of four play-throughs: **no violations**.
-- 93 unit tests run by the tester: pass.
-- Scores: 28 of 35 overall, 29 as a build.
+- All eleven rules, every whole year and two full play-throughs, by the tester's own checker: **no violations**.
+- Every caption, finding and count recounts true. All 619 stops are backed by a record. No console errors from the page.
+- The blocker from round 12 is fixed for the person it named.
+- Scores: 28 of 35 overall, 27 as a build.
 
 Blocking:
-- **B1.** Peter William Barlow's panel said "the records here do not date the voyage" beside his own record, "1883 Auckland, arrival noted in the tree", dated 2 July 1883.
+- **D1.** William Henry Carter's panel said "The records here do not date the voyage". The tree's own description of him says "Emigrated to Wellington in 1857". The same cause in Mary Ann Seaman's panel: "birthplace not recorded", where her description says "Baptised 5 Mar 1815 at Westfield". The tester's caveat: these facts sit in the free-text description, which the map did not read; if that is out of scope, the point is minor.
 
-Minor: a death recorded as "after 1808" shown as "c. 1808"; a same-year death and burial drawn dashed; a guide sentence that read as if 31 people lacked both birth and death; three small-screen overlaps; "London" for a Lambeth parish in one caption.
+Minor: an order of two same-year records the dates do settle; a ring's wording for four people whose death record names only a county or country; two Welsh places keyed "Elsewhere in England"; "c. 1808" for "after 1808" in lists; "b." for a baptism date in one header.
 
 ## The Council
 
-**Cat.** One false sentence, in one panel, about the one record added in round 9. It is the same class as before, but the class is now nearly empty: the tester machine-checked every move sentence, every place string and every line style and found this alone.
+**Cat.** The tester is right to block and right about the cause. For three rounds the false sentence has been the same sentence: the page saying "no record" when it means "no record I read". Fixing the people one at a time will not end it. Two things will. Read the dated, placed facts the descriptions state. And never say "no record": say what the map reads, and say once, in the guide, what that is.
 
-**Owl.** Fix it, fix the three one-line minors, test again. Nothing else.
+**Owl.** Both. The descriptions hold nineteen dated sentences; two patterns among them are a date, a place and nothing to interpret: "Baptised D at P" and "Emigrated to P in Y". Read those two. Do not parse the rest.
 
-**Wolf.** Tell the owner the count: six testers, and the blockers went ten, ten, five, two, four, one.
+**Rabbit.** And the guide should send people to the River for the notes.
 
-**Bear, Rabbit, Puppy.** Agreed.
+**Wolf.** Tell the owner plainly: seven testers. The blockers went ten, ten, five, two, four, one, one. The last two were one sentence each.
 
-**Simon.** Consensus as Owl says. The small-screen overlaps and the "after 1808" light going out in 1808 go on the owner's list.
+**Bear, Puppy.** Agreed.
+
+**Simon.** Consensus: fix the cause, not the instance; fix the five minors; test again.
 
 ## What was done
 
 | Point | Fix |
 |---|---|
-| B1 | Where the tree dates the arrival, the panel says so and gives the date. |
-| "after 1808" shown as "c. 1808" | The stop reads "after 1808". |
-| Same-year death and burial dashed | Drawn solid: it is known to within the year. |
-| Guide: "31 have no birth on record either" | "31 people have no birth on record". |
+| D1, the cause | The map reads a baptism or emigration that a person's description states with a date and a place. Mary Ann Seaman is now placed at Westfield by her baptism; William Henry Carter is in Wellington from 1857. |
+| D1, the wording | No sentence says "no record" or "not recorded" outright. They say what the map reads. The guide has a new paragraph, "What the map reads", and points to the River for notes. |
+| Same-year order | Two records in one year with full dates are given in order. |
+| Ring wording | "At the last place the map has for them." |
+| Welsh places | Keyed "Elsewhere". |
+| "after 1808" | In lists, search and tooltips too. |
+| Baptism in a header | "bapt." |
 
-93 unit tests, the River's 59 browser checks and the Atlas's 158 pass.
-
-## Left for the owner
-
-- The last frame stands far back, so the remnants are small on the globe.
-- Hollow lights and "last placed here" rings are both open circles.
-- The 1883 note says "with wife, 6 children"; only the man is placed by it.
-- James Carter's death is recorded as "after 1808"; his light goes out in 1808 though a son is born in 1816.
-- Small screens: stars pushed outside their panel on a sideways phone; a rim pointer under the chip row with the sheet open; the open Key over the closing caption.
+94 unit tests, the River's 59 browser checks and the Atlas's 158 pass.
 
 ## Next
 
