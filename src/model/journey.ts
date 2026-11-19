@@ -32,7 +32,8 @@ const vague = (pl: AtlasPlace) => pl.prec === 'area' || pl.prec === 'country';
 function contains(outer: AtlasPlace, inner: AtlasPlace): boolean {
   if (outer.id === inner.id || outer.country !== inner.country) return false;
   if (outer.prec === 'country') return inner.prec !== 'country';
-  return outer.prec === 'area' && !vague(inner) && km(ll(outer), ll(inner)) < 120;
+  // a county holds the places named as being in it: "Sproughton, Suffolk" is in Suffolk, and is not in Essex however near
+  return outer.prec === 'area' && !vague(inner) && inner.name.endsWith(', ' + outer.name);
 }
 const lent = (st: Stay) => st.stops.every((x) => x.kind === 'borrowed');
 
@@ -131,7 +132,7 @@ export function windowText(leg: Leg, name: (id: string) => string): string {
   if (leg.follows) return `No record of their own for either place. Drawn with a parent in ${a}, then in ${b} from ${leg.y1}, where that parent is next recorded.`;
   if (leg.assumed) return `No record gives a place before ${leg.y1}: ${a} is where a parent was. First recorded in ${b} in ${leg.y1}.`;
   const y0 = `${leg.approx0 ? 'about ' : ''}${leg.y0}`, y1 = `${leg.approx1 ? 'about ' : ''}${leg.y1}`;
-  if (leg.y1 === leg.y0) return `In ${a} and in ${b} in ${y0}.`;
+  if (leg.y1 === leg.y0) return leg.km > 1500 ? `In ${a} and in ${b} in ${y0}.` : `In ${a} and in ${b} in ${y0}. The records do not say which came first.`;
   const n = leg.y1 - leg.y0;
   return `Last known in ${a} in ${y0}. In ${b} by ${y1}. The move was some time in ${n === 1 ? 'that year' : `those ${leg.approx0 || leg.approx1 ? 'roughly ' : ''}${n} years`}.`;
 }

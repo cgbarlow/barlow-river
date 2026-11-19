@@ -24,12 +24,12 @@ interface Panel { proj: GeoProjection; vis?: (ll: LonLat) => boolean; rect?: [nu
 interface Hit { x: number; y: number; id: string }
 interface Goal { lon: number; lat: number; k: number }
 
-const GB: [number, number, number, number] = [-8.6, 49.7, 2.4, 55.3];
+const GB: [number, number, number, number] = [-10.9, 49.7, 2.4, 55.6];
 const NZ: [number, number, number, number] = [166, -47.6, 179, -34];
-const PL: [number, number, number, number] = [13.5, 48.8, 24.6, 55];
+const PL: [number, number, number, number] = [11.5, 48.8, 26, 57];
 const US: [number, number, number, number] = [-81, 35.5, -66.5, 46];
 /** a country to point at when it is out of view */
-export interface Pointer { name: string; ll: LonLat; n: number; on?: boolean }
+export interface Pointer { name: string; ll: LonLat; n: number; on?: boolean; /** what the number counts when it is not lights lit */ unit?: string }
 /** a finding that belongs to a place: a star on the map from the year it happens */
 export interface Star { id: string; ll: LonLat; y: number; on?: boolean }
 const inBox = (b: number[]) => (ll: LonLat) => ll[0] >= b[0] && ll[0] <= b[2] && ll[1] >= b[1] && ll[1] <= b[3];
@@ -110,7 +110,7 @@ export class Stage {
     const rects: [number, number, number, number][] = one
       ? [[pad, top, W - pad, Math.max(top + 90, H - this.inset.bottom - 10)], [pad, top, W - pad, Math.max(top + 90, H - this.inset.bottom - 10)]]
       : tall
-        ? [[pad, top, W - pad, top + (hb - top - 30) * 0.5 - 12], [pad, top + (hb - top - 30) * 0.5 + 12, W - pad, hb - 30]]
+        ? [[pad, top, W - pad, top + (hb - top - 118) * 0.5 - 12], [pad, top + (hb - top - 118) * 0.5 + 12, W - pad, hb - 118]]
         : [[pad, top, (W - g) / 2, hb - 56], [(W + g) / 2, top, W - pad, hb - 56]];
     const fit = (r: number[], box: number[]) => geoMercator().fitExtent([[r[0] + 10, r[1] + 10], [r[2] - 10, r[3] - 10]], { type: 'MultiPoint', coordinates: [[box[0], box[1]], [box[2], box[3]]] }).clipExtent([[r[0], r[1]], [r[2], r[3]]]);
     // the insets sit on open sea: Poland north-east of Scotland, the United States north-west of the North Island
@@ -213,8 +213,9 @@ export class Stage {
       if (p.vis && !p.vis(s.ll)) continue;
       const q = p.proj(s.ll); if (!q) continue;
       if (p.rect && (q[0] < p.rect[0] + 8 || q[0] > p.rect[2] - 8 || q[1] < p.rect[1] + 24 || q[1] > p.rect[3] - 4)) continue;
-      let x = q[0], y = q[1] - 17;
-      while (taken.some((t) => Math.abs(t[0] - x) < 15 && Math.abs(t[1] - y) < 13)) x += 15;
+      // in a small inset the title is along the top, so the star goes below its place
+      let x = q[0]; const y = p.small ? q[1] + 16 : q[1] - 17;
+      while (taken.some((t) => Math.abs(t[0] - x) < 22 && Math.abs(t[1] - y) < 13)) x += 22;
       taken.push([x, y]);
       const fresh = sc.year - s.y;
       if (fresh < 3) { c.globalAlpha = 1 - fresh / 3; c.strokeStyle = '#F2B544'; c.lineWidth = 1.5; c.beginPath(); c.arc(x, y, 7 + fresh * 6, 0, 7); c.stroke(); }
@@ -241,10 +242,10 @@ export class Stage {
       if (q && q[0] > 30 && q[0] < W - 30 && q[1] > 30 && q[1] < hb - 30) continue;
       const [l, f] = rot(it.ll), a = (l * Math.PI) / 180, b = (f * Math.PI) / 180;
       let dx = Math.cos(b) * Math.sin(a), dy = -Math.sin(b); const len = Math.hypot(dx, dy) || 1; dx /= len; dy /= len;
-      const text = `${it.name}  ${it.n}`, tw = c.measureText(text).width + 30, th = 26;
+      const text = `${it.name}  ${it.n}${it.unit ? ' ' + it.unit : ''}`, tw = c.measureText(text).width + 30, th = 26;
       // walk out from the middle until the chip touches the edge
       const mx = W / 2 - tw / 2 - 14, my = hb / 2 - th / 2 - 14, t = Math.min(Math.abs(dx) > 1e-6 ? mx / Math.abs(dx) : 1e9, Math.abs(dy) > 1e-6 ? my / Math.abs(dy) : 1e9);
-      const x = cx + dx * t; let y = Math.min(hb - 110, Math.max(62, cy + dy * t));
+      const x = cx + dx * t; let y = Math.min(hb - (W < 500 ? 190 : 110), Math.max(62, cy + dy * t));
       let box = [x - tw / 2, y - th / 2, x + tw / 2, y + th / 2];
       for (let i = 0; i < 8 && boxes.some((o) => box[0] < o[2] + 6 && box[2] > o[0] - 6 && box[1] < o[3] + 4 && box[3] > o[1] - 4); i++) { y += th + 6; box = [x - tw / 2, y - th / 2, x + tw / 2, y + th / 2]; }
       boxes.push(box);
@@ -417,7 +418,8 @@ export class Stage {
   }
   /** how far the nearest of these marks is from a point: a tap goes to whichever mark it is closest to */
   private dist(hits: Hit[], x: number, y: number): number { let d = Infinity; for (const h of hits) d = Math.min(d, Math.hypot(h.x - x, h.y - y)); return d; }
-  starAt(x: number, y: number, r = 11): string | null { return this.starHits.find((h) => Math.hypot(h.x - x, h.y - y) < r)?.id ?? null; }
+  /** the nearest star within reach: two can sit side by side */
+  starAt(x: number, y: number, r = 11): string | null { let best = r, id: string | null = null; for (const h of this.starHits) { const d = Math.hypot(h.x - x, h.y - y); if (d < best) { best = d; id = h.id; } } return id; }
   starScreen(id: string): [number, number] | null { const h = this.starHits.find((x) => x.id === id); return h ? [h.x, h.y] : null; }
   countryAt(x: number, y: number): string | null { return this.countryHits.find((h) => x >= h.x0 && x <= h.x1 && y >= h.y0 && y <= h.y1)?.name ?? null; }
   pointerScreen(name: string): [number, number] | null { const h = this.countryHits.find((x) => x.name === name); return h ? [(h.x0 + h.x1) / 2, (h.y0 + h.y1) / 2] : null; }

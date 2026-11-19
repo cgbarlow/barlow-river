@@ -258,6 +258,23 @@ describe('nobody is drawn before a record places them', () => {
     expect(atlas.facts.find((f) => f.id === 'a-first-crossing')!.body).toMatch(/about 1823/);
     expect(atlas.facts.find((f) => f.id === 'a-first-poland')!.title).toMatch(/about 1959/);
   });
+  it('does not fold a record from one county into a stay in the next', () => {
+    const r = tiny([{ id: 'a', name: 'J F', b: { y: 1821, text: '', place: 'Sproughton, Suffolk, England' }, d: { y: 1913, text: '', place: '1663713, Essex, England' }, events: [{ tag: 'CENS', label: 'Census', y: 1851, place: 'Suffolk, England' }] }]);
+    const st = staysOf(buildAtlas(r).atlas.people[0], place);
+    // "Suffolk" says nothing new for someone in Sproughton, Suffolk; "Essex" is somewhere else
+    expect(st.map((x) => x.p)).toEqual(['sproughton', 'essex']);
+    expect(st[0].to).toBe(1851);
+  });
+  it('names the person recorded in the most places, by recount', () => {
+    const w2 = new World(river, atlas);
+    const count = (a: (typeof w2.actors)[number]) => new Set(a.stays.filter((x, i) => x.stops.some((y) => y.kind !== 'borrowed') && !a.stays[i + 1]?.within).map((x) => w2.siteId(x.p))).size;
+    const own = w2.actors.filter((a) => !a.hollow);
+    const top = Math.max(...own.map(count));
+    const f = atlas.facts.find((x) => x.id === 'a-most-places')!;
+    expect(f.title).toContain(`${top} places`);
+    expect(count(w2.byId.get(f.people[0])!)).toBe(top);
+    if (own.filter((a) => count(a) === top).length > 1) expect(f.body).not.toMatch(/More places than anyone else/);
+  });
   it('counts a family as split only when a brother or sister was alive to be left', () => {
     const f = atlas.facts.find((x) => x.id === 'a-split-siblings')!;
     const w2 = new World(river, atlas);

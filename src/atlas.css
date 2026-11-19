@@ -28,6 +28,9 @@ body.kbd .views:focus { outline: 2px solid var(--amber); outline-offset: -2px; }
 .countries > * { pointer-events: auto; flex: none; }
 .countries button, .countries .sea { min-height: 32px; padding: 0 11px; border-radius: 16px; border: 1px solid var(--line); background: rgba(23,39,63,.92); color: var(--ink); font-size: 12.5px; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
 .countries .short { display: none; }
+/* a toast informs; it must never sit in the way of a control */
+.atlas .toast, .toast { pointer-events: none; }
+.atlas .toast { top: auto; bottom: 150px; max-width: min(520px, calc(100% - 32px)); text-align: center; }
 .countries b { font: 500 12px var(--mono); color: var(--amber); }
 .countries button.none { color: var(--ink-3); } .countries button.none b { color: var(--ink-3); }
 .countries button:hover { border-color: #4A6186; }
@@ -36,7 +39,7 @@ body.kbd .views:focus { outline: 2px solid var(--amber); outline-offset: -2px; }
 /* the caption sits at the bottom like a subtitle, clear of the countries and the globe's rim pointers */
 .atlas .caption { top: auto; bottom: 26px; left: 50%; margin-left: 0; transform: translate(-50%, 6px); width: max-content; max-width: min(620px, calc(100% - 220px)); text-align: center; pointer-events: none; }
 .atlas .caption.on { transform: translate(-50%, 0); }
-.atlas .year-read { width: auto; min-width: 96px; }
+.atlas .year-read { width: 150px; }
 .atlas #alive { white-space: nowrap; }
 .tip img.face { float: left; width: 38px; height: 38px; border-radius: 50%; object-fit: cover; margin: 0 9px 2px 0; border: 1px solid var(--line); }
 .stops { list-style: none; margin: 8px 0 0; padding: 0; }
@@ -91,6 +94,7 @@ body.kbd .views:focus { outline: 2px solid var(--amber); outline-offset: -2px; }
   .atlas .caption { bottom: 84px; left: 12px; right: 68px; width: auto; max-width: none; transform: translateY(6px); text-align: left; font-size: 14px; }
   .atlas .caption.on { transform: none; }
   .atlas .time { gap: 8px; }
+  .atlas .year-read { width: 104px; }
   .atlas #alive { font-size: 10.5px; }
 }
 @media (max-height: 520px) and (min-aspect-ratio: 13/10) {

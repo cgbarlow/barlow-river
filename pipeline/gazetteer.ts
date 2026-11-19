@@ -41,8 +41,8 @@ const ROWS: Row[] = [
   ['bexley', 'Bexley, Kent', 51.441, 0.150, 'town', 'England', 'Kent'],
   ['kent', 'Kent', 51.25, 0.75, 'area', 'England', 'Kent'],
   ['london', 'London', 51.507, -0.128, 'town', 'England', 'London'],
-  ['lambeth', 'Lambeth, London', 51.480, -0.117, 'town', 'England', 'London'],
-  ['camberwell', 'Camberwell, London', 51.474, -0.093, 'town', 'England', 'London'],
+  ['lambeth', 'Lambeth, London', 51.480, -0.117, 'parish', 'England', 'London', 'london'],
+  ['camberwell', 'Camberwell, London', 51.474, -0.093, 'parish', 'England', 'London', 'london'],
   ['streatham', 'Streatham, Surrey', 51.428, -0.131, 'town', 'England', 'London'],
   // the rest of England
   ['derbyshire', 'Derbyshire', 53.13, -1.60, 'area', 'England', 'Elsewhere in England'],
@@ -71,7 +71,7 @@ const ROWS: Row[] = [
   // Wales, Ireland, America
   ['gellifelen', 'Clydach Works, Llanelly, Breconshire', 51.807, -3.126, 'town', 'Wales', 'Elsewhere in England'],
   ['trevethin', 'Trevethin, Monmouthshire', 51.712, -3.045, 'town', 'Wales', 'Elsewhere in England'],
-  ['ireland', 'Ireland', 53.30, -7.80, 'country', 'Ireland', 'Elsewhere'],
+  ['ireland', 'Ireland', 51.55, -6.30, 'country', 'Ireland', 'Elsewhere'],
   ['new-york', 'New York', 40.71, -74.01, 'town', 'United States', 'Elsewhere'],
   // New Zealand
   ['christchurch', 'Christchurch', -43.532, 172.636, 'town', 'New Zealand', 'New Zealand'],

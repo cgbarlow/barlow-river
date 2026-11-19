@@ -96,8 +96,9 @@ process.on('exit', () => server?.kill());
   let sailed = false, shipSeen = false;
   for (let i = 0; i < 80 && !sailed; i++) { await page.waitForTimeout(150); const s = await A(page, (id) => { const sc = window.__atlas.scene(); return { moving: sc.lights.some((l) => l.actor.id === id && l.moving), ship: Boolean(sc.ship) }; }, edwin); if (s.moving) { sailed = true; shipSeen = s.ship; } }
   check('follow the journey plays, and the light sails', sailed && shipSeen);
-  for (let i = 0; i < 80; i++) { await page.waitForTimeout(150); if (!(await A(page, () => window.__atlas.state.playing))) break; }
-  check('the journey ends where the records end', !(await A(page, () => window.__atlas.state.playing)) && (await year(page)) >= 1874 && (await year(page)) <= 1880, String(await year(page)));
+  for (let i = 0; i < 260; i++) { await page.waitForTimeout(150); if (!(await A(page, () => window.__atlas.state.playing))) break; }
+  // his last record is his burial in 1912: the journey runs to there, so the death is told too
+  check('the journey ends where the records end', !(await A(page, () => window.__atlas.state.playing)) && (await year(page)) >= 1912 && (await year(page)) <= 1915, String(await year(page)));
   await A(page, () => window.__atlas.settle());
   check('the globe has turned to New Zealand', (await A(page, () => window.__atlas.stages[0].cam.lon)) > 150);
   await page.keyboard.press('Escape');
@@ -290,6 +291,28 @@ process.on('exit', () => server?.kill());
   await page.keyboard.press('Escape');
   await A(page, () => window.__atlas.setYear(1880));
 
+  // 8d. things an outside tester found: sentences that must agree with each other
+  await A(page, () => window.__atlas.openCountry('New Zealand'));
+  const nzCame = Number((await page.locator('#record h3', { hasText: 'Came here from another country' }).textContent()).match(/\((\d+)\)/)[1]);
+  const crossers = Number((await A(page, () => window.__atlas.atlas.facts.find((f) => f.id === 'a-one-way').title)).match(/^(\d+)/)[1]);
+  check('the New Zealand panel and the findings agree on how many came', nzCame === crossers, `${nzCame} vs ${crossers}`);
+  await page.keyboard.press('Escape');
+  check('the help does not say hollow lights never move', await (async () => { await page.locator('#help').click(); const t = await page.locator('#record').textContent(); await page.keyboard.press('Escape'); return /goes where that parent is next recorded/.test(t) && !/and they never move/.test(t); })());
+  const dead = await page.evaluate(() => { document.querySelector('#legend .key-toggle').click(); const out = [...document.querySelectorAll('#legend [data-group]')].map((b) => b.dataset.group).filter((g) => !window.__atlas.world.actors.some((a) => window.__atlas.atlas && (window.__atlas.state.lens === 'surname'))); document.querySelector('#legend .key-toggle').click(); return out; });
+  const swatches = await page.evaluate(() => { document.querySelector('#legend .key-toggle').click(); const keys = [...document.querySelectorAll('#legend [data-group]')].map((b) => b.dataset.group); const res = []; for (const k of keys) { document.querySelector(`#legend [data-group="${k}"]`).click(); res.push([k, window.__atlas.state.focus ? window.__atlas.state.focus.size : 0]); document.querySelector(`#legend [data-group="${k}"]`).click(); } document.querySelector('#legend .key-toggle').click(); return res; });
+  check('every colour in the Key lights someone', swatches.length >= 5 && swatches.every((x) => x[1] > 0) && dead.length === 0, JSON.stringify(swatches));
+  await page.evaluate(() => { document.querySelector('#legend .key-toggle').click(); document.querySelector('#legend [data-group]').click(); });
+  check('a toast never blocks a control', (await page.evaluate(() => { const t = document.querySelector('.toast'); return t ? getComputedStyle(t).pointerEvents : 'none'; })) === 'none');
+  await page.evaluate(() => { document.querySelector('#legend [data-group]').click(); document.querySelector('#legend .key-toggle').click(); });
+  check('and it goes when the selection is cleared', (await page.locator('.toast').count()) === 0);
+  await page.keyboard.press('Tab');
+  await page.locator('#countries [data-country="Poland"]').focus(); await page.keyboard.press('Enter'); await page.waitForTimeout(120);
+  check('opening a country by keyboard leaves focus in the record', await page.evaluate(() => Boolean(document.activeElement?.closest('#record'))));
+  await page.keyboard.press('Enter'); await page.waitForTimeout(120);
+  check('and Back by keyboard leaves focus on the panel, not at the top of the page', await page.evaluate(() => Boolean(document.activeElement?.closest('#panel'))));
+  await page.mouse.move(700, 500);
+  await A(page, () => window.__atlas.setYear(1880));
+
   // 9. the panel: findings, places, people
   const cards = await page.locator('#panel-body [data-finding]').count();
   check('findings are listed', cards >= 7, String(cards));
@@ -436,6 +459,14 @@ process.on('exit', () => server?.kill());
   await A(page, () => window.__atlas.settle());
   const sp = await page.evaluate(() => { const s = window.__atlas.stages[0], r = s.canvas.getBoundingClientRect(); const id = (window.__atlas.atlas.facts.concat(window.__atlas.atlas.leads)).map((f) => f.id).find((i) => s.starScreen(i)); const q = id ? s.starScreen(id) : null; return q ? [id, r.left + q[0], r.top + q[1]] : null; });
   if (sp) { await page.touchscreen.tap(sp[1], sp[2]); await page.waitForTimeout(300); check('on a phone a tap on a star opens something', (await A(page, () => window.__atlas.state.finding)) !== null || (await A(page, () => window.__atlas.state.selected)) !== null, sp[0]); await page.keyboard.press('Escape'); }
+  // two stars side by side at Norwich: each can be opened by touch
+  await A(page, () => { window.__atlas.setYear(1700); window.__atlas.stages[0].resume(); window.__atlas.settle(); });
+  const two = await page.evaluate(() => { const s = window.__atlas.stages[0], r = s.canvas.getBoundingClientRect(); return ['a-birthplace', 'a-doubt-I900104'].map((id) => { const q = s.starScreen(id); return q ? [id, r.left + q[0], r.top + q[1]] : null; }); });
+  if (two.every(Boolean)) {
+    const got = [];
+    for (const t of two) { await page.touchscreen.tap(t[1], t[2]); await page.waitForTimeout(250); got.push(await A(page, () => window.__atlas.state.finding)); await page.keyboard.press('Escape'); await page.waitForTimeout(100); }
+    check('on a phone two stars at the same town each open their own finding', got[0] === two[0][0] && got[1] === two[1][0], JSON.stringify(got));
+  } else check('on a phone two stars at the same town each open their own finding', false, 'stars not found at 1700');
   if (await page.locator('#panel.open').count()) await page.locator('#grab').tap();
   await A(page, () => { window.__atlas.setYear(1880); window.__atlas.stages[0].resume(); window.__atlas.settle(); });
   await page.locator('.view [data-view="shores"]').tap();
