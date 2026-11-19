@@ -132,9 +132,11 @@ Nothing is published. The built site has been tested served from a `/barlow-rive
 
 ## How the Atlas was reviewed
 
-The Council reviewed the plan, then three mockups, then the build over five rounds, each after an outside tester had been through it. Six outside passes in all. The reports are in `.campaign/council-report-atlas-*.md`; the last is `council-report-atlas-closing.md`. The outside testers' final scores on the seven criteria were 26 and 28 of 35, and 29.5 judging only what the page does with the data it has. Much of the gap is the records: two thirds of people have no place of their own and only one voyage is dated.
+The Council reviewed the plan, then three mockups, then the build over six rounds, each after an outside tester had been through it. Eight outside passes in all. The reports are in `.campaign/council-report-atlas-*.md`; the last is `council-report-atlas-final.md`.
 
-The voyage routes (round the Cape before 1914, through Panama after) are a convention drawn from general knowledge, not checked against a source.
+The last four outside passes checked the placement rules for every person in every year and found no violations. The final full test scored the Atlas 27.5 of 35 on the seven criteria, and 29.5 judging only what the page does with the data it has. Much of the gap is the records: about half the lights are borrowed and only one voyage is dated closely enough to draw sailing.
+
+Known and left: the doubted Francis Barlow is given a single age from a year-only birth, and the old-calendar note on his record ends awkwardly. The voyage routes (round the Cape before 1914, through Panama after) are a convention drawn from general knowledge, not checked against a source.
 
 ## Not done
 
