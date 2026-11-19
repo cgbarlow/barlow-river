@@ -2,11 +2,28 @@
 // are related, a life told in a few plain sentences, who shares a name, and
 // what rests on a link. Recorded dates only. The living are counted, never named.
 
-import type { Family, Person } from './types.ts';
+import type { DateInfo, Family, Person } from './types.ts';
 
 export interface Tree { P: Map<string, Person>; F: Map<string, Family> }
 
 const rec = (p: Person | undefined, k: 'b' | 'd') => (p && !p.living && p[k] && !p[k]!.est && !/^(after|before)/.test(p[k]!.text) ? p[k]! : undefined);
+const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+const when = (d: DateInfo) => { const m = /(?:(\d{1,2}) )?([A-Za-z]{3})[a-z]* \d{4}/.exec(d.text); const mo = m ? MONTHS.indexOf(m[2].toLowerCase()) : -1; return { mo, day: m && m[1] && mo >= 0 ? Number(m[1]) : 0 }; };
+/**
+ * An age in whole years, as far as the two dates allow. Two bare years can be a year
+ * apart either way round a birthday, so they give "35 or 36"; a year marked "c." gives "about 36".
+ */
+export function ageBetween(b: DateInfo, e: DateInfo): string {
+  const n = e.y - b.y;
+  if (b.approx || e.approx) return `about ${n}`;
+  const x = when(b), y = when(e);
+  if (n <= 0) return String(Math.max(0, n));
+  if (x.mo >= 0 && y.mo >= 0) {
+    if (y.mo !== x.mo) return String(y.mo > x.mo ? n : n - 1);
+    if (x.day && y.day) return String(y.day >= x.day ? n : n - 1);
+  }
+  return `${n - 1} or ${n}`;
+}
 const parentsOf = (t: Tree, id: string): string[] => { const f = t.P.get(id)?.parents; return f ? t.F.get(f)?.partners ?? [] : []; };
 
 /** Every ancestor of a person with how many generations up, self included at 0. */
@@ -118,14 +135,14 @@ export function lifeLines(t: Tree, p: Person): string[] {
   }
   const fams = p.fams.map((f) => t.F.get(f)!).filter(Boolean);
   const wed = fams.filter((f) => f.m && !f.m.est).sort((x, y) => x.m!.y - y.m!.y);
-  if (b && wed.length) out.push(`Married at ${wed[0].m!.y - b.y}${wed.length > 1 ? `, and again at ${wed.slice(1).map((f) => f.m!.y - b.y).join(' and ')}` : ''}.`);
+  if (b && wed.length) out.push(`Married at ${ageBetween(b, wed[0].m!)}${wed.length > 1 ? `, and again at ${wed.slice(1).map((f) => ageBetween(b, f.m!)).join(' and ')}` : ''}.`);
   const kids = fams.flatMap((f) => f.children).map((id) => t.P.get(id)!).filter(Boolean);
   if (kids.length) {
-    const dated = kids.map((k) => rec(k, 'b')).filter(Boolean).map((x) => x!.y).sort((x, y) => x - y);
+    const dated = kids.map((k) => rec(k, 'b')).filter(Boolean).map((x) => x!).sort((x, y) => x.y - y.y);
     let s = `${kids.length === 1 ? 'One child' : `${kids.length} children`} on record`;
     if (b && dated.length) {
-      const first = dated[0] - b.y, last = dated[dated.length - 1] - b.y;
-      if (first >= 12 && first < 80) s += dated.length > 1 && last !== first ? `, the first at ${first} and the last at ${last}` : `, at ${first}`;
+      const first = dated[0].y - b.y, last = dated[dated.length - 1].y - b.y;
+      if (first >= 12 && first < 80) s += dated.length > 1 && last !== first ? `, the first at ${ageBetween(b, dated[0])} and the last at ${ageBetween(b, dated[dated.length - 1])}` : `, at ${ageBetween(b, dated[0])}`;
     }
     out.push(s + '.');
     if (d) {

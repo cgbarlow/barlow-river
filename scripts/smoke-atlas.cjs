@@ -222,7 +222,7 @@ process.on('exit', () => server?.kill());
   const sh = await A(page, (id) => { const w = window.__atlas.world, a = w.byId.get(id); const at = (y) => { const l = w.scene(y, null, null).lights.find((x) => x.actor === a); return [w.countryOf(a, y), l ? l.haze : null]; }; return [at(1858.5), at(1865.5), at(1880.5)]; }, sarah);
   check('a record naming only New Zealand moves the person there, as a haze, until a town is recorded', sh[0][0] === 'England' && sh[1][0] === 'New Zealand' && sh[1][1] === true && sh[2][0] === 'New Zealand' && sh[2][1] === false, JSON.stringify(sh));
   await A(page, () => window.__atlas.setYear(1874));
-  check('a voyage that falls inside one year is counted as at sea', /At sea\s*2/.test(await page.locator('#countries').textContent()) && (await A(page, () => Boolean(window.__atlas.scene().ship))));
+  check('a voyage that falls inside one year is counted as at sea', (await page.locator('#countries .sea b').textContent()) === '2' && (await A(page, () => Boolean(window.__atlas.scene().ship))));
   const sums = await A(page, () => { const out = []; for (const y of [1700, 1855, 1874, 1900, 1960]) { window.__atlas.setYear(y); window.__atlas.settle(); const c = window.__atlas.counts(); out.push(Object.values(c).reduce((a, b) => a + b, 0) === window.__atlas.scene().alive && document.querySelector('#alive').textContent.startsWith(String(window.__atlas.scene().alive))); } return out; });
   check('chips, the count under the year and the lights drawn agree', sums.every(Boolean), JSON.stringify(sums));
   const atSea = seen.filter((c) => c[2]);
@@ -506,6 +506,63 @@ process.on('exit', () => server?.kill());
   await page.waitForTimeout(1500);
   check('with reduced motion nothing plays by itself, and it opens on a peopled year', !(await A(page, () => window.__atlas.state.playing)) && (await inked(page)) > 500 && (await A(page, () => window.__atlas.scene().alive)) > 50);
   await page.close();
+
+  // 17. what the last outside test found
+  {
+  page = await open('#y=1855');
+  await A(page, () => window.__atlas.stop());
+  const panelOf = async (id) => { await A(page, (i) => window.__atlas.select(i), id); return page.locator('#record').textContent(); };
+  const pb = await panelOf('I11');
+  check('an age counts birthdays: Peter Barlow, born October 1776, was 35 when a child was born in May 1812', /the last at 35\./.test(pb), (pb.match(/children on record[^.]*\./) || [''])[0]);
+  const allMoves = await A(page, () => { const A_ = window.__atlas, out = []; for (const a of A_.world.actors) { A_.select(a.id); for (const m of document.querySelectorAll('#record .move b:first-child')) out.push(a.id + ': ' + m.textContent); } return out; });
+  const inside = allMoves.filter((m) => /(New Zealand to (Wellington|Carterton|Whanganui|Northland))|Woolwich to England|Kent to Bexley/.test(m));
+  check('a record that only names the country or county of the place before it is not listed as a move', allMoves.length > 60 && inside.length === 0, inside.slice(0, 3).join(' | '));
+  check('no distance is given to or from a country', !allMoves.some((m) => /(England|Ireland|New Zealand|Poland)(,| to England,| to New Zealand,) [\d,]+ km/.test(m.split(': ')[1]) && /^(somewhere|England|Ireland|New Zealand|Poland) to |to (England|Ireland|New Zealand|Poland),/.test(m.split(': ')[1])), allMoves.filter((m) => /to (England|Ireland|New Zealand|Poland),/.test(m)).slice(0, 3).join(' | '));
+  check('no reason on the page is the bare word "accomplishment"', !(await A(page, () => JSON.stringify(window.__atlas.atlas.people))).includes('accomplishment'));
+  // light the family: those lit are in view, and the message goes with the selection
+  const tf17 = await A(page, () => window.__atlas.world.actors.find((a) => a.p.name === 'Thomas Finch' && a.b === 1823).id);
+  for (const y of [1830, 1850, 1880]) {
+    await A(page, (o) => { window.__atlas.setYear(o.y); window.__atlas.select(o.id, false); window.__atlas.setYear(o.y); }, { y, id: tf17 });
+    await page.locator('#record [data-act="family"]').click();
+    await page.waitForTimeout(1600);
+    const fam = await A(page, () => { const A_ = window.__atlas, st = A_.stages[0]; A_.settle(); const sc = A_.scene(); const ids = [...A_.state.focus]; const lit = ids.filter((id) => sc.lights.some((l) => l.actor.id === id)); const r = st.canvas.getBoundingClientRect(); const seen = lit.filter((id) => { const q = st.screenOf(id); return q && q[0] > 0 && q[1] > 0 && q[0] < r.width && q[1] < r.height; }); return [lit.length, seen.length, Boolean(document.querySelector('.toast'))]; });
+    check(`light the family in ${y}: most of those lit are in view`, fam[0] > 0 && fam[1] * 2 >= fam[0] && fam[2], JSON.stringify(fam));
+    await page.keyboard.press('Escape');
+    check(`light the family in ${y}: Esc clears the message with the selection`, (await page.locator('.toast').count()) === 0 && (await A(page, () => window.__atlas.state.focus)) === null);
+  }
+  // the arrow keys keep stepping
+  await page.keyboard.press('Tab');
+  await page.locator('#views').focus();
+  const stepped = [];
+  for (let i = 0; i < 4; i++) { await page.keyboard.press('ArrowDown'); await page.waitForTimeout(120); stepped.push(await A(page, () => window.__atlas.state.selected)); }
+  check('down arrow on the map steps through four different people', new Set(stepped).size === 4 && (await page.evaluate(() => document.activeElement?.id)) === 'views', JSON.stringify(stepped));
+  await page.keyboard.press('Escape'); await page.waitForTimeout(80);
+  check('Esc puts the keyboard back on the map it came from', (await page.evaluate(() => document.activeElement?.id)) === 'views');
+  // a place name is a target along its whole length
+  await A(page, () => { window.__atlas.setYear(1855); window.__atlas.settle(); });
+  const labs = await A(page, () => { const st = window.__atlas.stages[0]; return [...window.__atlas.world.atSite.keys()].map((id) => [id, st.labelScreen(id)]).filter((x) => x[1]); });
+  let labOk = labs.length > 2; const labBad = [];
+  for (const [id, q] of labs) { const box = await page.locator('#view-a').boundingBox(); await A(page, () => window.__atlas.select(null)); await page.keyboard.press('Escape'); await A(page, () => window.__atlas.settle()); const q2 = await A(page, (i) => window.__atlas.stages[0].labelScreen(i), id); if (!q2) continue; await page.mouse.click(box.x + q2[0], box.y + q2[1]); await page.waitForTimeout(60); const got = await A(page, () => window.__atlas.state.finding ? 'star' : window.__atlas.state.place); /* a finding's star on top of the name wins */ if (got !== id && got !== 'star') { labOk = false; labBad.push(id + '→' + got); } void q; }
+  check('every place name drawn opens its place when its far end is clicked', labOk, `${labs.length} labels; ${labBad.join(' ')}`);
+  // sail with: the place being left is given a whole year and time to be read
+  const fb = await A(page, () => { const A_ = window.__atlas; const a = A_.world.actors.find((x) => x.legs.some((l) => l.sail && l.km > 9000)); A_.select(a.id); A_.setYear(1873); A_.play(a.id); return a.id; });
+  const capSeen = [];
+  for (let i = 0; i < 40; i++) { await page.waitForTimeout(150); const t = await page.evaluate(() => (document.querySelector('#caption.on b')?.textContent ?? '') + '|' + (document.querySelector('#caption.on')?.textContent ?? '').slice(0, 30)); capSeen.push(t); }
+  const first17 = capSeen.find((t) => t !== '|'), held17 = capSeen.filter((t) => t === first17).length * 150;
+  check('sail with: the first caption carries a whole year and stays long enough to read', Boolean(first17) && /^\d{4}\|/.test(first17) && held17 >= 2000, `${first17} held17 ${held17} ms`);
+  await A(page, () => window.__atlas.stop()); void fb;
+  await page.close();
+  // phones: every country chip on screen while someone is at sea; the caption under the lower map
+  page = await open('#y=1874', { width: 390, height: 800 }, { hasTouch: true, isMobile: true });
+  await A(page, () => { window.__atlas.stop(); window.__atlas.setYear(1874); window.__atlas.settle(); });
+  const chipsR = await page.evaluate(() => [...document.querySelectorAll('#countries > *')].map((c) => Math.round(c.getBoundingClientRect().right)));
+  check('on a phone every country chip is on screen while someone is at sea', chipsR.length === 7 && Math.max(...chipsR) <= 390, JSON.stringify(chipsR));
+  await A(page, () => { window.__atlas.setView('shores'); window.__atlas.settle(); });
+  const capBox = await page.evaluate(() => { const c = document.querySelector('#caption'); c.classList.add('on'); c.innerHTML = '<b>1870</b>Edward Charles Carter dies in Wellington in 1870. Last recorded in Bexley in 1831.'; const w = window.__atlas.stages[0].siteScreen('wellington'); const cv = window.__atlas.stages[0].canvas.getBoundingClientRect(), r = c.getBoundingClientRect(); return [r.top, w ? cv.top + w[1] : null]; });
+  check('on a phone the caption sits under the lower map, not on the place it describes', capBox[1] !== null && capBox[0] > capBox[1] + 20, JSON.stringify(capBox));
+  await page.close();
+
+  }
 
   check('no errors in the console', errors.length === 0, errors.slice(0, 3).join(' | '));
   await browser.close();

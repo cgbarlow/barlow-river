@@ -93,6 +93,10 @@ body.kbd .views:focus { outline: 2px solid var(--amber); outline-offset: -2px; }
   /* clear of the zoom column on the right */
   .atlas .caption { bottom: 84px; left: 12px; right: 68px; width: auto; max-width: none; transform: translateY(6px); text-align: left; font-size: 14px; }
   .atlas .caption.on { transform: none; }
+  /* on two shores the caption goes between the Key and the zoom buttons, under the lower map */
+  .atlas[data-view='shores'] .caption { bottom: 22px; left: 76px; right: 68px; font-size: 13.5px; }
+  .countries { gap: 4px; }
+  .countries button, .countries .sea { padding: 0 7px; }
   .atlas .time { gap: 8px; }
   .atlas .year-read { width: 104px; }
   .atlas #alive { font-size: 10.5px; }

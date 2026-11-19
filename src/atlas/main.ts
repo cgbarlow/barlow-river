@@ -9,7 +9,7 @@ import type { AtlasData, AtlasPlace } from '../model/atlas-types.ts';
 import { buildLayout, LINES, type Layout, type LineName } from '../model/layout.ts';
 import { lifeLines } from '../model/kin.ts';
 import { ROUTE_LABEL, type LonLat } from '../model/geo.ts';
-import { whereAt, windowText } from '../model/journey.ts';
+import { whereAt, windowText, type Leg } from '../model/journey.ts';
 import { BEATS, SOFT_BREAKS } from '../casefile.ts';
 import { LINE_COLOUR, REGION_COLOUR } from '../river.ts';
 import { World, type Actor, type Scene } from './scene.ts';
@@ -69,10 +69,28 @@ function refocus(sel: string) {
   if (!document.body.classList.contains('kbd')) return;
   setTimeout(() => (document.querySelector(sel) as HTMLElement | null)?.focus(), 30);
 }
-function toast(msg: string) {
+function toast(msg: string, ms = 3200) {
   document.querySelector('.toast')?.remove();
   const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg;
-  document.body.appendChild(t); setTimeout(() => t.remove(), 3200);
+  document.body.appendChild(t); setTimeout(() => t.remove(), ms);
+}
+/** a message about a selection goes when the selection does */
+function clearToast() { document.querySelector('.toast')?.remove(); }
+/** the control a record was opened from, so Esc can put the keyboard back there */
+let opener: string | null = null;
+/** a household lit together: the camera keeps the side of the world most of them are on */
+let family: Set<string> | null = null, familySide = false;
+function frameFamily(): number {
+  if (!family || state.focus !== family) { family = null; return 0; }
+  const lls: LonLat[] = [];
+  for (const id of family) { const a = world.byId.get(id); const ll = a && world.lightOf(a, state.year >= thisYear ? thisYear : state.year + 0.5); if (ll) lls.push(ll); }
+  if (!lls.length) return 0;
+  const far = lls.filter((ll) => ll[0] > 100), near = lls.filter((ll) => ll[0] <= 100);
+  // most of them; when it is even, stay where the camera already is
+  if (far.length !== near.length) familySide = far.length > near.length;
+  const mine = familySide ? far : near;
+  for (const s of stages) s.frame(mine.length ? mine : lls);
+  return mine.length ? lls.length - mine.length : 0;
 }
 
 // ---------------------------------------------------------------- boot
@@ -201,7 +219,7 @@ function renderCountries(year: number) {
   const at = state.playing ? playYear : year >= thisYear ? thisYear : Math.floor(year) + 0.5;
   for (const a of world.actors) { const c = world.countryOf(a, at); if (c) counts.set(c, (counts.get(c) ?? 0) + 1); }
   const sea = counts.get('sea') ?? 0;
-  const html = (sea ? `<span class="sea">At sea <b>${sea}</b></span>` : '') + countries.map((c) => { const n = counts.get(c.name) ?? 0; return `<button data-country="${esc(c.name)}" aria-pressed="${state.country === c.name}" class="${n ? '' : 'none'}" aria-label="${esc(c.name)}: ${n} lit" title="${esc(c.name)}: ${n} lit in ${Math.floor(year)}, ${c.people.length} ${c.people.length === 1 ? 'person' : 'people'} in all"><span class="full">${esc(c.name)}</span><span class="short" aria-hidden="true">${SHORT[c.name] ?? esc(c.name)}</span> <b>${n}</b></button>`; }).join('');
+  const html = (sea ? `<span class="sea"><span class="full">At sea</span><span class="short" aria-hidden="true">Sea</span> <b>${sea}</b></span>` : '') + countries.map((c) => { const n = counts.get(c.name) ?? 0; return `<button data-country="${esc(c.name)}" aria-pressed="${state.country === c.name}" class="${n ? '' : 'none'}" aria-label="${esc(c.name)}: ${n} lit" title="${esc(c.name)}: ${n} lit in ${Math.floor(year)}, ${c.people.length} ${c.people.length === 1 ? 'person' : 'people'} in all"><span class="full">${esc(c.name)}</span><span class="short" aria-hidden="true">${SHORT[c.name] ?? esc(c.name)}</span> <b>${n}</b></button>`; }).join('');
   if (html !== chipsHtml) { chipsHtml = html; $('#countries').innerHTML = html; }
 }
 function openCountry(name: string, moveYear = true) {
@@ -259,6 +277,7 @@ function setYear(y: number, fromPlay = false) {
   if (changed || !fromPlay) {
     state.year = shown;
     $('#year').textContent = String(shown);
+    if (!fromPlay && family) frameFamily();
     const alive = world.actors.filter((a) => world.lightOf(a, shown >= thisYear ? thisYear : shown + 0.5)).length;
     $('#alive').textContent = shown >= thisYear ? `${atlas.meta.counts.living} living, not shown` : `${alive} lit`;
     const u = (shown - trackMin) / (thisYear - trackMin);
@@ -319,7 +338,7 @@ function childrenLine(ids: string[], y1: number, dest: string): string {
   if (after > 1) return ` ${after} children are born in ${the}${country}.`;
   return '';
 }
-interface Beat { y: number; text: string; end?: boolean; sail?: boolean; ids?: string[]; they?: string }
+interface Beat { y: number; /** the year to print, when it is not the year the caption is due */ label?: number; text: string; end?: boolean; sail?: boolean; ids?: string[]; they?: string }
 let beats: Beat[] = [];
 let allBeats: Beat[] = [];
 function buildBeats() {
@@ -407,6 +426,8 @@ function buildBeats() {
   beats.push({ y: Math.min(thisYear, lastDeath), end: true, text: `The map goes dark here, but the family does not. ${atlas.meta.counts.living} living relatives carry on. They are not shown.` });
 }
 let shownBeat: Beat | null = null;
+/** when the caption on screen went up */
+let shownAt = 0;
 /** while a caption is new, play slows so it can be read */
 let captionUntil = 0;
 /** a caption waiting for the one on screen to be read */
@@ -422,9 +443,11 @@ function beatsFor(a: Actor): Beat[] {
     const lent = st.stops.every((x) => x.kind === 'borrowed');
     const where = placeName(st.p), leg = a.legs[i];
     const sails = Boolean(leg && leg.sail && leg.km > 1500);
-    const what = [...new Set(st.stops.filter((x) => x.kind !== 'borrowed').map((x) => `${x.y} ${x.why}`))].slice(0, 4).join('; ');
+    // a record that names only the county or country is said to: the light stays at the closer place
+    const all = [...new Set(st.stops.filter((x) => x.kind !== 'borrowed').map((x) => `${x.y} ${x.why}${x.p !== st.p && ['area', 'country'].includes(world.places.get(x.p)!.prec) ? ` (the record says only ${placeName(x.p)})` : ''}`))];
+    const what = all.slice(0, 4).join('; ') + (all.length > 4 ? `; and ${all.length - 4} more ${all.length - 4 === 1 ? 'record' : 'records'} here, to ${st.to}` : '');
     // a place left in the same year it is recorded is told just before the voyage, not after it
-    out.push({ y: sails && leg.y0 === st.from ? st.from - 0.9 : st.from, ids: [a.id], text: lent ? `${where}: no record of ${a.p.given?.split(' ')[0] ?? 'their'} own. Drawn here with a relative.` : `${where}: ${what}.` });
+    out.push({ y: sails && leg.y0 === st.from ? st.from - 0.9 : st.from, label: st.from, ids: [a.id], text: lent ? `${where}: no record of ${a.p.given?.split(' ')[0] ?? 'their'} own. Drawn here with a relative.` : `${where}: ${what}.` });
     if (sails) out.push({ y: leg.y0, sail: true, ids: [a.id], text: `${shortPlace(world.siteId(leg.a))} to ${shortPlace(world.siteId(leg.b))}: ${windowText(leg, (id) => shortPlace(world.siteId(id)))}` });
   });
   return out;
@@ -433,7 +456,7 @@ function beatsFor(a: Actor): Beat[] {
 function showBeat(b: Beat | null) {
   shownBeat = b;
   const el = $('#caption'); el.classList.toggle('on', Boolean(b));
-  if (b) { el.innerHTML = `${b.end ? '' : `<b>${b.y}</b>`}${esc(b.text)}`; captionUntil = performance.now() + Math.min(7000, 1600 + b.text.split(' ').length * 190); }
+  if (b) { el.innerHTML = `${b.end ? '' : `<b>${b.label ?? b.y}</b>`}${esc(b.text)}`; shownAt = performance.now(); captionUntil = performance.now() + Math.min(7000, 1600 + b.text.split(' ').length * 190); }
 }
 function caption(fromPlay: boolean) {
   if (!fromPlay || !state.playing) {
@@ -449,7 +472,9 @@ function caption(fromPlay: boolean) {
   const now = performance.now();
   // a voyage under way is told while it is under way, whatever else is waiting
   const sailing = lastScene?.ship ? beats.findIndex((b) => Boolean(b.sail) && mine(b) && b.y <= y && y < b.y + 1.2) : -1;
-  if (sailing >= 0) { if (beats[sailing] !== shownBeat) { beatIdx = Math.max(beatIdx, sailing); pendingBeat = false; showBeat(beats[sailing]); } return; }
+  if (sailing >= 0) { if (beats[sailing] !== shownBeat) {
+    // the place being left is on screen: let it be read before the voyage takes over
+    if (followBeats && shownBeat && !shownBeat.sail && now < Math.min(captionUntil, shownAt + 3000)) { pendingBeat = true; return; } beatIdx = Math.max(beatIdx, sailing); pendingBeat = false; showBeat(beats[sailing]); } return; }
   let next = -1;
   for (let i = beatIdx + 1; i < beats.length && beats[i].y <= y; i++) if (mine(beats[i]) && beats[i] !== shownBeat && (beats[i].end || !beats[i].sail || y < beats[i].y + 1.2)) { next = i; break; }
   if (next < 0) { pendingBeat = false; if (shownBeat && !shownBeat.end && now > captionUntil + 2500) showBeat(null); return; }
@@ -486,12 +511,15 @@ function frameIds(ids: string[]) {
 }
 function clearAll() {
   stop(); state.selected = null; state.place = null; state.finding = null; state.focus = null; state.follow = null; state.track = null; state.country = null; state.group = null; trail.length = 0;
+  family = null; clearToast(); showBeat(null);
   closeRecord(); renderLegend(); renderTab(); renderCountries(state.year); openSheet(false); writeHash(); kick();
 }
 function select(id: string | null, _moveYear = true) {
   const moveYear = _moveYear;
   if (!id || !world.byId.has(id)) { if (id && P.get(id) && !P.get(id)!.living) { toast(`${P.get(id)!.name} has no recorded place and is not on the map`); openPeopleAt(id); } return; }
-  stop();
+  stop(); clearToast(); family = null;
+  // a caption from following someone else does not stay over this person
+  if (shownBeat && !shownBeat.end) showBeat(null);
   const a = world.byId.get(id)!;
   if (state.group) { state.group = null; renderLegend(); }
   state.selected = id; state.place = null; state.focus = null; state.finding = null; state.follow = null; state.country = null; renderCountries(state.year);
@@ -507,7 +535,7 @@ function select(id: string | null, _moveYear = true) {
 }
 function openPlace(site: string, moveYear = true) {
   if (!world.places.has(site)) return;
-  stop();
+  stop(); clearToast(); family = null;
   const people = world.atSite.get(site) ?? [];
   if (state.group) { state.group = null; renderLegend(); }
   state.place = site; state.selected = null; state.finding = null; state.follow = null; state.track = null; state.country = null; renderCountries(state.year);
@@ -522,8 +550,8 @@ function openPlace(site: string, moveYear = true) {
 }
 function openFinding(id: string, moveYear = true) {
   const f = [...atlas.facts, ...atlas.leads].find((x) => x.id === id); if (!f) return;
-  stop();
-  if (state.finding === id) { const top = $('#panel-body').scrollTop; state.finding = null; state.focus = null; renderTab(); $('#panel-body').scrollTop = top; writeHash(); kick(); return; }
+  stop(); clearToast(); family = null;
+  if (state.finding === id) { const top = $('#panel-body').scrollTop; state.finding = null; state.focus = null; renderTab(); $('#panel-body').scrollTop = top; writeHash(); kick(); refocus(`[data-finding="${id}"]`); return; }
   if (state.group) { state.group = null; renderLegend(); }
   state.finding = id; state.selected = null; state.place = null; state.follow = null; state.track = null; state.country = null; trail.length = 0; renderCountries(state.year);
   state.focus = new Set(f.people);
@@ -539,6 +567,7 @@ function openFinding(id: string, moveYear = true) {
   state.tab = 'journeys'; renderTab(); writeHash(); kick();
   document.querySelector('#panel-body .card.on')?.scrollIntoView({ block: 'nearest' });
   if (isSmall()) openSheet(false);
+  refocus(`[data-finding="${id}"]`);
 }
 /** note a record being opened, so Back can return to the one it was opened from */
 function remember(kind: 'person' | 'place' | 'country', id: string) {
@@ -567,6 +596,8 @@ function stepPerson(dir: number) {
   if (i < 0) { i = birthOrder.findIndex((id) => world.byId.get(id)!.on >= state.year); if (i < 0) i = birthOrder.length - 1; i -= dir > 0 ? 1 : 0; }
   i = Math.max(0, Math.min(birthOrder.length - 1, i + dir));
   select(birthOrder[i]);
+  // the keyboard stays on the map, so the next arrow steps again
+  opener = '#views'; refocus('#views');
 }
 
 // ---------------------------------------------------------------- panel
@@ -652,20 +683,20 @@ function personHtml(a: Actor): string {
   const p = a.p, line = lineOf(a.id);
   // an age worked out from a "c." birth is not an age: leave those sentences out
   // an age is only an age from a fully dated birth; from a bare year it could be a year out
-  const loose = Boolean(p.b?.approx || p.b?.est || !/[A-Za-z]/.test(p.b?.text ?? ''));
-  const lines = lifeLines({ P, F }, p).flatMap((t) => t.split(/(?<=\.)\s+/)).filter((t) => !/at about 0\b/.test(t)).filter((t) => !loose || !/\bat \d+|\bat about \d+|\baged\b|\bby \d+ years\b/.test(t))
-    // nor an age at marriage where the marriage year is loose
-    .filter((t) => !/Married at|and again at/.test(t) || !p.fams.some((fid) => F.get(fid)?.m?.approx || F.get(fid)?.m?.est));
+  const loose = Boolean(p.b?.est);
+  const lines = lifeLines({ P, F }, p).flatMap((t) => t.split(/(?<=\.)\s+/)).filter((t) => !/at about 0\b/.test(t)).filter((t) => !loose || !/\bat \d+|\bat about \d+|\baged\b|\bby \d+ years\b/.test(t));
   const lender = a.a.borrowed ? P.get(a.a.borrowed.from) : null;
   const firstRec = Math.min(...a.a.stops.filter((x) => x.kind !== 'borrowed').map((x) => x.y), Infinity);
   const about = (y: number) => (a.a.stops.some((x) => x.y === y && x.approx) && !a.a.stops.some((x) => x.y === y && x.kind !== 'borrowed' && !x.approx) ? 'about ' : '');
   const moved = a.stays.length > 1;
   const given = (p.given ?? p.name ?? '').split(' ')[0].replace(/\.$/, '');
   const vagueDeath = a.a.stops.find((x) => (x.kind === 'death' || x.kind === 'burial') && ['area', 'country'].includes(world.places.get(x.p)!.prec));
-  const how = a.hollow ? `<span class="badge"><i style="border:1.5px solid ${CERT.borrowed}"></i>No place of their own</span>` : a.vague ? `<span class="badge"><i style="background:${CERT.vague}"></i>Place known only roughly</span>` : `<span class="badge"><i style="background:${CERT.record}"></i>Placed by a record${firstRec > a.b + 2 ? ` from ${about(firstRec)}${firstRec}` : ''}</span>`;
+  const how = a.hollow ? `<span class="badge"><i style="border:1.5px solid ${CERT.borrowed}"></i>No place of their own</span>` : a.vague ? `<span class="badge"><i style="background:${CERT.vague}"></i>Place known only roughly</span>` : `<span class="badge"><i style="background:${CERT.record}"></i>Placed by a record${firstRec > a.b + 2 || a.a.stops.some((x) => x.kind === 'borrowed' && x.y < firstRec) ? ` from ${about(firstRec)}${firstRec}` : ''}</span>`;
   const stops = a.a.stops.map((s) => `<li class="${s.kind === 'borrowed' ? 'coarse' : ''}"><b>${(s.kind === 'borrowed' ? p.b?.est && s.y === p.b.y : s.est || s.approx) ? 'c. ' : ''}${s.y}</b><span><button data-place="${esc(world.siteId(s.p))}">${esc(placeName(s.p))}</button><small>${esc(s.why)}${s.kind !== 'borrowed' && ['area', 'country'].includes(world.places.get(s.p)!.prec) ? ' · no closer place is given: drawn as a haze' : ''}${s.doubt ? ` · in doubt: ${esc(s.doubt)}` : ''}</small></span></li>`).join('');
   const kmText = (k: number) => (k >= 1000 ? (Math.round(k / 100) * 100).toLocaleString('en') : k >= 100 ? String(Math.round(k / 10) * 10) : String(Math.round(k)));
-  const moves = a.legs.filter((l) => l.km > 3).map((l) => `<div class="move${l.doubt ? ' doubt' : l.sail ? ' sail' : ''}"><b>${esc(shortPlace(world.siteId(l.a)))} to ${esc(shortPlace(world.siteId(l.b)))}, ${kmText(l.km)} km.</b> ${esc(windowText(l, (id) => shortPlace(world.siteId(id))))}${l.kind !== 'direct' && !l.assumed ? ' ' + esc(l.sail ? ROUTE_LABEL[l.kind] : 'Drawn along a sea route usual in those years. The tree does not record the ship, the route or the year.') : ''}${l.doubt ? ` <b style="color:#FFB4A8">The tree doubts this: ${esc(l.doubt)}. If the two records are two people, this move never happened.</b>` : ''}</div>`).join('');
+  // a country is not a point: no distance is given to or from one
+  const noKm = (l: Leg) => [l.a, l.b].some((id) => world.places.get(id)!.prec === 'country');
+  const moves = a.legs.filter((l) => l.km > 3 && !l.within).map((l) => `<div class="move${l.doubt ? ' doubt' : l.sail ? ' sail' : ''}"><b>${esc(shortPlace(world.siteId(l.a)))} to ${esc(shortPlace(world.siteId(l.b)))}${noKm(l) ? '' : `, ${kmText(l.km)} km`}.</b> ${esc(windowText(l, (id) => shortPlace(world.siteId(id))))}${l.kind !== 'direct' && !l.assumed ? ' ' + esc(l.sail ? ROUTE_LABEL[l.kind] : 'Drawn along a sea route usual in those years. The tree does not record the ship, the route or the year.') : ''}${l.doubt ? ` <b style="color:#FFB4A8">The tree doubts this: ${esc(l.doubt)}. If the two records are two people, this move never happened.</b>` : ''}</div>`).join('');
   return `<button class="back" data-act="back">← Back</button>
   <div class="rec"><div class="rec-head">${p.photo ? `<img src="${esc(p.photo)}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'avatar',textContent:'${esc((p.given ?? p.name ?? '?')[0])}'}))">` : `<div class="avatar">${esc((p.given ?? p.name ?? '?')[0])}</div>`}<div><h2>${esc(p.name)}</h2><div class="life">${esc(lifeText(p))}</div></div></div>
   <div class="badges"><span class="badge"><i style="background:${LINE_COLOUR[line]}"></i>${line} line</span>${how}</div>
@@ -676,7 +707,7 @@ function personHtml(a: Actor): string {
   ${moves ? `<h3>Moves</h3>${moves}` : ''}
   ${a.on >= a.d ? (a.a.stops.filter((x) => x.kind !== 'borrowed').every((x) => x.kind === 'death' || x.kind === 'burial') ? `<p class="fine">The only record that places ${esc(given)} is a death or burial. There is no light on the map${a.ember ? `, only the ember left from ${about(a.d)}${a.d}` : ''}.</p>` : `<p class="fine">${esc(given)} is recorded within a single year, ${about(a.d)}${a.d}. A life that short leaves no lasting light on the map${a.ember ? ', only an ember' : ''}.</p>`) : a.a.seen ? `<p class="fine">Nothing places ${esc(given)} before ${about(a.a.seen)}${a.a.seen}, so no light is drawn until then.</p>` : ''}
   ${a.on >= a.d ? '' : p.d?.est ? `<p class="fine">No death is recorded. The light goes out seventy years after birth, and no ember is left.</p>` : !a.ember ? (vagueDeath ? `<p class="fine">${esc(given)} died in ${esc(placeName(vagueDeath.p))}. No closer place is recorded, so no ember is left on the map.</p>` : `<p class="fine">Where ${esc(given)} died is not recorded, so no ember is left on the map.</p>`) : ''}
-  <div class="actions">${a.legs.some((l) => l.km > 3) ? `<button class="btn solid" data-act="follow">Follow the journey</button>` : ''}<button class="btn quiet" data-act="family">Light the family</button><a class="btn quiet" id="open-river" href="./index.html#p=${encodeURIComponent(a.id)}&y=${Math.round(state.year)}">Open in the River</a></div></div>`;
+  <div class="actions">${a.legs.some((l) => l.km > 3 && !l.within) ? `<button class="btn solid" data-act="follow">Follow the journey</button>` : ''}<button class="btn quiet" data-act="family">Light the family</button><a class="btn quiet" id="open-river" href="./index.html#p=${encodeURIComponent(a.id)}&y=${Math.round(state.year)}">Open in the River</a></div></div>`;
 }
 function placeHtml(site: string): string {
   const pl = world.places.get(site)!, s = siteStats(site);
@@ -740,7 +771,7 @@ function setLens(lens: Lens) {
 let legendSet = false;
 function setView(view: View, quiet = false) {
   if (view === 'both' && (isSmall() || isSideways())) view = 'globe';
-  state.view = view; $('#tip').hidden = true;
+  state.view = view; $('#tip').hidden = true; document.body.dataset.view = view;
   document.querySelectorAll<HTMLElement>('.view button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.view === view)));
   const both = view === 'both';
   $('#views').classList.toggle('both', both);
@@ -835,6 +866,7 @@ function bindChrome() {
     if (key) { $('#legend').classList.toggle('collapsed'); key.setAttribute('aria-expanded', String(!$('#legend').classList.contains('collapsed'))); return; }
     const grp = t.closest<HTMLElement>('[data-group]');
     if (grp) { pickGroup(grp.dataset.group!); return; }
+    if (!state.record) { const src = t.closest<HTMLElement>('[data-country], [data-act="help"], [data-place], [data-go]'); opener = !src ? null : src.dataset.country ? `#countries [data-country="${src.dataset.country}"]` : src.dataset.act ? '[data-act="help"]' : src.dataset.place ? `#panel-body [data-place="${src.dataset.place}"]` : `#panel-body [data-go="${src.dataset.go}"]`; }
     const ctry = t.closest<HTMLElement>('[data-country]');
     if (ctry) { openCountry(ctry.dataset.country!); return; }
     const go = t.closest<HTMLElement>('[data-go]');
@@ -857,7 +889,11 @@ function bindChrome() {
       const fams = [p0.parents, ...p0.fams].filter(Boolean).map((fid) => F.get(fid!)).filter(Boolean) as Family[];
       for (const f of fams) for (const id of [...f.partners, ...f.children]) if (world.byId.has(id)) ids.add(id);
       stop(); closeRecord(); state.selected = null; state.track = null; state.focus = ids; trail.length = 0;
-      renderTab(); frameIds([...ids]); toast(`${ids.size} of ${p0.given?.split(' ')[0] ?? 'the'}’s close family are on the map. Scrub the year to see where each ended up. Esc to clear.`); openSheet(false); writeHash(); kick();
+      family = ids; familySide = state.year >= stages[0].plan.turn;
+      renderTab(); const lit = [...ids].filter((id) => world.lightOf(world.byId.get(id)!, state.year + 0.5)).length;
+      const away = frameFamily(); if (!lit) frameIds([...ids]);
+      toast(`${ids.size} of ${p0.given?.split(' ')[0] ?? 'the'}’s close family are on the map, ${lit} of them lit in ${Math.round(state.year)}.${away ? ` ${away} ${away === 1 ? 'is' : 'are'} on the other side of the world: Two shores shows both.` : ''} Scrub the year to see where each ended up. Esc to clear.`, 8000); openSheet(false); writeHash(); kick();
+      refocus('#views');
     }
     else if (act === 'follow' && state.selected) {
       const a = world.byId.get(state.selected)!;
@@ -884,7 +920,7 @@ function bindChrome() {
     else if (k === 'g') setView('globe'); else if (k === 's') setView('shores'); else if (k === 'b') setView('both');
     else if (e.key === '/') { e.preventDefault(); $('#search').focus(); }
     else if (e.key === '+' || e.key === '=') $('#zin').click(); else if (e.key === '-') $('#zout').click(); else if (e.key === '0') $('#zfit').click();
-    else if (e.key === 'Escape') { if (state.record === 'help') { closeRecord(); renderTab(); } else clearAll(); }
+    else if (e.key === 'Escape') { if (state.record === 'help') { closeRecord(); renderTab(); } else clearAll(); refocus(opener ?? '#views'); opener = null; }
   });
   let rt = 0;
   addEventListener('resize', () => { clearTimeout(rt); rt = window.setTimeout(() => { if (state.view === 'both' && (isSmall() || isSideways())) setView('globe'); for (const s of stages) s.resize(); syncInset(); draw(true); }, 80); });

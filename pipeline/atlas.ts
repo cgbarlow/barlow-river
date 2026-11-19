@@ -58,7 +58,7 @@ export function buildAtlas(river: RiverData): AtlasBuild {
       else if (e.tag === 'BURI') add(e.place, e.y ?? (d.est ? undefined : d.y), 'burial', 'buried');
       else if (e.tag === 'CENS') add(e.place, e.y, 'census', 'census');
       else if (e.tag === 'MARR') add(e.place, e.y, 'marriage', 'married');
-      else if (e.y != null && e.y >= b.y && e.y <= d.y) add(e.place, e.y, 'event', `in the record for that year: ${e.label.toLowerCase()}`);
+      else if (e.y != null && e.y >= b.y && e.y <= d.y) add(e.place, e.y, 'event', /accomplish/i.test(e.label) ? 'an achievement the tree dates to that year and places here' : `in the record for that year: ${e.label.toLowerCase()}`);
     }
     if (!d.est) add(d.place, d.y, d.kind === 'bur' ? 'burial' : 'death', d.kind === 'bur' ? 'buried' : 'died', false, Boolean(d.approx));
     for (const fid of p.fams) {
@@ -239,7 +239,7 @@ function findings(people: AtlasPerson[], P: Map<string, Person>, F: Map<string, 
   if (busy && distinct(busy.st).size >= 3) {
     const names = [...distinct(busy.st)].map((id) => place(id).name);
     facts.push({ id: 'a-most-places', kind: 'places', y: busy.st[1].from, people: [busy.a.id], title: `${name(busy.a.id)} is recorded in ${names.length} places`,
-      body: `${names.join(', then ')}. ${all.filter((x) => distinct(x.st).size === names.length).length > 1 ? 'No one in the tree is recorded in more places' : 'More places than anyone else in the tree'}, which says as much about how well this life is recorded as about how far it went.` });
+      body: `${names.join(', then ')}. ${all.filter((x) => distinct(x.st).size === names.length).length > 1 ? 'No one in the tree is recorded in more places' : 'More places than anyone else in the tree'}, counting a county or country only when no town inside it is named, which says as much about how well this life is recorded as about how far it went.` });
   }
   // the place with the most births
   const births = new Map<string, string[]>();

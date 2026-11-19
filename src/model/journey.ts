@@ -14,7 +14,7 @@ import { km, type LonLat } from './geo.ts';
 export const SAIL_MAX = 3;
 
 export interface Stay { p: string; from: number; to: number; stops: AtlasStop[]; /** a closer place inside the vaguer one before it (New Zealand, then Carterton): the same stay known better, not a move */ within?: boolean }
-export interface Leg { a: string; b: string; y0: number; y1: number; km: number; sail: boolean; /** rests on a disputed identity: the words from the record */ doubt?: string; /** not a move: a closer place inside the vaguer one before it */ within?: boolean; /** starts from a borrowed place, so it is an inference and not a recorded move */ assumed?: boolean; /** both ends are borrowed: a child drawn with a parent, going where the parent is next recorded */ follows?: boolean; /** the year at that end is only approximate in the record */ approx0?: boolean; approx1?: boolean }
+export interface Leg { a: string; b: string; y0: number; y1: number; km: number; sail: boolean; /** rests on a disputed identity: the words from the record */ doubt?: string; /** not a move: one end is the county or country that holds the other */ within?: boolean; /** starts from a borrowed place, so it is an inference and not a recorded move */ assumed?: boolean; /** both ends are borrowed: a child drawn with a parent, going where the parent is next recorded */ follows?: boolean; /** the year at that end is only approximate in the record */ approx0?: boolean; approx1?: boolean }
 
 const ORDER: Record<string, number> = { borrowed: 0, birth: 1, baptism: 1, census: 2, event: 2, marriage: 2, child: 2, death: 8, burial: 9 };
 
@@ -69,7 +69,8 @@ export function legsOf(stays: Stay[], place: (id: string) => AtlasPlace): Leg[] 
     const a = place(stays[i - 1].p), b = place(stays[i].p);
     const y0 = stays[i - 1].to, y1 = stays[i].from;
     const doubt = [...stays[i - 1].stops, ...stays[i].stops].find((s) => s.doubt)?.doubt;
-    const assumed = lent(stays[i - 1]), within = Boolean(stays[i].within), follows = assumed && lent(stays[i]);
+    // a record that names only the county or country of the place before it (or the reverse) is the same place known better or worse, not a move
+    const assumed = lent(stays[i - 1]), within = Boolean(stays[i].within) || contains(a, b) || contains(b, a), follows = assumed && lent(stays[i]);
     const ap0 = stays[i - 1].stops.some((x) => x.y === y0 && x.approx) && !stays[i - 1].stops.some((x) => x.y === y0 && !x.approx);
     const ap1 = stays[i].stops.some((x) => x.y === y1 && x.approx) && !stays[i].stops.some((x) => x.y === y1 && !x.approx);
     // a voyage is only drawn sailing when both ends are firm dates

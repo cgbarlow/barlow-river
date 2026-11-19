@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { chain, kinTerm, kinship, lifeLines, namesakes, restsOn } from '../src/model/kin.ts';
+import { ageBetween, chain, kinTerm, kinship, lifeLines, namesakes, restsOn } from '../src/model/kin.ts';
 import type { Family, Person, RiverData } from '../src/model/types.ts';
 
 describe('kinTerm', () => {
@@ -67,13 +67,30 @@ describe('chain', () => {
   });
 });
 
+describe('ageBetween', () => {
+  const d = (text: string, approx = false) => ({ y: Number(/\d{4}/.exec(text)![0]), text, ...(approx ? { approx } : {}) });
+  it('counts birthdays, not calendar years', () => {
+    expect(ageBetween(d('13 Oct 1776'), d('10 May 1812'))).toBe('35');
+    expect(ageBetween(d('10 Dec 1821'), d('Jun 1843'))).toBe('21');
+    expect(ageBetween(d('1 Jun 1814'), d('1 Jun 1855'))).toBe('41');
+    expect(ageBetween(d('2 Jun 1814'), d('1 Jun 1855'))).toBe('40');
+    expect(ageBetween(d('5 Mar 1800'), d('Nov 1830'))).toBe('30');
+  });
+  it('says so when the dates cannot settle it', () => {
+    expect(ageBetween(d('1800'), d('1830'))).toBe('29 or 30');
+    expect(ageBetween(d('Mar 1800'), d('12 Mar 1830'))).toBe('29 or 30');
+    expect(ageBetween(d('c. 1800', true), d('4 May 1830'))).toBe('about 30');
+  });
+});
+
 describe('lifeLines', () => {
   it('tells a life from the family around it', () => {
     const a = lifeLines(t, P.get('A')!).join(' ');
     expect(a).toMatch(/elder of two children/);
     expect(a).toMatch(/Lost a mother at about 8/);
-    expect(a).toMatch(/Married at 24/);
-    expect(a).toMatch(/One child on record, at 25/);
+    // bare years cannot say which side of a birthday: the age is given as either
+    expect(a).toMatch(/Married at 23 or 24/);
+    expect(a).toMatch(/One child on record, at 24 or 25/);
     expect(a).toMatch(/Outlived X by 20 years/);
     expect(lifeLines(t, P.get('B')!).join(' ')).toMatch(/Died in early childhood/);
     expect(lifeLines(t, P.get('G1')!).join(' ')).toMatch(/Buried a child who did not reach 21/);

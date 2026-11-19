@@ -60,6 +60,7 @@ export class Stage {
   focusSide: 'gb' | 'nz' = 'gb';
   private hits: Hit[] = [];
   private siteHits: Hit[] = [];
+  private labelHits: { x0: number; y0: number; x1: number; y1: number; id: string }[] = [];
   private countryHits: { x0: number; y0: number; x1: number; y1: number; name: string }[] = [];
   private starHits: Hit[] = [];
   private pointers = new Map<number, { x: number; y: number }>();
@@ -105,13 +106,15 @@ export class Stage {
       return [{ proj, vis: (ll) => geoDistance(ll, [cam.lon, cam.lat]) < 1.5, globe: true }];
     }
     const tall = hb > W * 1.05, g = tall ? 0 : Math.min(150, W * 0.11), top = 66, pad = 12;
+    // room under the maps for the caption and the Key, so neither sits on the place being described
+    const foot = tall ? 150 : H < 340 ? 82 : 56;
     // a phone's sheet covers the lower shore: with it open, draw one shore in the space that is left
     const one = tall && this.inset.bottom > 120;
     const rects: [number, number, number, number][] = one
       ? [[pad, top, W - pad, Math.max(top + 90, H - this.inset.bottom - 10)], [pad, top, W - pad, Math.max(top + 90, H - this.inset.bottom - 10)]]
       : tall
-        ? [[pad, top, W - pad, top + (hb - top - 118) * 0.5 - 12], [pad, top + (hb - top - 118) * 0.5 + 12, W - pad, hb - 118]]
-        : [[pad, top, (W - g) / 2, hb - 56], [(W + g) / 2, top, W - pad, hb - 56]];
+        ? [[pad, top, W - pad, top + (hb - top - foot) * 0.5 - 12], [pad, top + (hb - top - foot) * 0.5 + 12, W - pad, hb - foot]]
+        : [[pad, top, (W - g) / 2, hb - foot], [(W + g) / 2, top, W - pad, hb - foot]];
     const fit = (r: number[], box: number[]) => geoMercator().fitExtent([[r[0] + 10, r[1] + 10], [r[2] - 10, r[3] - 10]], { type: 'MultiPoint', coordinates: [[box[0], box[1]], [box[2], box[3]]] }).clipExtent([[r[0], r[1]], [r[2], r[3]]]);
     // the insets sit on open sea: Poland north-east of Scotland, the United States north-west of the North Island
     const r0 = rects[0], r1 = rects[1];
@@ -194,7 +197,7 @@ export class Stage {
     this.ease(sc, opts.follow ?? null, Boolean(opts.snap));
     const c = this.ctx, { W, H, cam } = this;
     c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0); c.clearRect(0, 0, W, H);
-    this.hits = []; this.siteHits = []; this.countryHits = []; this.starHits = [];
+    this.hits = []; this.siteHits = []; this.labelHits = []; this.countryHits = []; this.starHits = [];
     const ps = this.panels();
     if (this.kind === 'shores') { this.drawShores(ps, sc, selected); for (const p of ps) this.drawStars(p, sc, opts.stars ?? []); return; }
     const p = ps[0], zoom = this.cam.k;
@@ -367,7 +370,7 @@ export class Stage {
       if (boxes.some((b) => box[0] < b[2] + 4 && box[2] > b[0] - 4 && box[1] < b[3] && box[3] > b[1])) continue;
       boxes.push(box); drawn++;
       c.fillStyle = 'rgba(10,20,34,.72)'; c.fillRect(box[0] - 3, box[1], tw + 6, 14); c.fillStyle = '#C5D1E0'; c.fillText(text, box[0], q[1]);
-      this.siteHits.push({ x: box[0] + tw / 2, y: q[1], id: sid });
+      this.labelHits.push({ x0: box[0] - 3, y0: box[1] - 2, x1: box[0] + tw + 3, y1: box[3] + 2, id: sid });
     }
   }
   private drawShores(ps: Panel[], sc: Scene, selected: string | null) {
@@ -382,7 +385,7 @@ export class Stage {
       if (p.title === 'Britain and Ireland') {
         c.save(); c.beginPath(); c.rect(r[0], r[1], r[2] - r[0], r[3] - r[1]); c.clip();
         c.fillStyle = 'rgba(159,176,198,.5)'; c.font = 'italic 12px Newsreader, Georgia, serif'; c.textAlign = 'center';
-        for (const [name, lon, lat] of [['Ireland', -8.1, 53.4], ['Wales', -3.75, 52.35], ['England', -1.7, 54.35], ['Scotland', -4.2, 56.9]] as [string, number, number][]) { const q = p.proj([lon, lat]); if (q) c.fillText(name, q[0], q[1]); }
+        for (const [name, lon, lat] of [['Ireland', -8.1, 53.4], ['Wales', -3.75, 52.35], ['England', -1.7, 54.35], ['Scotland', -4.2, 56.9]] as [string, number, number][]) { const q = p.proj([lon, lat]); if (q && !ps.some((s) => s.small && s.rect && q[0] > s.rect[0] - 30 && q[0] < s.rect[2] + 30 && q[1] > s.rect[1] - 8 && q[1] < s.rect[3] + 8)) c.fillText(name, q[0], q[1]); }
         c.textAlign = 'left'; c.restore();
       }
     } });
@@ -411,6 +414,9 @@ export class Stage {
   nearest(x: number, y: number, r = 16): { person: string | null; site: string | null } {
     let best = r, person: string | null = null;
     for (const h of this.hits) { const d = Math.hypot(h.x - x, h.y - y); if (d < best) { best = d; person = h.id; } }
+    // a place name is a target over its whole length, unless a light sits right under the pointer
+    const lab = this.labelHits.find((h) => x >= h.x0 && x <= h.x1 && y >= h.y0 && y <= h.y1);
+    if (lab && !(person && best <= 5)) return { person: null, site: lab.id };
     if (person) return { person, site: null };
     let site: string | null = null; best = r + 6;
     for (const h of this.siteHits) { const d = Math.hypot(h.x - x, h.y - y); if (d < best) { best = d; site = h.id; } }
@@ -425,6 +431,8 @@ export class Stage {
   pointerScreen(name: string): [number, number] | null { const h = this.countryHits.find((x) => x.name === name); return h ? [(h.x0 + h.x1) / 2, (h.y0 + h.y1) / 2] : null; }
   /** where a person's light was last drawn, for tests and keyboard focus */
   screenOf(id: string): [number, number] | null { const h = this.hits.find((x) => x.id === id); return h ? [h.x, h.y] : null; }
+  /** the right-hand end of a drawn place name, for tests */
+  labelScreen(id: string): [number, number] | null { const h = this.labelHits.find((x) => x.id === id); return h ? [h.x1 - 6, (h.y0 + h.y1) / 2] : null; }
   siteScreen(id: string): [number, number] | null { const h = this.siteHits.find((x) => x.id === id); return h ? [h.x, h.y] : null; }
 
   private bind() {
