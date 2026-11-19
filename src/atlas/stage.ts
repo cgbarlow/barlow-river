@@ -131,6 +131,8 @@ export class Stage {
     const ride = this.plan.ride;
     if (ride && sc.ship && sc.year >= ride[0] && sc.year < ride[1]) return { lon: sc.ship[0], lat: sc.ship[1], k: 1.7 };
     const nz = sc.year >= this.plan.turn;
+    // when the last named light has gone out, stand back and show the whole of this side of the Earth
+    if (!sc.lights.length && sc.embers.length) return nz ? { lon: 150, lat: -20, k: 1.25 } : { lon: 5, lat: 45, k: 1.6 };
     const mine = sc.lights.filter((l) => !l.moving && l.ll[0] > -30 && (l.ll[0] > 100) === nz);
     // with only a handful of lights left, hold a steady view: chasing them makes the zoom pump
     if (mine.length < 12) return nz ? { lon: 174.2, lat: -40.6, k: 5.4 } : { lon: -0.6, lat: 52.6, k: 6 };

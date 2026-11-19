@@ -141,12 +141,14 @@ process.on('exit', () => server?.kill());
   check('the follow button gives the camera back', await A(page, () => window.__atlas.stages[0].auto));
 
   // 7b. the camera crosses the world once, and does not come back
-  const cams = await A(page, () => { const out = []; for (let y = 1600; y <= 2020; y += 5) { window.__atlas.setYear(y); window.__atlas.settle(); out.push([y, Math.round(window.__atlas.stages[0].cam.lon), +window.__atlas.stages[0].cam.k.toFixed(1)]); } return { out, plan: window.__atlas.plan }; });
+  const cams = await A(page, () => { const out = []; for (let y = 1600; y <= 2020; y += 5) { window.__atlas.setYear(y); window.__atlas.settle(); out.push([y, Math.round(window.__atlas.stages[0].cam.lon), +window.__atlas.stages[0].cam.k.toFixed(1), window.__atlas.scene().lights.length]); } return { out, plan: window.__atlas.plan }; });
   const sides = cams.out.map((c) => (c[1] > 100 ? 'nz' : c[1] > -30 && c[1] < 40 ? 'eu' : 'sea'));
   const firstNz = sides.indexOf('nz');
   check('the globe starts with the family in Europe', sides[0] === 'eu' && firstNz > 10);
   check('it crosses to New Zealand once and never swings back', firstNz > 0 && sides.slice(firstNz).every((x) => x === 'nz') && sides.slice(0, firstNz).every((x) => x !== 'nz'), `turn ${cams.plan.turn}, ride ${JSON.stringify(cams.plan.ride)}`);
-  let jump = 0; for (let i = 1; i < cams.out.length; i++) if (sides[i] === sides[i - 1]) jump = Math.max(jump, Math.abs(cams.out[i][1] - cams.out[i - 1][1]));
+  let jump = 0; for (let i = 1; i < cams.out.length; i++) if (sides[i] === sides[i - 1] && cams.out[i][3] && cams.out[i - 1][3]) jump = Math.max(jump, Math.abs(cams.out[i][1] - cams.out[i - 1][1]));
+  const lastCam = cams.out[cams.out.length - 1];
+  check('when the last light is out it stands back on the same side, without crossing again', lastCam[3] === 0 ? lastCam[1] > 100 && lastCam[2] < 2 : true, JSON.stringify(lastCam));
   check('between times it holds steady', jump <= 4, `largest move in five years: ${jump} degrees`);
   await A(page, () => { window.__atlas.setYear(1868); window.__atlas.stages[0].resume(); window.__atlas.settle(); window.__atlas.play(); });
   const seen = [];

@@ -129,6 +129,12 @@ The case file cards in `src/casefile.ts` are written by hand from the Iris docum
 
 Nothing is published. The built site has been tested served from a `/barlow-river/` sub-path, the way GitHub Pages serves it, and passes every browser check there. `.github/workflows/publish.yml` builds the site and puts it on GitHub Pages, but only when someone presses "Run workflow" on the Actions tab (Pages must be switched on for the repository first, with GitHub Actions as the source). Read the Privacy section before pressing it.
 
+## How the Atlas was reviewed
+
+The Council reviewed the plan, then three mockups, then the build over five rounds, each after an outside tester had been through it. Six outside passes in all. The reports are in `.campaign/council-report-atlas-*.md`; the last is `council-report-atlas-closing.md`. The outside testers' final scores on the seven criteria were 26 and 28 of 35, and 29.5 judging only what the page does with the data it has. Much of the gap is the records: two thirds of people have no place of their own and only one voyage is dated.
+
+Left undone in the Atlas: the leads are not yet marked on the map itself; "Follow the journey" has captions only for a dated voyage; on a phone the last two country chips need a swipe. The voyage routes (round the Cape before 1914, through Panama after) are a convention drawn from general knowledge, not checked against a source.
+
 ## Not done
 
 - Writing evidence back to Iris directly. The draft and change request are as far as it goes, on purpose.
