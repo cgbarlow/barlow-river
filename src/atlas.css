@@ -10,6 +10,9 @@ body.kbd .views:focus { outline: 2px solid var(--amber); outline-offset: -2px; }
 .atlas .legend i.ring { border-style: solid; }
 .legend i.haze { width: 16px; height: 16px; background: radial-gradient(#F2B54499, #F2B54400) !important; border: 1px dashed #F2B544; }
 .legend i.em { width: 5px; height: 5px; background: #a8834a; }
+.legend i.wring { width: 8px; height: 8px; border: 1.4px solid #fff; background: none; border-radius: 50%; }
+.legend i.star { width: auto; height: auto; background: none; color: #F2B544; font-style: normal; font-size: 11px; line-height: 1; }
+.legend .swatch small { opacity: .6; font: 500 10.5px var(--mono); margin-left: 2px; }
 .legend i.rest { width: 6px; height: 6px; border: 1px solid #a8834a; background: none; border-radius: 0; transform: rotate(45deg); opacity: .8; }
 .legend i.ln { width: 22px; height: 0; border-radius: 0; border-top: 2px solid var(--ink-2); }
 .legend i.ln.d { border-top-style: dashed; }

@@ -147,5 +147,6 @@ export function windowText(leg: Leg, name: (id: string) => string): string {
   if (leg.y1 === leg.y0) return leg.km > 1500 ? `In ${a} and in ${b} in ${y0}.` : `In ${a} and in ${b} in ${y0}. The dates the map reads do not say which came first.`;
   // counted from the full dates where the tree has both
   const n = leg.d0 && leg.d1 && !leg.approx0 && !leg.approx1 ? Number(ageBetween({ y: leg.y0, text: leg.d0 }, { y: leg.y1, text: leg.d1 })) || leg.y1 - leg.y0 : leg.y1 - leg.y0;
-  return `Last known in ${a} in ${y0}. In ${b} by ${y1}. The move was some time in ${n <= 1 ? 'that year' : `those ${leg.approx0 || leg.approx1 ? 'roughly ' : ''}${n} years`}.`;
+  const span = n <= 1 ? (leg.y1 !== leg.y0 ? 'between those two years' : 'some time in that year') : `some time in those ${leg.approx0 || leg.approx1 ? 'roughly ' : ''}${n} years`;
+  return `Last known in ${a} in ${y0}. In ${b} by ${y1}. The move was ${span}.`;
 }

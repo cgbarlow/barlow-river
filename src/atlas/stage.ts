@@ -197,7 +197,7 @@ export class Stage {
     c.lon += dl * r; if (c.lon > 180) c.lon -= 360; if (c.lon < -180) c.lon += 360;
     c.lat += (g.lat - c.lat) * r;
     // pull back while crossing the world, so the turn reads as a turn
-    c.k += ((far ? Math.min(g.k, 1.5) : g.k) - c.k) * (snap ? 1 : 0.035);
+    c.k += ((far ? Math.min(g.k, 1.5) : g.k) - c.k) * (snap ? 1 : riding ? 0.14 : 0.035);
   }
 
   // ---------- drawing ----------

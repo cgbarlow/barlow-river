@@ -369,7 +369,19 @@ function findings(people: AtlasPerson[], P: Map<string, Person>, F: Map<string, 
       const r = runs[0], same = runs.filter((q) => q.n === r.n && q !== r), his = P.get(r.id)!.sex === 'F' ? 'her' : P.get(r.id)!.sex === 'M' ? 'his' : 'their', him = P.get(r.id)!.sex === 'F' ? 'her' : P.get(r.id)!.sex === 'M' ? 'him' : 'them';
       facts.push({ id: 'a-longest-stay', kind: 'places', y: r.y0, people: [r.id, ...same.map((q) => q.id)],
         title: `${name(r.id)}: ${r.n} records in ${place(r.p).name.split(',')[0]} across ${r.y1 - r.y0} years`,
-        body: `${r.n} of ${his} own records that the map reads place ${him} in ${place(r.p).name}, the first in ${r.y0} and the last in ${r.y1}. No one on the map has more records in one place${same.length ? `; ${same.map((q) => `${name(q.id)} has as many in ${place(q.p).name.split(',')[0]}, over ${q.y1 - q.y0} years`).join(', and ')}` : ''}. Most lives here are two or three records. This one stayed long enough to be seen staying.` });
+        body: `${r.n} of ${his} own records that the map reads place ${him} in ${place(r.p).name}, the first in ${r.y0} and the last in ${r.y1}. No one on the map has more records in one place${same.length ? `; ${same.map((q) => `${name(q.id)} has as many in ${place(q.p).name.split(',')[0]}, over ${q.y1 - q.y0} years`).join(', and ')}` : ''}. ${(() => { const counts = all.map((x) => x.a.stops.filter((q) => q.kind !== 'borrowed').length), one = counts.filter((n) => n === 1).length; return `Of the ${counts.length} people on the map with records of their own, ${one} have a single one.`; })()}` });
+    }
+  }
+  // how much of the map is borrowed, by the century of birth
+  {
+    const eras = new Map<number, { all: number; lent: number }>();
+    for (const a of people) { const c = Math.floor(P.get(a.id)!.b!.y / 100) * 100, e = eras.get(c) ?? { all: 0, lent: 0 }; e.all++; if (a.borrowed) e.lent++; eras.set(c, e); }
+    const rows = [...eras].sort((x, y) => x[0] - y[0]).filter(([, e]) => e.all >= 5), tot = people.filter((a) => a.borrowed).length;
+    if (rows.length >= 2) {
+      const worst = [...rows].sort((x, y) => y[1].lent / y[1].all - x[1].lent / x[1].all)[0];
+      facts.push({ id: 'a-borrowed-by-era', kind: 'places', y: worst[0] + 50, people: people.filter((a) => a.borrowed && Math.floor(P.get(a.id)!.b!.y / 100) * 100 === worst[0]).map((a) => a.id),
+        title: `${tot} of the ${people.length} lights are borrowed, most of all for those born in the ${worst[0]}s`,
+        body: `Counted by the century of birth, how many of the people drawn have none of the records the map reads and are drawn with a relative: ${rows.map(([c, e]) => `${c}s, ${e.lent} of ${e.all}`).join('; ')}. Where the map reads no dated birth, the century is from the tree’s estimate. The hollow lights are not evenly spread across the centuries.` });
     }
   }
   for (const [c, f] of firstIn) {

@@ -154,7 +154,7 @@ export function lifeLines(t: Tree, p: Person): string[] {
     let s = `${kids.length === 1 ? 'One child' : `${kids.length} children`} on record`;
     if (b && dated.length) {
       const first = dated[0].y - b.y, last = dated[dated.length - 1].y - b.y;
-      if (first >= 12 && first < 80) s += dated.length > 1 && last !== first ? `, the first at ${ageBetween(b, dated[0])} and the last at ${ageBetween(b, dated[dated.length - 1])}` : `, at ${ageBetween(b, dated[0])}`;
+      if (first >= 12 && first < 80) { const some = dated.length < kids.length ? ' with a recorded date' : ''; s += dated.length > 1 && last !== first ? `, the first${some} at ${ageBetween(b, dated[0])} and the last at ${ageBetween(b, dated[dated.length - 1])}` : dated.length < kids.length ? `, the one${some} at ${ageBetween(b, dated[0])}` : `, at ${ageBetween(b, dated[0])}`; }
     }
     out.push(s + '.');
     if (d) {

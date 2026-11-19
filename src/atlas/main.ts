@@ -165,7 +165,8 @@ function loop(now: number) {
     const reading2 = now < captionUntil;
     // a caption still being read just before a voyage: wait for it, so the voyage does not cut it short
     const shipSoon = reading2 && (followBeats ?? allBeats).some((b) => b.sail && b.y - playYear > 0 && b.y - playYear < 0.6);
-    const speed = shipSoon ? 0.05 : sailing ? 0.18 : hop ? 1.1 : pendingBeat && reading2 ? 0.15 : reading ? 0.9 : fol ? (reading2 ? 2.5 : 6) : playYear < 1650 ? 20 : playYear > 1900 ? 5.5 : 8;
+    const nearSail = Boolean(fol) && !sailing && (followBeats ?? []).some((b) => b.sail && b.y - playYear > 0 && b.y - playYear < 0.3);
+    const speed = shipSoon ? 0.05 : sailing ? 0.18 : nearSail ? 0.5 : hop ? 1.1 : pendingBeat && reading2 ? 0.15 : reading ? 0.9 : fol ? (reading2 ? 2.5 : 6) : playYear < 1650 ? 20 : playYear > 1900 ? 5.5 : 8;
     playYear += dt * speed;
     const end = fol ? Math.min(thisYear, fol.stays[fol.stays.length - 1].to + 2) : thisYear;
     if (playYear >= end) { playYear = end; setYear(playYear, true); stop(); } else setYear(playYear, true);
@@ -274,6 +275,7 @@ function countryHtml(c: (typeof countries)[number]): string {
   <h3>Places (${c.sites.length})</h3><div class="who">${c.sites.map((id) => `<button data-place="${esc(id)}">${esc(shortPlace(id))}</button>`).join('')}</div>
   ${list('Born or baptised here', born)}${list('Came here from another country', came)}${list('Recorded here, with no placed birth record', rest)}${list('Drawn here with a relative', lent)}
   ${died.length ? `<h3>Of those, died or buried here (${died.length})</h3><div class="who">${[...died].sort((x, y) => x.d - y.d).slice(0, 60).map((a) => chip(a.id)).join('')}${died.length > 60 ? `<span class="rel">and ${died.length - 60} more</span>` : ''}</div>` : ''}
+  ${(() => { let y0 = 0, y1 = 0; for (let y = trackMin; y < thisYear; y++) if (world.actors.some((q) => world.countryOf(q, y + 0.5) === c.name)) { if (!y0) y0 = y; y1 = y; } return y0 ? `<p class="fine">On the map a light stands in ${esc(c.name === 'United States' ? 'the United States' : c.name)} from ${y0} to ${y1}, hollow lights included.</p>` : ''; })()}
   ${first != null ? `<div class="actions"><button class="btn quiet" data-act="goyear" data-y="${first}">Go to ${loose(first)}${first}</button></div>` : ''}</div>`;
 }
 
@@ -403,6 +405,8 @@ function buildBeats() {
   }
   // the first record in each other country
   for (const f of atlas.facts) if (/^a-first-(wales|ireland|united-states|poland)$/.test(f.id)) beats.push({ y: f.y, ids: f.people, text: `${f.title}. ${f.body}` });
+  // the oldest of those a record places in New Zealand, told in that record's year when nothing else is being said
+  for (const f of atlas.facts) if (f.id === 'a-oldest-crosser' && !beats.some((x) => Math.abs(x.y - f.y) < 2)) beats.push({ y: f.y, ids: f.people.slice(0, 1), text: `${f.title}. ${f.body.split('. ').slice(1, 2).join('. ')}.` });
   // two findings that belong to a year are told when the year comes
   for (const f of atlas.facts) if (f.id === 'a-split-siblings' || f.id === 'a-silence') beats.push({ y: f.id === 'a-silence' ? f.y : f.y + 1, ids: f.people, text: f.id === 'a-silence' ? `${f.title}. ${f.body.split('. ').slice(0, 1).join('. ')}.` : f.body.split('. ').slice(1, -1).join('. ') + '.' });
   // the quiet years: how many lights the map holds and where, counted, when nothing else is being said
@@ -410,12 +414,12 @@ function buildBeats() {
     if (beats.some((x) => Math.abs(x.y - y) < 8)) continue;
     const by = new Map<string, number>(); let n = 0, hollow = 0;
     for (const a of world.actors) { if (!world.lightOf(a, y + 0.5)) continue; const w = whereAt(a.stays, y + 0.5)!, st = a.stays[w.i], reg = world.places.get(st.p)!.region; n++; if (a.hollow || st.stops.every((x) => x.kind === 'borrowed')) hollow++; by.set(reg, (by.get(reg) ?? 0) + 1); }
-    if (n < 3) continue;
+    if (n < (y >= 1900 ? 1 : 3)) continue;
     const inReg = (r: string) => (r === 'Elsewhere in England' ? 'elsewhere in England' : r === 'Elsewhere' ? 'in other countries' : `in ${r}`);
     const top = [...by].sort((p, q) => q[1] - p[1]), rest = n - top[0][1] - (top[1]?.[1] ?? 0);
     const where = top.length === 1 ? `all ${inReg(top[0][0])}` : `${top[0][1]} ${inReg(top[0][0])}, ${top[1][1]} ${inReg(top[1][0])}${rest > 0 ? `, ${rest} in other places` : ''}`;
     const gone = world.actors.filter((a) => a.d <= y && (a.on < a.d || a.ember)).length;
-    beats.push({ y, text: `In ${y} the map holds ${n} lights, ${where}. ${hollow === 0 ? 'None is hollow.' : hollow === 1 ? 'One is hollow, drawn with a relative.' : `${hollow} of the ${n} are hollow, drawn with a relative.`}${gone >= 20 ? ` ${gone} marks stand where lights have gone out.` : ''}` });
+    beats.push({ y, text: `In ${y} the map holds ${n} ${n === 1 ? 'light' : 'lights'}, ${where}. ${hollow === 0 ? 'None is hollow.' : hollow === 1 ? 'One is hollow, drawn with a relative.' : `${hollow} of the ${n} are hollow, drawn with a relative.`}${gone >= 20 ? ` ${gone} marks stand where lights have gone out.` : ''}` });
   }
   // the quiet centuries have their own moments: the River's captions that belong to a place
   for (const b of BEATS) if (b.y >= 1700 && !beats.some((x) => Math.abs(x.y - b.y) < 2)) beats.push({ y: b.y, text: b.text });
@@ -609,6 +613,8 @@ function openFinding(id: string, moveYear = true) {
     const lit = (yy: number) => f.people.some((id) => { const a = world.byId.get(id); return Boolean(a && world.lightOf(a, yy + 0.5)); });
     let y = f.y;
     for (let k = 0; k <= 4; k++) if (lit(f.y - k)) { y = f.y - k; break; }
+    // a finding about a voyage opens the year before it, with its people still on shore and in view
+    if (f.people.some((id) => { const a = world.byId.get(id); const w = a ? whereAt(a.stays, y + 0.5) : null; return Boolean(a && w?.sail && a.legs[w.leg!].km > 1500); })) y -= 1;
     setYear(y);
   }
   frameIds(f.people.filter((p) => world.byId.has(p)));
@@ -792,11 +798,11 @@ function helpHtml(): string {
 function renderLegend() {
   const el = $('#legend');
   // each swatch is a button: tap it to light just those people
-  const sw1 = (key: string, colour: string, label: string) => `<button class="swatch" data-group="${esc(key)}" aria-pressed="${state.group === key}"><i style="background:${colour}"></i>${esc(label)}</button>`;
+  const sw1 = (key: string, colour: string, label: string) => `<button class="swatch" data-group="${esc(key)}" aria-pressed="${state.group === key}"><i style="background:${colour}"></i>${esc(label)} <small>${world.actors.filter((a) => groupOf(a) === key).length}</small></button>`;
   const sw = state.lens === 'surname' ? LINES.filter((l) => world.actors.some((a) => lineOf(a.id) === l)).map((l) => sw1(l, LINE_COLOUR[l], l)).join('')
     : state.lens === 'place' ? [...new Set(world.actors.map((a) => world.places.get(a.stays[0].p)!.region))].map((r) => sw1(r, REGION_COLOUR[r] ?? '#A9B7CB', r)).join('')
     : sw1('record', CERT.record, 'Placed by a record') + sw1('borrowed', CERT.borrowed, 'With a relative') + sw1('vague', CERT.vague, 'County or country only') + sw1('disputed', CERT.disputed, 'Identity disputed');
-  el.innerHTML = `<button class="key-toggle" aria-expanded="${!el.classList.contains('collapsed')}">Key</button>${sw}<span><i class="ring"></i>Hollow: drawn with a relative</span><span><i class="haze"></i>Known only roughly</span><span><i class="em"></i>Died or buried here</span><span><i class="rest"></i>Last placed here</span><span><i class="ln"></i>Move, known to within three years</span><span><i class="ln d"></i>Move, some time in a window</span><span><i class="ln q"></i>Move in doubt</span><button data-act="help">How to read this</button>`;
+  el.innerHTML = `<button class="key-toggle" aria-expanded="${!el.classList.contains('collapsed')}">Key</button>${sw}<span><i class="ring"></i>Hollow: drawn with a relative</span><span><i class="haze"></i>Known only roughly</span><span><i class="em"></i>Died or buried here</span><span><i class="rest"></i>Last placed here</span><span><i class="wring"></i>First record of their own</span><span><i class="star">★</i>A finding: tap it</span><span><i class="ln"></i>Move, known to within three years</span><span><i class="ln d"></i>Move, some time in a window</span><span><i class="ln q"></i>Move in doubt</span><button data-act="help">How to read this</button>`;
 }
 function groupOf(a: Actor): string {
   if (state.lens === 'place') return world.places.get(a.stays[0].p)!.region;
@@ -903,7 +909,7 @@ function bindChrome() {
   $('#grab').addEventListener('click', () => openSheet(!$('#panel').classList.contains('open')));
 
   const track = $('#track');
-  const at = (e: PointerEvent) => { const r = track.getBoundingClientRect(); return Math.round(trackMin + Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * (thisYear - trackMin)); };
+  const at = (e: PointerEvent) => { const r = track.getBoundingClientRect(); const u = (e.clientX - r.left) / r.width; return u < 0.012 ? trackMin : u > 0.988 ? thisYear : Math.round(trackMin + Math.max(0, Math.min(1, u)) * (thisYear - trackMin)); };
   let dragging = false;
   track.addEventListener('pointerdown', (e) => { dragging = true; track.setPointerCapture(e.pointerId); stop(); $('#hint').hidden = true; setYear(at(e)); });
   track.addEventListener('pointermove', (e) => { if (dragging) setYear(at(e)); });
