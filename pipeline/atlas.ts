@@ -259,7 +259,7 @@ function findings(people: AtlasPerson[], P: Map<string, Person>, F: Map<string, 
   if (far.length) {
     const f = far[0];
     facts.push({ id: 'a-farthest', kind: 'distance', y: P.get(f.id)!.d!.y, people: [f.id], title: `${name(f.id)} ended ${(Math.round(f.d / 100) * 100).toLocaleString('en')} km from the start`,
-      body: `First recorded in ${place(f.from).name}, last in ${place(f.to).name}. No one in the tree is recorded farther from where they began.` });
+      body: `First recorded in ${place(f.from).name}, last in ${place(f.to).name}. No one on the map is placed farther from where they began.` });
   }
   // most places in one life
   // a closer place inside a vaguer one is the same place known better, not another place
@@ -268,7 +268,7 @@ function findings(people: AtlasPerson[], P: Map<string, Person>, F: Map<string, 
   if (busy && distinct(busy.st).size >= 3) {
     const names = [...distinct(busy.st)].map((id) => place(id).name);
     facts.push({ id: 'a-most-places', kind: 'places', y: busy.st[1].from, people: [busy.a.id], title: `${name(busy.a.id)} is recorded in ${names.length} places`,
-      body: `${names.join(', then ')}. ${all.filter((x) => distinct(x.st).size === names.length).length > 1 ? 'No one in the tree is recorded in more places' : 'More places than anyone else in the tree'}, counting a county or country only when no town inside it is named, which says as much about how well this life is recorded as about how far it went.` });
+      body: `${names.join(', then ')}. ${all.filter((x) => distinct(x.st).size === names.length).length > 1 ? 'No one on the map is placed in more' : 'More places than anyone else on the map'}, counting a county or country only when no town inside it is named, which says as much about how well this life is recorded as about how far it went.` });
   }
   // the place with the most births
   const births = new Map<string, string[]>();
@@ -305,8 +305,8 @@ function findings(people: AtlasPerson[], P: Map<string, Person>, F: Map<string, 
   const ended = all.filter((x) => x.st.length > 1).map((x) => ({ id: x.a.id, from: place(x.st[0].p).country, to: place(x.st[x.st.length - 1].p).country }));
   const out = ended.filter((e) => e.from !== 'New Zealand' && e.to === 'New Zealand'), home = ended.filter((e) => e.from === 'New Zealand' && e.to !== 'New Zealand');
   if (out.length) {
-    facts.push({ id: 'a-one-way', kind: 'crossing', y: Math.max(...out.map((e) => P.get(e.id)!.b!.y)), people: [...out, ...home].map((e) => e.id), title: home.length ? `${out.length} went out to New Zealand. ${home.length} came back` : `${out.length} went out to New Zealand. Nobody is recorded coming back`,
-      body: `${out.length} people are first recorded on one side of the world and last recorded in New Zealand. ${home.length ? `${home.map((e) => name(e.id)).join(' and ')} went the other way.` : 'Not one person in the tree is first recorded in New Zealand and last recorded anywhere else.'} For this family the voyage was one way.` });
+    facts.push({ id: 'a-one-way', kind: 'crossing', y: Math.max(...out.map((e) => P.get(e.id)!.b!.y)), people: [...out, ...home].map((e) => e.id), title: home.length ? `${out.length} went out to New Zealand. ${home.length} came back` : `${out.length} went out to New Zealand. No record the map reads shows anyone coming back`,
+      body: `${out.length} people are first recorded on one side of the world and last recorded in New Zealand. ${home.length ? `${home.map((e) => name(e.id)).join(' and ')} went the other way.` : 'Not one person on the map is first placed in New Zealand and last placed anywhere else.'} As far as the map’s records go, the voyage was one way.` });
   }
   // brothers and sisters who ended on different sides of the world
   const lastSide = new Map(all.map((x) => [x.a.id, place(x.st[x.st.length - 1].p).country === 'New Zealand' ? 'nz' : 'eu']));

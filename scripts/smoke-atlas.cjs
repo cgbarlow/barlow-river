@@ -112,7 +112,7 @@ process.on('exit', () => server?.kill());
   const hollow = await A(page, () => window.__atlas.world.actors.find((a) => a.hollow).id);
   await A(page, (id) => window.__atlas.select(id), hollow);
   const hText = await page.locator('#record').textContent();
-  check('a hollow light says it is borrowed and from whom', /records the map reads gives a place/.test(hText) && /No place of their own/.test(hText) && (await page.locator('#record [data-act="follow"]').count()) === 0);
+  check('a hollow light says it is borrowed and from whom', /records the map reads gives a place/.test(hText) && /Drawn with a relative/.test(hText) && (await page.locator('#record [data-act="follow"]').count()) === 0);
   await page.locator('#record .back').click();
 
   // 7. two ways to draw the Earth, or both
@@ -584,7 +584,7 @@ process.on('exit', () => server?.kill());
   await page.keyboard.press('Escape');
   // the page never says outright that something is unrecorded: it says what the map reads
   const allText = await A(page, () => { const A_ = window.__atlas, out = []; for (const a of A_.world.actors) { A_.select(a.id); out.push(a.id + ' :: ' + document.querySelector('#record').textContent); } for (const c of ['England', 'New Zealand', 'Wales', 'Poland', 'United States', 'Ireland']) { A_.openCountry(c); out.push(c + ' :: ' + document.querySelector('#record').textContent); } document.querySelector('#help').click(); out.push('guide :: ' + document.querySelector('#record').textContent); document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); for (const tab of ['journeys', 'places', 'people']) { document.querySelector(`.tabs [data-tab="${tab}"]`).click(); out.push('tab ' + tab + ' :: ' + document.querySelector('#panel-body').textContent); } out.push('captions :: ' + A_.beats().map((b) => b.text).join(' | ')); out.push('findings :: ' + JSON.stringify([A_.atlas.facts, A_.atlas.leads])); return out; });
-  const bare = /\bnot recorded\b|\bno recorded\b|No death is recorded|(?<!map reads )[Nn]o record\b|the tree does not|[Rr]ecords (here )?do not (say|date)|[Nn]obody wrote|names no ship|No ship is named/;
+  const bare = /\bnot recorded\b|\bno recorded\b|No death is recorded|(?<!map reads )[Nn]o record\b(?! the map reads)|the tree does not|[Rr]ecords (here )?do not (say|date)|[Nn]obody wrote|names no ship|No ship is named|nothing says|to borrow from|no place of their own|have no place\b|no one to\b/;
   const hitsBare = allText.filter((t) => bare.test(t)).map((t) => t.split(' :: ')[0] + ': ' + (bare.exec(t) || [''])[0]);
   check('no panel, caption, finding or guide text says outright that something is unrecorded', allText.length > 320 && hitsBare.length === 0, hitsBare.slice(0, 6).join(' | '));
   const whc = allText.find((t) => t.startsWith('L5KW-4FV')) || '';
