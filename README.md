@@ -40,6 +40,8 @@ On a wide screen, play starts close on the headwaters and pulls back as the rive
 
 A second mode, at `atlas.html`. The River shows time and doubt. The Atlas adds place. Brief: `BRIEF-ATLAS.md`.
 
+![The Atlas in 1874: the one voyage the records date closely, on its way round the Cape](docs/screenshots/atlas-voyage.png)
+
 1. **Press play.** A light comes on where each person was born and goes out when they die. Every light leaves a mark: an ember where a death or burial names the place, a small open diamond otherwise. Captions tell the moves as their years come, and count the lights in the quiet years. The camera follows the family, and turns to the other side of the world when it goes there. The last frame sits close on New Zealand and counts what each country remembers.
 2. **Two ways to draw the Earth, or both.** A globe, and two shores: Britain and New Zealand drawn large with the ocean folded away, and small insets for Poland and the United States. On a wide screen, globe and shores side by side (keys G, S, B). The globe's camera stays with the family in Europe, crosses to New Zealand once, with the one voyage the records date closely, and stays there.
 3. **Tap a light.** The places the records put that person, in order, each with the evidence: born, baptised, census, married, the birth of a child, buried. Then each move, with the years it could have happened in. "Follow the journey" plays that one life. "Light the family" lights parents, brothers and sisters, partners and children together. An ember or a diamond can be tapped too: it opens the person it remembers.
@@ -48,6 +50,8 @@ A second mode, at `atlas.html`. The River shows time and doubt. The Atlas adds p
 6. **Switch the lens.** By surname, by the first place each person is drawn, or by how well the place is known.
 7. **Stars on the map.** A finding that belongs to a place is starred there from the year it happens. Tap it to read it.
 8. **Read the findings.** Sixteen things counted from the records and two worth a second look. Among them: the first of the family in New Zealand, fourteen people recorded on both sides of the world and no record of anyone coming back, the life that ended farthest from where it began, a silence of 93 years between two records, the oldest person a record places in New Zealand, how many of the people drawn are borrowed in each century, a couple on both sides of the world in one year, and a move the tree itself doubts. "Tell me a story" steps through them in the order of their years. The finding about the 1874 voyage has a "Sail with" button that rides the ship.
+
+![Two shores in 1900: Britain and Ireland beside New Zealand, with the ocean folded away](docs/screenshots/atlas-two-shores.png)
 
 What it will not pretend to know:
 
