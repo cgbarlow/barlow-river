@@ -1,6 +1,47 @@
 # LinkedIn post: The River
 
-Third draft, 18 November 2026. Edited by the Cat after the owner said the post was not gelling. One story: hands off the wheel, something good came back, and the credit belongs to the person who wrote it down.
+Final draft, 20 November 2026. The owner named the thrust: the danger of overspecification. There is a time to step out of the loop and a time a person has to be in it.
+
+I gave my AI agents my family tree and one instruction: do something awesome with this. Then I went and made a cup of tea.
+
+That is not how I normally work. Normally I write the spec. Then I write more spec.
+
+What came back is the Barlow River. Four centuries of my family drawn as streams that join at each marriage. Norwich weavers, a mathematician at Woolwich, New Zealand by the 1850s. I would never have asked for a river. I'd have asked for a family tree, and I'd have got one.
+
+That's the bitter lesson, as I read it. We pour everything we know into the instructions, with the best of intentions, and box in the very thing we hoped would surprise us.
+
+It doesn't mean stay out for good. When the agents put the family on a globe, the view swung between Britain and New Zealand like a tennis match. It took a person to say stop that.
+
+So write down what you know. My grandfather did, and it's the only reason there was anything to work with. Go easier on writing down what you want. And learn which moments need you in the room.
+
+I've talked about the writing-down half before: https://agentics.org.nz/blog/the-organisation-as-code-recording/
+
+Got something worth a day? Bring it to the Agentics NZ Hack Day, December 4th. One day, no lanyards.
+
+The River: [link]
+The hack day: https://lnkd.in/eGU3mUv8
+
+## One paragraph you can swap in
+
+In place of the globe paragraph, if you would rather the joke be on you. It is true: the Atlas went through twenty-six rounds of review.
+
+> The sequel I specified properly, with a score to hit. The agents ran twenty-six rounds of review chasing the last point before I called time. Overspecification works on machines too.
+
+## What this draft cut
+
+- **Ethan Mollick and "conjuror" mode.** The book title and the word are still unverified, and the post no longer needs them. To restore, after the tea: "Ethan Mollick calls it conjuror mode."
+- **"The agents will happily take the credit."** The grandfather now sits in the closing advice instead.
+- **The organisation as code, by name.** It is one line and a link.
+
+## To check before posting
+
+- The River link. The site is now on GitHub Pages; paste the address you want to share.
+- That the recording page is the right link for the talk.
+- That "the bitter lesson, as I read it" is a reading you are happy to defend. Sutton's essay is about general methods beating hand-built knowledge; the post applies it to instructions.
+
+## Earlier drafts
+
+### Third draft, 18 November 2026 (edited by the Cat)
 
 I told my AI agents to do something awesome with my family tree. Then I left them to it.
 
@@ -16,21 +57,6 @@ Got something written down that deserves a day? Bring it to the Agentics NZ Hack
 
 The River: [link]
 The hack day: https://lnkd.in/eGU3mUv8
-
-## What the edit cut, and how to put it back
-
-- **The bitter lesson.** Needs explaining and nothing pays it off. To restore, one clause in line two: "I'd been hearing about the 'bitter lesson' again, so this time, hands off the wheel."
-- **"No substitute for domain expertise."** The grandfather shows it. To say it outright, one sentence after his paragraph: "Expertise still wins. It just doesn't have to be yours."
-- **The organisation as code, explained.** Now two sentences and a link.
-- **Poland** from the list of places.
-
-## To check before posting
-
-- Mollick's book title and that "conjuror" is his word. Not verified, and the post now leans on it for a joke.
-- The River link. Nothing is published; see the Privacy section of the README.
-- That the recording page is the right link for "I gave a talk about that".
-
-## Earlier drafts
 
 The second draft's middle passage, in three reworks, is kept below.
 

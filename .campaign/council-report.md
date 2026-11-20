@@ -1,69 +1,39 @@
-# Council report: the Atlas, closing (third)
+---
+created: 2026-11-20
+council-type: standalone
+---
 
-Subject: the twenty-first full outside test (commit `0bf28e7`, a fresh tester), and where the work stands against the brief.
+# Council Report
 
-## The verdict
+Subject: finishing the LinkedIn post (`docs/posts/linkedin-the-river.md`) on the danger of overspecification.
 
-> Yes: 0bf28e7 is fit to merge as "fully tested and working". I found no BLOCKING defect.
+## Animal Perspectives
 
-By the tester's own checkers, written from the two data files:
+### Bear — Vision & Direction
+The post now has one idea, and it is the owner's: say less about what you want. The River is the proof, because nobody asked for a river. Keep every paragraph pointed at that. The hook should carry the instruction itself, "do something awesome with this", since five loose words are the whole argument.
 
-- **The owner's requests:** all met. The timelapse on a globe, on Two shores, or both. One hemisphere crossing in a full play-through. The other countries always in view. A mark left by every one of the 317 lights. The River loads and works, and R1 holds for all 340 of its people.
-- **Placement rules A1 to A8:** no violation on 437 paused years and 1,118 play frames.
-- **Numbers and words:** about 120 sentence forms with a number or quantifier and 324 with a negative reviewed. None false.
-- **Navigation and robustness:** no trapped Back, every address the page writes reloads, about 700 random actions on three screen sizes with no error.
-- **The two fixes of round 26:** 148 story steps measured at four sizes, none with a covered title; every "lost a parent" sentence in both pages true.
+### Cat — Risk & Scope
+Three risks. First, "the bitter lesson" is Sutton's phrase for general methods beating hand-built knowledge in AI research; the post stretches it to prompts, so it says "as I read it" and moves on. Second, the post must not read as "expertise is over", which the owner does not believe: the grandfather stays, and he does the work of saying knowledge matters. Third, Mollick. The book title and the word "conjuror" were never verified, and the post no longer leans on them, so I cut them. I also cut "the agents will take the credit": a good line for a different post.
 
-## The seven criteria
+### Owl — Process & Structure
+Order: what I did, what came back, what it means, the limit, the advice, the links. One example for stepping out (the River) and one for stepping in (the globe that swung between Britain and New Zealand until a person said stop). Two examples, no more. The talk gets one line and a link, and the hack day closes it.
 
-| | Interesting | Novel | Surprising | Delightful | Engaging | Interactive | Dynamic | Total |
-|---|---|---|---|---|---|---|---|---|
-| Overall | 4 | 4.5 | 3.5 | 4 | 3.5 | 4.5 | 4.5 | 28.5 |
-| As a build | 4.5 | 4.5 | 4 | 4 | 4 | 4.5 | 4.5 | 30 |
+### Puppy — Opportunities & Momentum
+The best line is "I'd have asked for a family tree, and I'd have got one." Everyone who has written a long prompt will feel that. And the tennis match is funny and true. The joke at his own expense ("Then I write more spec") makes the lesson easy to take.
 
-The plan was scored 31 before the build. Build scores from the last ten outside tests, oldest first: 29.5, 30, 30, 31.5, 30.5, 30.5, 30, 29.5, 31, 30. Overall scores over the same tests: 28 to 29.5.
+### Rabbit — Resources & Stakeholders
+The readers are people who write specifications for a living, and people coming to the hack day. They need something to do on Monday: write down what you know, go easier on what you want, learn which moments need you. The River is now published, so the link can be real. The Atlas's twenty-six review rounds are true and make the point from the other side; offered as a swap-in paragraph, since it is his call whether to tell that one.
 
-The Council's reading:
+### Wolf — Cohesion & Balance
+The owner asked for both halves: a time to step out and a time a person must be in. The draft gives the first four paragraphs and the second one. That is the right weight, because the first is the news, but the second must not be dropped. The grandfather used to be the centre and is now one sentence. He still earns it: he is the difference between knowledge and instructions.
 
-- **The build sits at 30 to 31.** Two of ten testers put it at or over the bar; eight put it a half point or a point under. Different testers score the same build about a point apart.
-- **The overall score sits at 28.5** and has not moved in ten tests. Every tester gives the same reason: 168 of 322 people have none of the records the map reads, and one voyage is dated closely enough to sail. That is the tree.
-- **The bar of 31 is not met cleanly.** The Council does not claim it is.
+## Consensus
 
-## Why the Council stops here
+Common ground: one idea, shown by one thing that happened. Knowledge and instructions are different things; the post says write down the first and hold back on the second. The tension was between the Cat, who wanted nothing that could be argued with, and the Bear, who wanted the bitter lesson named because that is where the thought came from. Settled as "the bitter lesson, as I read it". The Cat, as editor, made the cuts: Mollick, the credit line, the organisation as code by name. The post is finished apart from three things only the owner can check.
 
-Rounds 17 to 26 added features to gain the last point: the close last frame, diamonds, new findings, counted captions, decade strips, the story button, live panels. The score rose from 29 to about 30.5.
+## Recommended Next Steps
 
-Over the same rounds, four tests in a row were failed by something the round before had added: an uncounted sentence, the River's age line, a star drawn early, a pinned button. Each was fixed and now has a check. But the pattern is plain: further features cost a blocker each and gain half a point from some testers and none from others.
-
-What testers now name as the next half points are larger features: comparing two lives, a person's line to the youngest generation, automatic coincidences, a story told as one arc, the full list behind a strip bar. Those are new scope, and the owner's to choose.
-
-**Cat.** I will not sign "31". I will sign "no rule violation in twenty-one tests, no false sentence in the last one, and a build ten testers put between 29.5 and 31.5".
-
-**Bear.** The four things the owner asked for are there and have been there, measured, in every test since the tenth.
-
-**Owl.** The tested commit is `0bf28e7`. Only documents change after it.
-
-**Rabbit.** The River changed on this branch, in shared code, and each change fixed something that was false: ages count birthdays; birth order is read from dates; no count of children where one is living; no age from an "after" date; no "lost a parent" for a child who died first. Its 59 checks pass. The owner asked that version 1 not be disturbed, so he should accept these knowingly.
-
-**Wolf.** `main` is untouched. Nothing is published. No pull request is open.
-
-**Simon.** Consensus: the Atlas is fully tested and working by the measure of the last outside test. On the seven criteria it stands at 30 of 35 as a build against a plan scored 31. The Council puts two questions to the owner: whether that meets his bar, and whether he wants any of the larger features.
-
-## For the owner
-
-Minor, from the last test, not fixed (no code was changed after it):
-
-1. Picking the ember of one of the four people who have only an ember moves the year to their death year, losing the last frame.
-2. Pressing "/" focuses the search box but keeps the old query.
-3. On a phone, tapping a finding card closes the sheet, and the globe takes a second to frame findings that span both sides of the world.
-4. "them" and "their" in two sentences about people whose sex is recorded.
-
-Standing items, his to decide: the 1883 arrival note ("with wife, 6 children"); free text the map does not read (cemetery citations, an undated death place); James Carter's "after 1808"; James Finch's 1846 to 1848; small-screen overlaps; "Beverley" (flagged deceased in the tree; if she is living the flag needs correcting in Iris); voyage routes are convention.
-
-Not built, his to choose: comparing two lives; a line to the youngest generation; coincidences; a story as one arc; the full list behind a bar; ages at death by country.
-
-## The owner's decision
-
-Put to the owner on 19 November 2026: accept the Atlas as it stands at about 30 to 31 as a build against a plan scored 31, build the larger features, or fix the four minors and test once more.
-
-The owner chose: **accept as it stands.** Commit `0bf28e7` is the finished, tested build. No further changes are made. Whether and when to merge to `main` remains his decision; no pull request has been opened.
+1. Paste the public address of the River in place of [link].
+2. Confirm the recording page is the right link for the talk.
+3. Decide between the globe paragraph and the twenty-six rounds paragraph.
+4. Restore the Mollick line only if the book title and the word are confirmed.
